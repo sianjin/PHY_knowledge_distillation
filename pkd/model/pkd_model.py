@@ -29,7 +29,7 @@ class PKDModel(nn.Module):
         """
         Args:
             num_channel_models: Number of channel models
-            num_mcs: Number of MCS levels
+            num_mcs: Number of MCS levels (0-indexed: 0 to num_mcs-1)
             num_nss: Number of spatial streams
             ar_order: AR order (p)
             hidden_dim: Hidden dimension for encoder

@@ -84,7 +84,7 @@ def test_time_skipping_correctness():
     # Create model
     model = PKDModel(
         num_channel_models=5,
-        num_mcs=10,
+        num_mcs=10,  # MCS 0-9
         num_nss=4,
         ar_order=5,
         hidden_dim=64,
@@ -92,7 +92,7 @@ def test_time_skipping_correctness():
     )
 
     # Create dummy PER LUT
-    per_lut = AWGNPERLookup.create_dummy_lut(num_mcs=10)
+    per_lut = AWGNPERLookup.create_dummy_lut(num_mcs=10)  # MCS 0-9
 
     # Create inference engine
     inference = PKDInference(model, per_lut, ar_order=5, burn_in=10, device='cpu')
@@ -104,7 +104,7 @@ def test_time_skipping_correctness():
         'N_r': torch.tensor(4),
         'BW': torch.tensor(20.0),
         'SNR_bar': torch.tensor(15.0),
-        'MCS': torch.tensor(5),
+        'MCS': torch.tensor(5),  # 0-indexed MCS value
         'N_ss': torch.tensor(2)
     }
 

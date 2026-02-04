@@ -60,7 +60,11 @@ class AWGNPERLookup:
 
     @staticmethod
     def create_dummy_lut(num_mcs=10, snr_range=(-10, 30), num_points=100):
-        """Create a dummy LUT for testing."""
+        """Create a dummy LUT for testing.
+
+        Args:
+            num_mcs: Number of MCS levels (0-indexed: 0 to num_mcs-1)
+        """
         lut_dict = {}
 
         for mcs in range(num_mcs):

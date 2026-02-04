@@ -10,7 +10,10 @@
       "Bash(conda info:*)",
       "Bash(ls:*)",
       "Bash(git init:*)",
-      "Bash(git add:*)"
+      "Bash(git add:*)",
+      "Bash(/Users/sianjin/Documents/Research/Claude-Skills/setup-skills.sh:*)",
+      "Bash(pip3 install:*)",
+      "Bash(rm:*)"
     ],
     "deny": [],
     "ask": []

@@ -60,7 +60,7 @@ def example_training():
         'N_r': 4,
         'BW': 20.0,
         'SNR_bar': 15.0 + np.random.randn() * 2,
-        'MCS': np.random.randint(1, 11),  # 1-10
+        'MCS': np.random.randint(0, 10),  # 0-9
         'N_ss': np.random.randint(1, 5)   # 1-4
     } for _ in range(100)]
 
@@ -72,7 +72,7 @@ def example_training():
         'N_r': 4,
         'BW': 20.0,
         'SNR_bar': 15.0 + np.random.randn() * 2,
-        'MCS': np.random.randint(1, 11),  # 1-10
+        'MCS': np.random.randint(0, 10),  # 0-9
         'N_ss': np.random.randint(1, 5)   # 1-4
     } for _ in range(20)]
 
@@ -80,7 +80,7 @@ def example_training():
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
     model_config = {
         'num_channel_models': 5,
-        'num_mcs': 10,
+        'num_mcs': 10,  # MCS 0-9
         'num_nss': 4,
         'ar_order': 10,
         'hidden_dim': 128,
@@ -399,7 +399,7 @@ def example_evaluation():
         print("  Warning: model_config not found in checkpoint, using defaults")
         model_config = {
             'num_channel_models': 5,
-            'num_mcs': 10,
+            'num_mcs': 10,  # MCS 0-9
             'num_nss': 4,
             'ar_order': 10,
             'hidden_dim': 128,

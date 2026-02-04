@@ -1,124 +1,173 @@
 # PKD Quick Start Guide
 
-## Installation (1 minute)
+**Goal:** Get PKD running in under 5 minutes
+
+---
+
+## Step 1: Installation (1 minute)
 
 ```bash
-# Install dependencies
+cd /path/to/PHY_knowledge_distillation
 pip install -r requirements.txt
 ```
 
-## Run Tests (1 minute)
+**Dependencies:**
+- PyTorch ≥ 2.0.0
+- NumPy ≥ 1.24.0
+- SciPy ≥ 1.10.0
+- tqdm ≥ 4.65.0
+
+---
+
+## Step 2: Run Tests (1 minute)
 
 ```bash
 cd pkd/tests
 python test_components.py
 ```
 
-Expected output:
+**Expected output:**
 ```
+Testing PACF stability...
 ✓ PACF stability test passed
+Testing flow invertibility...
 ✓ Flow invertibility test passed
+Testing AR mean consistency...
 ✓ AR mean consistency test passed
+Testing time-skipping correctness...
 ✓ Time-skipping correctness test passed
+
 ✅ All tests passed!
 ```
 
-## Run Example (2 minutes)
+---
+
+## Step 3: Train Model (2 minutes)
 
 ```bash
-cd pkd
-python example.py
+python pkd/example.py train
 ```
 
-This will:
-1. Create a PKD model
-2. Generate dummy effective SINR sequences
-3. Run inference simulation
-4. Demonstrate time-skipping
+**What happens:**
+- Creates PKD model with Gaussian innovation
+- Trains on 100 synthetic AR(1) sequences
+- Saves best model to `pkd_model.pt`
 
-## Basic Usage
+**Expected output:**
+```
+PKDModel initialized with gaussian innovation
+PACFToAR initialized with kappa_max=0.950 for stability
 
-### 1. Create Model
+Epoch 1/10
+Train Loss: 2.3456
+Val Loss: 2.2987
+Saved best model
 
-```python
-from pkd import PKDModel
+...
 
-model = PKDModel(
-    num_channel_models=5,  # Number of channel types
-    num_mcs=10,            # Number of MCS levels
-    num_nss=4,             # Max spatial streams
-    ar_order=10,           # AR process order
-    hidden_dim=128         # Network hidden dimension
-)
+Training complete. Best model saved to pkd_model.pt
 ```
 
-### 2. Setup Inference
+---
 
-```python
-from pkd import PKDInference, AWGNPERLookup
+## Step 4: Evaluate Model (1 minute)
 
-# Create PER lookup table
-per_lut = AWGNPERLookup.create_dummy_lut(num_mcs=10)
-
-# Create inference engine
-inference = PKDInference(
-    model=model,
-    per_lut=per_lut,
-    ar_order=10,
-    device='cuda'  # or 'cpu'
-)
+```bash
+python pkd/example.py eval
 ```
 
-### 3. Run Simulation
+**What happens:**
+- Loads trained model
+- Generates teacher and student sequences
+- Compares marginal distribution, temporal dependence, innovation structure
+
+**Expected output:**
+```
+Student sequence validation:
+  ✓ All values finite and positive
+  Unique values: 1998 / 2000
+  Mean: 8.45, Std: 5.23
+
+--- 1. Marginal Distribution Fidelity ---
+Kolmogorov-Smirnov test: statistic=0.0523, p-value=0.4532
+
+--- 2. Temporal Dependence ---
+ACF RMSE (excluding lag 0): 0.0823
+
+--- 3. Innovation Structure ---
+PIT uniformity KS test: statistic=0.0634, p-value=0.7821
+
+Evaluation complete!
+```
+
+**Generated files:**
+- `eval_marginal.png`: CCDF, QQ plot, quantile error
+- `eval_temporal.png`: ACF, PSD comparison
+- `eval_innovations.png`: PIT histogram and ACF
+
+---
+
+## Next Steps
+
+### Option A: Use PKD for Inference
 
 ```python
+from pkd import PKDModel, PKDInference, AWGNPERLookup
 import torch
 
-# Define configuration
+# Load model
+model = PKDModel(num_channel_models=5, num_mcs=10, num_nss=4)
+checkpoint = torch.load('pkd_model.pt')
+model.load_state_dict(checkpoint['model_state_dict'])
+
+# Setup inference
+per_lut = AWGNPERLookup.create_dummy_lut(num_mcs=10)
+inference = PKDInference(model, per_lut)
+
+# Run simulation
 config = {
     'channel_model_id': torch.tensor(0),
     'N_t': torch.tensor(4),
     'N_r': torch.tensor(4),
     'BW': torch.tensor(20.0),
     'SNR_bar': torch.tensor(15.0),
-    'MCS': torch.tensor(5),
+    'MCS': torch.tensor(5),  # 0-indexed!
     'N_ss': torch.tensor(2)
 }
 
-# Simulate 1000 packets
 config_trajectory = [config] * 1000
 results = inference.run_sequence(config_trajectory)
 
-# Access results
-gamma_eff = results['gamma_eff']  # Effective SINR values
-per = results['per']              # Packet error rates
-errors = results['errors']        # Error events (0/1)
+print(f"Generated {len(results['gamma_eff'])} SINR values")
+print(f"PER: {results['per']}")
 ```
 
-### 4. Time-Skipping (Efficient)
+### Option B: Train on Your Data
 
 ```python
-# Define windows with constant config
-config_windows = [
-    (config, 500),   # 500 packets
-    (config2, 300),  # 300 packets with different config
-    (config, 200),   # 200 packets
-]
+from pkd import PKDModel, train_pkd
+import numpy as np
 
-# Run efficiently - network evaluated only 2 times!
-results = inference.run_with_time_skipping(config_windows)
-```
+# 1. Replace with your PHY simulator output
+train_sequences = [...]  # List of gamma_eff numpy arrays
+train_configs = [{
+    'channel_model_id': 0,
+    'N_t': 4, 'N_r': 4, 'BW': 20.0,
+    'SNR_bar': 15.0,
+    'MCS': 5,  # 0-9 (0-indexed!)
+    'N_ss': 2   # 1-4 (1-indexed)
+} for _ in range(len(train_sequences))]
 
-## Training with Your PHY Simulator
+# 2. Create and train model
+model = PKDModel(
+    num_channel_models=5,
+    num_mcs=10,  # MCS 0-9
+    num_nss=4,
+    ar_order=10,
+    kappa_max=0.95,
+    innovation_type='gaussian'
+)
 
-```python
-from pkd import train_pkd
-
-# 1. Generate data from your PHY simulator
-train_sequences = [...]  # List of gamma_eff arrays
-train_configs = [...]    # List of config dicts
-
-# 2. Train
 trained_model = train_pkd(
     model,
     train_sequences,
@@ -126,82 +175,66 @@ trained_model = train_pkd(
     val_sequences,
     val_configs,
     num_epochs=50,
-    batch_size=256,
-    lr=1e-3,
     device='cuda'
 )
-
-# 3. Save
-torch.save({
-    'model_state_dict': trained_model.state_dict()
-}, 'my_pkd_model.pt')
-
-# 4. Load later
-model.load_state_dict(torch.load('my_pkd_model.pt')['model_state_dict'])
 ```
 
-## Key Configuration Parameters
-
-```python
-# Configuration dict structure
-config = {
-    # Static parameters (fixed per simulation run)
-    'channel_model_id': 0,    # Your channel model ID (0 to num_channel_models-1)
-    'N_t': 4,                 # Number of transmit antennas
-    'N_r': 4,                 # Number of receive antennas
-    'BW': 20.0,               # Bandwidth in MHz
-
-    # Dynamic parameters (can vary with rate adaptation)
-    'SNR_bar': 15.0,          # Average SNR in dB
-    'MCS': 5,                 # MCS index (0 to num_mcs-1)
-    'N_ss': 2,                # Number of spatial streams (1 to num_nss)
-}
-```
-
-## Performance Tips
-
-1. **Use time-skipping**: When config is constant, 100-1000x speedup
-2. **Batch configurations**: Group similar configs together
-3. **GPU acceleration**: Use `device='cuda'` for large models
-4. **Tune AR order**: Start with p=10, increase if needed
-5. **Cache size**: Monitor `len(inference.cache)` - should be reasonable
+---
 
 ## Troubleshooting
 
-### NaN losses during training
-- Reduce learning rate
-- Increase gradient clipping
-- Check input normalization
+### "Unique values: 2 / 2000" (Degenerate sequence)
+**Fix:** Retrain with latest code (all critical fixes applied)
 
-### Flow invertibility errors
-- Increase `min_bin_size` (default 1e-3)
-- Increase `tail_bound` (default 5.0)
-- Check input ranges
+### "AR coefficients sum to X > 1.0"
+**Fix:** Lower `kappa_max` to 0.90 for more stability
 
-### Slow inference
-- Verify time-skipping is working: `len(inference.cache)` should be small
-- Use GPU if available
-- Reduce `ar_order` if possible
+### "NaN loss during training"
+**Fix:** Increase `min_sigma` or check input data for zeros
 
-## File Locations
+### "ACF RMSE very high"
+**Fix:** Increase `kappa_max` or train longer
 
-- **Documentation**: `pkd/README.md`
-- **Examples**: `pkd/example.py`
-- **Tests**: `pkd/tests/test_components.py`
-- **Implementation**: `IMPLEMENTATION_SUMMARY.md`
+---
 
-## Next Steps
+## Key Parameters
 
-1. ✅ Run tests to verify installation
-2. ✅ Run example to understand workflow
-3. 📝 Replace dummy data with your PHY simulator output
-4. 🎯 Train on real data
-5. 📊 Validate distributional fidelity
-6. 🚀 Deploy in your system-level simulator
+| Parameter | Default | Range | Impact |
+|-----------|---------|-------|--------|
+| `kappa_max` | 0.95 | 0.90-0.98 | AR stability (lower=safer) |
+| `innovation_type` | 'gaussian' | 'gaussian'/'flow' | Innovation model |
+| `min_sigma` | 0.1 | 0.05-0.5 | Minimum variance |
+| `ar_order` | 10 | 5-20 | Temporal memory |
 
-## Getting Help
+---
 
-- Check docstrings: All functions have detailed documentation
-- Read README: `pkd/README.md` has comprehensive info
-- Review paper: `PHY_Knowledge_Distillation.pdf`
-- Check tests: `pkd/tests/test_components.py` shows usage patterns
+## Documentation
+
+- **Full Guide:** [QUICK_START.md](QUICK_START.md)
+- **Architecture:** [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)
+- **Common Issues:** [docs/COMMON_ISSUES.md](docs/COMMON_ISSUES.md)
+- **Changelog:** [CHANGELOG.md](CHANGELOG.md)
+- **Data Format:** [data/README.md](data/README.md)
+
+---
+
+## Performance Expectations
+
+### Good Training Signs
+```
+✓ Train loss decreases steadily
+✓ |kappa| max < 0.95 (constraint working)
+✓ phi sum < 1.0 (stable AR)
+✓ Unique values: ~2000 / 2000 (continuous)
+```
+
+### Typical Metrics
+- **Marginal KS statistic:** < 0.10
+- **ACF RMSE:** < 0.15
+- **PIT KS p-value:** > 0.05
+
+---
+
+**You're ready to use PKD!** 🎉
+
+For detailed documentation, see [docs/README.md](docs/README.md)

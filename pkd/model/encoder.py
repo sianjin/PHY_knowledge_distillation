@@ -159,7 +159,7 @@ class CompositionalEncoder(nn.Module):
                 - channel_model_id: (batch,)
                 - N_t, N_r, BW: (batch,)
                 - SNR_bar: (batch,)
-                - MCS: (batch,) MCS values (1-indexed: 1 to num_mcs)
+                - MCS: (batch,) MCS values (0-indexed: 0 to num_mcs-1)
                 - N_ss: (batch,) number of spatial streams (1-indexed: 1 to num_nss)
 
         Returns:
@@ -179,9 +179,9 @@ class CompositionalEncoder(nn.Module):
         # Base representation
         h_base = h_static + h_snr
 
-        # Convert 1-indexed MCS and N_ss to 0-indexed for embeddings
+        # MCS is already 0-indexed (0-9), N_ss is 1-indexed (1-4) so convert N_ss to 0-indexed
         # Create new tensors to avoid in-place modification issues
-        mcs_idx = config_dict['MCS'] + (-1)
+        mcs_idx = config_dict['MCS']
         nss_idx = config_dict['N_ss'] + (-1)
 
         # FiLM modulation with rate adaptation
