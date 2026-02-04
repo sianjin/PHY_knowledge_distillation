@@ -233,7 +233,7 @@ def train_pkd(model, train_sequences, train_configs,
 
     # Scheduler
     scheduler = optim.lr_scheduler.ReduceLROnPlateau(
-        optimizer, mode='min', factor=0.5, patience=10, verbose=True
+        optimizer, mode='min', factor=0.5, patience=10
     )
 
     # Move model to device
@@ -248,6 +248,10 @@ def train_pkd(model, train_sequences, train_configs,
     for epoch in range(num_epochs):
         print(f"\nEpoch {epoch+1}/{num_epochs}")
 
+        # Get current learning rate
+        current_lr = optimizer.param_groups[0]['lr']
+        print(f"Learning rate: {current_lr:.6f}")
+
         # Train
         train_loss = train_epoch(model, train_loader, optimizer, device)
         print(f"Train Loss: {train_loss:.4f}")
@@ -261,8 +265,13 @@ def train_pkd(model, train_sequences, train_configs,
             rel_diff = (train_loss - val_loss) / train_loss * 100
             print(f"  Note: Val loss is {rel_diff:.1f}% lower than train loss (may be normal with dropout/regularization)")
 
-        # Step scheduler
+        # Step scheduler and check if LR changed
+        old_lr = optimizer.param_groups[0]['lr']
         scheduler.step(val_loss)
+        new_lr = optimizer.param_groups[0]['lr']
+
+        if new_lr < old_lr:
+            print(f"  Learning rate reduced: {old_lr:.6f} -> {new_lr:.6f}")
 
         # Save best model and check early stopping
         if val_loss < best_val_loss:
