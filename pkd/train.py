@@ -41,7 +41,7 @@ class PKDDataset(Dataset):
                     'seq_idx': seq_idx,
                     't': t,
                     'X_t': X_seq[t],
-                    'X_hist': X_seq[t-ar_order:t][::-1]  # [X_{t-1}, ..., X_{t-p}]
+                    'X_hist': np.flip(X_seq[t-ar_order:t], axis=0).copy()  # [X_{t-1}, ..., X_{t-p}]
                 })
 
     def __len__(self):
