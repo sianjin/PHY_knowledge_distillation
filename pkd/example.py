@@ -1,18 +1,141 @@
-"""Example usage of PKD model."""
+"""Example usage of PKD model.
+
+Usage modes:
+    python example.py train           # Train with synthetic dummy data
+    python example.py train-real [N]  # Train with real data (optionally limit to N files)
+    python example.py eval            # Evaluate with synthetic data (default)
+    python example.py eval-real [file_idx] [seq_idx]  # Evaluate with real data
+
+Examples:
+    python example.py train-real 10      # Train with first 10 .mat files
+    python example.py eval-real 5 50     # Evaluate with file 5, sequence 50
+"""
 import torch
 import numpy as np
 import matplotlib.pyplot as plt
 from scipy import stats
 from scipy.signal import welch
+import h5py
+import os
+import glob
 from model.pkd_model import PKDModel
 from per_lut import AWGNPERLookup
 from infer import PKDInference
 from train import train_pkd
 
 
+# ============ Data Loading Functions ============
+def load_real_data(data_dir='data', train_ratio=0.8, max_files=None, random_seed=42):
+    """Load real PHY simulator data from .mat files.
+
+    Args:
+        data_dir: Directory containing .mat files
+        train_ratio: Ratio of sequences to use for training (rest for validation)
+        max_files: Maximum number of files to load (None = load all)
+        random_seed: Random seed for reproducible shuffling (None = no shuffling)
+
+    Returns:
+        train_sequences: List of gamma_eff sequences for training (in LINEAR scale)
+        train_configs: List of config dicts for training
+        val_sequences: List of gamma_eff sequences for validation (in LINEAR scale)
+        val_configs: List of config dicts for validation
+
+    Note:
+        The .mat files contain gamma_eff in LOG scale (log of SINR).
+        This function converts them to LINEAR scale (exp(log_gamma)) for consistency
+        with the generate_dummy_sequence function, which also returns linear scale values.
+        The training code will convert back to log scale internally.
+
+        Sequences are randomly shuffled before splitting to ensure train/val sets
+        have representative samples from all configurations.
+    """
+    # Find all .mat files
+    mat_files = sorted(glob.glob(os.path.join(data_dir, '*.mat')))
+
+    if max_files is not None:
+        mat_files = mat_files[:max_files]
+
+    print(f"Found {len(mat_files)} .mat files")
+
+    all_sequences = []
+    all_configs = []
+
+    for mat_file in mat_files:
+        print(f"Loading {os.path.basename(mat_file)}...")
+
+        with h5py.File(mat_file, 'r') as f:
+            # Load configuration (shape: (7, 100) where each column is config for one sequence)
+            config_array = f['config'][:]  # Shape: (7, 100)
+
+            # Load gamma_eff sequences (shape: (1000, 100) where each column is one sequence)
+            gamma_eff = f['gamma_eff'][:]  # Shape: (1000, 100)
+
+            # Number of sequences in this file
+            num_sequences = gamma_eff.shape[1]
+
+            # Process each sequence
+            for i in range(num_sequences):
+                # Extract config for this sequence (column i)
+                config_col = config_array[:, i]
+
+                channel_model_id = int(config_col[0])
+                N_t = int(config_col[1])
+                N_r = int(config_col[2])
+                BW = float(config_col[3])
+                SNR_bar = float(config_col[4])
+                MCS = int(config_col[5])  # Already 0-indexed in data
+                N_ss = int(config_col[6])
+
+                # Create config dict
+                config_dict = {
+                    'channel_model_id': channel_model_id,
+                    'N_t': N_t,
+                    'N_r': N_r,
+                    'BW': BW,
+                    'SNR_bar': SNR_bar,
+                    'MCS': MCS,
+                    'N_ss': N_ss
+                }
+
+                # Extract sequence for this index (column i)
+                # Note: Data is stored in LOG scale, convert to LINEAR scale
+                log_sequence = gamma_eff[:, i]  # Shape: (1000,), in log scale
+                sequence = np.exp(log_sequence)  # Convert to linear scale
+
+                all_sequences.append(sequence)
+                all_configs.append(config_dict)
+
+    print(f"\nTotal loaded: {len(all_sequences)} sequences")
+
+    # Randomly shuffle all sequences before splitting
+    if random_seed is not None:
+        print(f"Shuffling data with random seed {random_seed}...")
+        np.random.seed(random_seed)
+        indices = np.random.permutation(len(all_sequences))
+        all_sequences = [all_sequences[i] for i in indices]
+        all_configs = [all_configs[i] for i in indices]
+
+    # Split into train/val
+    num_train = int(len(all_sequences) * train_ratio)
+    train_sequences = all_sequences[:num_train]
+    train_configs = all_configs[:num_train]
+    val_sequences = all_sequences[num_train:]
+    val_configs = all_configs[num_train:]
+
+    print(f"Split: {len(train_sequences)} training sequences, {len(val_sequences)} validation sequences")
+
+    return train_sequences, train_configs, val_sequences, val_configs
+
+
 # ============ Training Example ============
-def example_training():
-    """Example training workflow."""
+def example_training(use_real_data=False, data_dir='data', max_files=None):
+    """Example training workflow.
+
+    Args:
+        use_real_data: If True, load real data from data_dir. If False, use dummy data.
+        data_dir: Directory containing .mat files (only used if use_real_data=True)
+        max_files: Maximum number of .mat files to load (only used if use_real_data=True)
+    """
 
     # Create model with Gaussian innovation
     model = PKDModel(
@@ -26,55 +149,65 @@ def example_training():
         min_sigma=0.1  # Minimum sigma for numerical stability
     )
 
-    # Generate dummy teacher data (replace with real PHY simulator output)
-    def generate_dummy_sequence(length=1000, mu=2.0, phi=0.9, sigma=0.5):
-        """Generate effective SINR sequence using log-AR(1) process.
+    if use_real_data:
+        # Load real PHY simulator data
+        print("Loading real data from", data_dir)
+        train_sequences, train_configs, val_sequences, val_configs = load_real_data(
+            data_dir=data_dir,
+            train_ratio=0.8,
+            max_files=max_files
+        )
+    else:
+        # Generate dummy teacher data (replace with real PHY simulator output)
+        def generate_dummy_sequence(length=1000, mu=2.0, phi=0.9, sigma=0.5):
+            """Generate effective SINR sequence using log-AR(1) process.
 
-        log(gamma_eff[t]) = mu + phi * (log(gamma_eff[t-1]) - mu) + epsilon[t]
-        where epsilon[t] ~ N(0, sigma^2)
+            log(gamma_eff[t]) = mu + phi * (log(gamma_eff[t-1]) - mu) + epsilon[t]
+            where epsilon[t] ~ N(0, sigma^2)
 
-        Args:
-            length: Sequence length
-            mu: Long-term mean of log(gamma_eff)
-            phi: AR(1) coefficient (autocorrelation), |phi| < 1 for stationarity
-            sigma: Standard deviation of innovation noise
-        """
-        log_gamma = np.zeros(length)
-        # Initialize from stationary distribution: N(mu, sigma^2 / (1 - phi^2))
-        log_gamma[0] = np.random.randn() * sigma / np.sqrt(1 - phi**2) + mu
+            Args:
+                length: Sequence length
+                mu: Long-term mean of log(gamma_eff)
+                phi: AR(1) coefficient (autocorrelation), |phi| < 1 for stationarity
+                sigma: Standard deviation of innovation noise
+            """
+            log_gamma = np.zeros(length)
+            # Initialize from stationary distribution: N(mu, sigma^2 / (1 - phi^2))
+            log_gamma[0] = np.random.randn() * sigma / np.sqrt(1 - phi**2) + mu
 
-        # Generate AR(1) process in log-space
-        for t in range(1, length):
-            epsilon = np.random.randn() * sigma
-            log_gamma[t] = mu + phi * (log_gamma[t-1] - mu) + epsilon
+            # Generate AR(1) process in log-space
+            for t in range(1, length):
+                epsilon = np.random.randn() * sigma
+                log_gamma[t] = mu + phi * (log_gamma[t-1] - mu) + epsilon
 
-        # Transform back to linear scale
-        gamma_eff = np.exp(log_gamma)
-        return gamma_eff
+            # Transform back to linear scale
+            gamma_eff = np.exp(log_gamma)
+            return gamma_eff
 
-    # Training data
-    train_sequences = [generate_dummy_sequence() for _ in range(100)]
-    train_configs = [{
-        'channel_model_id': 0,
-        'N_t': 4,
-        'N_r': 4,
-        'BW': 20.0,
-        'SNR_bar': 15.0 + np.random.randn() * 2,
-        'MCS': np.random.randint(0, 10),  # 0-9
-        'N_ss': np.random.randint(1, 5)   # 1-4
-    } for _ in range(100)]
+        print("Generating dummy data")
+        # Training data
+        train_sequences = [generate_dummy_sequence() for _ in range(100)]
+        train_configs = [{
+            'channel_model_id': 0,
+            'N_t': 4,
+            'N_r': 4,
+            'BW': 20.0,
+            'SNR_bar': 15.0 + np.random.randn() * 2,
+            'MCS': np.random.randint(0, 10),  # 0-9
+            'N_ss': np.random.randint(1, 5)   # 1-4
+        } for _ in range(100)]
 
-    # Validation data
-    val_sequences = [generate_dummy_sequence() for _ in range(20)]
-    val_configs = [{
-        'channel_model_id': 0,
-        'N_t': 4,
-        'N_r': 4,
-        'BW': 20.0,
-        'SNR_bar': 15.0 + np.random.randn() * 2,
-        'MCS': np.random.randint(0, 10),  # 0-9
-        'N_ss': np.random.randint(1, 5)   # 1-4
-    } for _ in range(20)]
+        # Validation data
+        val_sequences = [generate_dummy_sequence() for _ in range(20)]
+        val_configs = [{
+            'channel_model_id': 0,
+            'N_t': 4,
+            'N_r': 4,
+            'BW': 20.0,
+            'SNR_bar': 15.0 + np.random.randn() * 2,
+            'MCS': np.random.randint(0, 10),  # 0-9
+            'N_ss': np.random.randint(1, 5)   # 1-4
+        } for _ in range(20)]
 
     # Train
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
@@ -365,8 +498,15 @@ def evaluate_innovation_structure(model, inference, teacher_seq, config, device=
     }
 
 
-def example_evaluation():
-    """Run comprehensive evaluation of student model fidelity."""
+def example_evaluation(use_real_data=False, data_dir='data', file_idx=0, seq_idx=0):
+    """Run comprehensive evaluation of student model fidelity.
+
+    Args:
+        use_real_data: If True, use real data from data_dir. If False, use synthetic data.
+        data_dir: Directory containing .mat files (only used if use_real_data=True)
+        file_idx: Index of .mat file to use for evaluation (only used if use_real_data=True)
+        seq_idx: Index of sequence within the file to use (only used if use_real_data=True)
+    """
     print("=" * 50)
     print("PKD Model Fidelity Evaluation")
     print("=" * 50)
@@ -436,27 +576,69 @@ def example_evaluation():
     per_lut = AWGNPERLookup.create_dummy_lut(num_mcs=10)
     inference = PKDInference(model, per_lut, ar_order=model_config['ar_order'], device=device)
 
-    # Generate teacher sequence (log-AR(1) process)
-    def generate_teacher_sequence(length=2000, mu=2.0, phi=0.9, sigma=0.5):
-        log_gamma = np.zeros(length)
-        log_gamma[0] = np.random.randn() * sigma / np.sqrt(1 - phi**2) + mu
-        for t in range(1, length):
-            epsilon = np.random.randn() * sigma
-            log_gamma[t] = mu + phi * (log_gamma[t-1] - mu) + epsilon
-        return np.exp(log_gamma)
+    if use_real_data:
+        # Load real teacher sequence from data
+        print(f"\nLoading real data from {data_dir}")
+        mat_files = sorted(glob.glob(os.path.join(data_dir, '*.mat')))
 
-    teacher_seq = generate_teacher_sequence()
+        if file_idx >= len(mat_files):
+            raise ValueError(f"file_idx={file_idx} out of range, only {len(mat_files)} files available")
 
-    # Generate student sequence
-    config = {
-        'channel_model_id': torch.tensor(0),
-        'N_t': torch.tensor(4),
-        'N_r': torch.tensor(4),
-        'BW': torch.tensor(20.0),
-        'SNR_bar': torch.tensor(15.0),
-        'MCS': torch.tensor(5),
-        'N_ss': torch.tensor(2)
-    }
+        mat_file = mat_files[file_idx]
+        print(f"Using file: {os.path.basename(mat_file)}")
+
+        with h5py.File(mat_file, 'r') as f:
+            # Load configuration for the specific sequence
+            config_array = f['config'][:, seq_idx]
+
+            channel_model_id = int(config_array[0])
+            N_t = int(config_array[1])
+            N_r = int(config_array[2])
+            BW = float(config_array[3])
+            SNR_bar = float(config_array[4])
+            MCS = int(config_array[5])
+            N_ss = int(config_array[6])
+
+            # Load gamma_eff sequence (stored in log scale, convert to linear)
+            log_gamma_eff = f['gamma_eff'][:, seq_idx]
+            teacher_seq = np.exp(log_gamma_eff)
+
+            print(f"Loaded sequence {seq_idx}: channel_model_id={channel_model_id}, N_t={N_t}, N_r={N_r}, BW={BW}, SNR={SNR_bar}, MCS={MCS}, N_ss={N_ss}")
+            print(f"Sequence length: {len(teacher_seq)}")
+
+        # Create config dict for student model
+        config = {
+            'channel_model_id': torch.tensor(channel_model_id),
+            'N_t': torch.tensor(N_t),
+            'N_r': torch.tensor(N_r),
+            'BW': torch.tensor(BW),
+            'SNR_bar': torch.tensor(SNR_bar),
+            'MCS': torch.tensor(MCS),
+            'N_ss': torch.tensor(N_ss)
+        }
+    else:
+        # Generate synthetic teacher sequence (log-AR(1) process)
+        def generate_teacher_sequence(length=2000, mu=2.0, phi=0.9, sigma=0.5):
+            log_gamma = np.zeros(length)
+            log_gamma[0] = np.random.randn() * sigma / np.sqrt(1 - phi**2) + mu
+            for t in range(1, length):
+                epsilon = np.random.randn() * sigma
+                log_gamma[t] = mu + phi * (log_gamma[t-1] - mu) + epsilon
+            return np.exp(log_gamma)
+
+        print("\nGenerating synthetic teacher sequence")
+        teacher_seq = generate_teacher_sequence()
+
+        # Generate student sequence with synthetic config
+        config = {
+            'channel_model_id': torch.tensor(0),
+            'N_t': torch.tensor(4),
+            'N_r': torch.tensor(4),
+            'BW': torch.tensor(20.0),
+            'SNR_bar': torch.tensor(15.0),
+            'MCS': torch.tensor(5),
+            'N_ss': torch.tensor(2)
+        }
 
     config_traj = [config] * len(teacher_seq)
     student_results = inference.run_sequence(config_traj)
@@ -521,13 +703,33 @@ if __name__ == '__main__':
 
     mode = sys.argv[1] if len(sys.argv) > 1 else 'eval'
 
+    # Determine data directory path relative to this script
+    # Script is in pkd/example.py, data is in ../data/
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    project_root = os.path.dirname(script_dir)
+    data_dir = os.path.join(project_root, 'data')
+
     if mode == 'train':
         # Run training example
         print("=" * 50)
         print("PKD Example - Training")
         print("=" * 50)
-        trained_model = example_training()
+        trained_model = example_training(use_real_data=False)
+
+    elif mode == 'train-real':
+        # Run training with real data
+        print("=" * 50)
+        print("PKD Example - Training with Real Data")
+        print("=" * 50)
+        max_files = int(sys.argv[2]) if len(sys.argv) > 2 else None
+        trained_model = example_training(use_real_data=True, data_dir=data_dir, max_files=max_files)
+
+    elif mode == 'eval-real':
+        # Run evaluation with real data
+        file_idx = int(sys.argv[2]) if len(sys.argv) > 2 else 0
+        seq_idx = int(sys.argv[3]) if len(sys.argv) > 3 else 0
+        example_evaluation(use_real_data=True, data_dir=data_dir, file_idx=file_idx, seq_idx=seq_idx)
 
     else:
-        # Run evaluation (default mode)
-        example_evaluation()
+        # Run evaluation with synthetic data (default mode)
+        example_evaluation(use_real_data=False)
