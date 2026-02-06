@@ -1,14 +1,18 @@
 """Example usage of PKD model.
 
 Usage modes:
-    python example.py train           # Train with synthetic dummy data
-    python example.py train-real [N]  # Train with real data (optionally limit to N files)
-    python example.py eval            # Evaluate with synthetic data (default)
-    python example.py eval-real [file_idx] [seq_idx]  # Evaluate with real data
+    python example.py train              # Train with synthetic dummy data
+    python example.py train-real [N]     # Train with real data (optionally limit to N files)
+    python example.py test [N]           # Evaluate on held-out test set (70/10/20 split)
+    python example.py eval               # Evaluate with synthetic data (default)
+    python example.py eval-real [test_idx] [N]  # Evaluate single test sequence (qualitative)
 
 Examples:
-    python example.py train-real 10      # Train with first 10 .mat files
-    python example.py eval-real 5 50     # Evaluate with file 5, sequence 50
+    python example.py train-real 10      # Train with first 10 .mat files (70/10/20 split)
+    python example.py test               # Evaluate on all ~1,000 test sequences
+    python example.py test 10            # Evaluate on test set from first 10 files
+    python example.py eval-real 50       # Qualitative eval: 51st test sequence
+    python example.py eval-real 50 10    # Qualitative eval: 51st test seq (from 10 files)
 """
 import torch
 import numpy as np
@@ -18,6 +22,8 @@ from scipy.signal import welch
 import h5py
 import os
 import glob
+from tqdm import tqdm
+from collections import defaultdict
 from model.pkd_model import PKDModel
 from per_lut import AWGNPERLookup
 from infer import PKDInference
@@ -25,12 +31,13 @@ from train import train_pkd
 
 
 # ============ Data Loading Functions ============
-def load_real_data(data_dir='data', train_ratio=0.8, max_files=None, random_seed=42):
+def load_real_data(data_dir='data', train_ratio=0.7, val_ratio=0.1, max_files=None, random_seed=42):
     """Load real PHY simulator data from .mat files.
 
     Args:
         data_dir: Directory containing .mat files
-        train_ratio: Ratio of sequences to use for training (rest for validation)
+        train_ratio: Ratio of sequences to use for training (default: 0.7)
+        val_ratio: Ratio of sequences to use for validation (default: 0.1)
         max_files: Maximum number of files to load (None = load all)
         random_seed: Random seed for reproducible shuffling (None = no shuffling)
 
@@ -39,6 +46,8 @@ def load_real_data(data_dir='data', train_ratio=0.8, max_files=None, random_seed
         train_configs: List of config dicts for training
         val_sequences: List of gamma_eff sequences for validation (in LINEAR scale)
         val_configs: List of config dicts for validation
+        test_sequences: List of gamma_eff sequences for testing (in LINEAR scale)
+        test_configs: List of config dicts for testing
 
     Note:
         The .mat files contain gamma_eff in LOG scale (log of SINR).
@@ -46,8 +55,10 @@ def load_real_data(data_dir='data', train_ratio=0.8, max_files=None, random_seed
         with the generate_dummy_sequence function, which also returns linear scale values.
         The training code will convert back to log scale internally.
 
-        Sequences are randomly shuffled before splitting to ensure train/val sets
+        Sequences are randomly shuffled before splitting to ensure train/val/test sets
         have representative samples from all configurations.
+
+        Default split is 70% train, 10% val, 20% test.
     """
     # Find all .mat files
     mat_files = sorted(glob.glob(os.path.join(data_dir, '*.mat')))
@@ -115,16 +126,20 @@ def load_real_data(data_dir='data', train_ratio=0.8, max_files=None, random_seed
         all_sequences = [all_sequences[i] for i in indices]
         all_configs = [all_configs[i] for i in indices]
 
-    # Split into train/val
+    # Split into train/val/test
     num_train = int(len(all_sequences) * train_ratio)
+    num_val = int(len(all_sequences) * val_ratio)
+
     train_sequences = all_sequences[:num_train]
     train_configs = all_configs[:num_train]
-    val_sequences = all_sequences[num_train:]
-    val_configs = all_configs[num_train:]
+    val_sequences = all_sequences[num_train:num_train + num_val]
+    val_configs = all_configs[num_train:num_train + num_val]
+    test_sequences = all_sequences[num_train + num_val:]
+    test_configs = all_configs[num_train + num_val:]
 
-    print(f"Split: {len(train_sequences)} training sequences, {len(val_sequences)} validation sequences")
+    print(f"Split: {len(train_sequences)} training, {len(val_sequences)} validation, {len(test_sequences)} test sequences")
 
-    return train_sequences, train_configs, val_sequences, val_configs
+    return train_sequences, train_configs, val_sequences, val_configs, test_sequences, test_configs
 
 
 # ============ Training Example ============
@@ -152,11 +167,13 @@ def example_training(use_real_data=False, data_dir='data', max_files=None):
     if use_real_data:
         # Load real PHY simulator data
         print("Loading real data from", data_dir)
-        train_sequences, train_configs, val_sequences, val_configs = load_real_data(
+        train_sequences, train_configs, val_sequences, val_configs, test_sequences, test_configs = load_real_data(
             data_dir=data_dir,
-            train_ratio=0.8,
+            train_ratio=0.7,
+            val_ratio=0.1,
             max_files=max_files
         )
+        print(f"Test data: {len(test_sequences)} sequences (will be used for final evaluation)")
     else:
         # Generate dummy teacher data (replace with real PHY simulator output)
         def generate_dummy_sequence(length=1000, mu=2.0, phi=0.9, sigma=0.5):
@@ -185,8 +202,8 @@ def example_training(use_real_data=False, data_dir='data', max_files=None):
             return gamma_eff
 
         print("Generating dummy data")
-        # Training data
-        train_sequences = [generate_dummy_sequence() for _ in range(100)]
+        # Training data (70%)
+        train_sequences = [generate_dummy_sequence() for _ in range(70)]
         train_configs = [{
             'channel_model_id': 0,
             'N_t': 4,
@@ -195,10 +212,10 @@ def example_training(use_real_data=False, data_dir='data', max_files=None):
             'SNR_bar': 15.0 + np.random.randn() * 2,
             'MCS': np.random.randint(0, 10),  # 0-9
             'N_ss': np.random.randint(1, 5)   # 1-4
-        } for _ in range(100)]
+        } for _ in range(70)]
 
-        # Validation data
-        val_sequences = [generate_dummy_sequence() for _ in range(20)]
+        # Validation data (10%)
+        val_sequences = [generate_dummy_sequence() for _ in range(10)]
         val_configs = [{
             'channel_model_id': 0,
             'N_t': 4,
@@ -207,7 +224,20 @@ def example_training(use_real_data=False, data_dir='data', max_files=None):
             'SNR_bar': 15.0 + np.random.randn() * 2,
             'MCS': np.random.randint(0, 10),  # 0-9
             'N_ss': np.random.randint(1, 5)   # 1-4
+        } for _ in range(10)]
+
+        # Test data (20%)
+        test_sequences = [generate_dummy_sequence() for _ in range(20)]
+        test_configs = [{
+            'channel_model_id': 0,
+            'N_t': 4,
+            'N_r': 4,
+            'BW': 20.0,
+            'SNR_bar': 15.0 + np.random.randn() * 2,
+            'MCS': np.random.randint(0, 10),  # 0-9
+            'N_ss': np.random.randint(1, 5)   # 1-4
         } for _ in range(20)]
+        print(f"Test data: {len(test_sequences)} sequences (will be used for final evaluation)")
 
     # Train
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
@@ -498,14 +528,525 @@ def evaluate_innovation_structure(model, inference, teacher_seq, config, device=
     }
 
 
-def example_evaluation(use_real_data=False, data_dir='data', file_idx=0, seq_idx=0):
-    """Run comprehensive evaluation of student model fidelity.
+def evaluate_test_set(model, test_sequences, test_configs, device='cpu'):
+    """Evaluate model on entire test set and compute aggregate metrics.
+
+    Args:
+        model: Trained PKDModel
+        test_sequences: List of test gamma_eff sequences (in LINEAR scale)
+        test_configs: List of test config dicts
+        device: Device to run evaluation on
+
+    Returns:
+        Dictionary of aggregate metrics across all test sequences
+    """
+    print(f"\n{'='*60}")
+    print(f"Evaluating on {len(test_sequences)} test sequences")
+    print(f"{'='*60}")
+
+    from train import PKDDataset, collate_fn
+    from torch.utils.data import DataLoader
+
+    # Create test dataset (DataLoader handles batching automatically)
+    test_dataset = PKDDataset(test_sequences, test_configs, model.ar_order)
+    test_loader = DataLoader(test_dataset, batch_size=256,
+                            shuffle=False, collate_fn=collate_fn,
+                            num_workers=4)
+
+    model.eval()
+    total_loss = 0.0
+    total_samples = 0
+    all_log_q = []
+
+    print("\nComputing test set metrics...")
+    with torch.no_grad():
+        for X_t, X_hist, config_dict in tqdm(test_loader, desc="Evaluating"):
+            X_t = X_t.to(device)
+            X_hist = X_hist.to(device)
+            config_dict = {k: v.to(device) for k, v in config_dict.items()}
+
+            log_q, _ = model.compute_log_likelihood(X_t, X_hist, config_dict)
+
+            # Check for non-finite values
+            if torch.isfinite(log_q).all():
+                batch_size = X_t.shape[0]
+                total_loss += (-log_q.mean().item()) * batch_size
+                total_samples += batch_size
+                all_log_q.extend(log_q.cpu().numpy().tolist())
+
+    avg_loss = total_loss / total_samples if total_samples > 0 else float('inf')
+    avg_log_likelihood = np.mean(all_log_q)
+
+    print(f"\n{'='*60}")
+    print(f"Test Set Results")
+    print(f"{'='*60}")
+    print(f"Number of test sequences: {len(test_sequences)}")
+    print(f"Total test samples evaluated: {total_samples:,}")
+    print(f"Average test loss (NLL): {avg_loss:.4f}")
+    print(f"Average log-likelihood: {avg_log_likelihood:.4f}")
+    print(f"{'='*60}")
+
+    return {
+        'test_loss': avg_loss,
+        'avg_log_likelihood': avg_log_likelihood,
+        'num_sequences': len(test_sequences),
+        'num_samples': total_samples
+    }
+
+
+def generate_figure1_per_mcs_metrics(model, test_sequences, test_configs, device='cpu',
+                                      save_path='fig1_per_mcs_metrics.png'):
+    """Generate Figure 1: Per-MCS metrics vs SNR (4 panels).
+
+    Panels:
+    A) PIT pass rate vs SNR (teacher-forced)
+    B) Ljung-Box pass rate vs SNR (teacher-forced)
+    C) Median ACF RMSE vs SNR (free-running)
+    D) Median KS statistic vs SNR (free-running)
+    """
+    from collections import defaultdict
+
+    print("\n" + "="*60)
+    print("Generating Figure 1: Per-MCS Metrics vs SNR")
+    print("="*60)
+
+    # Group sequences by (MCS, SNR)
+    grouped = defaultdict(list)
+    for i, config in enumerate(test_configs):
+        mcs = config['MCS']
+        snr = int(config['SNR_bar'])
+        grouped[(mcs, snr)].append(i)
+
+    # Storage for metrics
+    metrics_by_mcs_snr = defaultdict(lambda: {
+        'pit_pass': [], 'lb_pass': [], 'acf_rmse': [], 'ks_stat': []
+    })
+
+    model.eval()
+    ar_order = model.ar_order
+
+    # Create inference engine for free-running
+    from per_lut import AWGNPERLookup
+    from infer import PKDInference
+    per_lut = AWGNPERLookup.create_dummy_lut(num_mcs=10)
+    inference = PKDInference(model, per_lut, ar_order=ar_order, device=device)
+
+    print("\nProcessing sequences by (MCS, SNR)...")
+    for (mcs, snr), seq_indices in tqdm(sorted(grouped.items()), desc="(MCS, SNR) groups"):
+        for seq_idx in seq_indices:
+            teacher_seq = test_sequences[seq_idx]
+            config = test_configs[seq_idx]
+            X_teacher = np.log(teacher_seq)  # Log domain
+
+            # === Teacher-Forced Metrics ===
+            with torch.no_grad():
+                innovations = []
+                for t in range(ar_order, len(X_teacher)):
+                    X_hist_array = X_teacher[t-ar_order:t][::-1].copy()
+                    X_hist = torch.tensor(X_hist_array, dtype=torch.float32).unsqueeze(0).to(device)
+                    X_t = torch.tensor(X_teacher[t], dtype=torch.float32).unsqueeze(0).to(device)
+
+                    config_dict = {k: torch.tensor([v]).to(device) for k, v in config.items()}
+                    log_q, info = model.compute_log_likelihood(X_t, X_hist, config_dict)
+
+                    eps = info['eps'].cpu().numpy()[0]
+                    innov_params = info['innov_params'].cpu().numpy()
+
+                    # Standardize innovation
+                    if innov_params.shape == () or innov_params.shape == (1,):
+                        sigma = innov_params.item() if innov_params.shape == () else innov_params[0]
+                        z = eps / sigma
+                    else:
+                        z = eps
+                    innovations.append(z)
+
+                innovations = np.array(innovations)
+
+                # PIT test
+                u_values = stats.norm.cdf(innovations)
+                ks_stat_pit, p_pit = stats.kstest(u_values, 'uniform')
+                pit_pass = 1 if p_pit > 0.05 else 0
+
+                # Ljung-Box test
+                lb_stat, p_lb = ljung_box_test(innovations, lags=20)
+                lb_pass = 1 if p_lb > 0.05 else 0
+
+            # === Free-Running Metrics ===
+            # Generate student sequence
+            config_traj = [config] * len(teacher_seq)
+            student_results = inference.run_sequence(config_traj)
+            student_seq = np.array(student_results['gamma_eff'])
+
+            if np.all(np.isfinite(student_seq)) and np.all(student_seq > 0):
+                X_student = np.log(student_seq)
+
+                # ACF RMSE
+                teacher_acf = compute_acf(X_teacher, max_lag=50)
+                student_acf = compute_acf(X_student, max_lag=50)
+                acf_rmse = np.sqrt(np.mean((teacher_acf[1:] - student_acf[1:])**2))
+
+                # KS test
+                ks_stat_marg, _ = stats.ks_2samp(X_teacher, X_student)
+            else:
+                acf_rmse = np.nan
+                ks_stat_marg = np.nan
+
+            # Store metrics
+            metrics_by_mcs_snr[(mcs, snr)]['pit_pass'].append(pit_pass)
+            metrics_by_mcs_snr[(mcs, snr)]['lb_pass'].append(lb_pass)
+            metrics_by_mcs_snr[(mcs, snr)]['acf_rmse'].append(acf_rmse)
+            metrics_by_mcs_snr[(mcs, snr)]['ks_stat'].append(ks_stat_marg)
+
+    # Aggregate metrics
+    results = defaultdict(lambda: {'snr': [], 'pit_rate': [], 'lb_rate': [],
+                                    'acf_rmse_med': [], 'ks_med': []})
+
+    for (mcs, snr), metrics in sorted(metrics_by_mcs_snr.items()):
+        pit_rate = np.mean(metrics['pit_pass'])
+        lb_rate = np.mean(metrics['lb_pass'])
+        acf_rmse_med = np.nanmedian(metrics['acf_rmse'])
+        ks_med = np.nanmedian(metrics['ks_stat'])
+
+        results[mcs]['snr'].append(snr)
+        results[mcs]['pit_rate'].append(pit_rate)
+        results[mcs]['lb_rate'].append(lb_rate)
+        results[mcs]['acf_rmse_med'].append(acf_rmse_med)
+        results[mcs]['ks_med'].append(ks_med)
+
+    # Plot
+    fig, axes = plt.subplots(4, 1, figsize=(10, 12), sharex=True)
+    colors = plt.cm.tab10(np.linspace(0, 1, 10))
+
+    for mcs in sorted(results.keys()):
+        data = results[mcs]
+        snr = np.array(data['snr'])
+
+        axes[0].plot(snr, data['pit_rate'], 'o-', label=f'MCS {mcs}', color=colors[mcs])
+        axes[1].plot(snr, data['lb_rate'], 'o-', label=f'MCS {mcs}', color=colors[mcs])
+        axes[2].plot(snr, data['acf_rmse_med'], 'o-', label=f'MCS {mcs}', color=colors[mcs])
+        axes[3].plot(snr, data['ks_med'], 'o-', label=f'MCS {mcs}', color=colors[mcs])
+
+    axes[0].axhline(y=0.05, color='r', linestyle='--', alpha=0.5, label='α=0.05')
+    axes[0].set_ylabel('PIT Pass Rate')
+    axes[0].set_title('(A) PIT Calibration (Teacher-Forced)')
+    axes[0].legend(bbox_to_anchor=(1.05, 1), loc='upper left')
+    axes[0].grid(True, alpha=0.3)
+
+    axes[1].axhline(y=0.05, color='r', linestyle='--', alpha=0.5, label='α=0.05')
+    axes[1].set_ylabel('Ljung-Box Pass Rate')
+    axes[1].set_title('(B) Ljung-Box Test (Teacher-Forced)')
+    axes[1].legend(bbox_to_anchor=(1.05, 1), loc='upper left')
+    axes[1].grid(True, alpha=0.3)
+
+    axes[2].set_ylabel('Median ACF RMSE')
+    axes[2].set_title('(C) Temporal Correlation Error (Free-Running)')
+    axes[2].legend(bbox_to_anchor=(1.05, 1), loc='upper left')
+    axes[2].grid(True, alpha=0.3)
+
+    axes[3].set_ylabel('Median KS Statistic')
+    axes[3].set_xlabel('SNR (dB)')
+    axes[3].set_title('(D) Marginal Distribution Error (Free-Running)')
+    axes[3].legend(bbox_to_anchor=(1.05, 1), loc='upper left')
+    axes[3].grid(True, alpha=0.3)
+
+    plt.tight_layout()
+    plt.savefig(save_path, dpi=150, bbox_inches='tight')
+    print(f"Saved Figure 1 to {save_path}")
+    plt.close()
+
+    return results
+
+
+def generate_figure2_quantile_error(model, test_sequences, test_configs, device='cpu',
+                                     save_path='fig2_quantile_error.png'):
+    """Generate Figure 2: Aggregated quantile error curve (per MCS, pooled over SNR)."""
+    print("\n" + "="*60)
+    print("Generating Figure 2: Quantile Error Curves")
+    print("="*60)
+
+    # Group by MCS (pool over SNR)
+    grouped_by_mcs = defaultdict(list)
+    for i, config in enumerate(test_configs):
+        mcs = config['MCS']
+        grouped_by_mcs[mcs].append(i)
+
+    # Create inference engine
+    from per_lut import AWGNPERLookup
+    from infer import PKDInference
+    per_lut = AWGNPERLookup.create_dummy_lut(num_mcs=10)
+    inference = PKDInference(model, per_lut, ar_order=model.ar_order, device=device)
+
+    quantile_levels = np.array([0.01, 0.05, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 0.95, 0.99])
+
+    results = {}
+
+    print("\nProcessing sequences by MCS...")
+    for mcs in sorted(grouped_by_mcs.keys()):
+        print(f"\nMCS {mcs}: {len(grouped_by_mcs[mcs])} sequences")
+        seq_indices = grouped_by_mcs[mcs]
+
+        quantile_errors = []
+
+        for seq_idx in tqdm(seq_indices, desc=f"MCS {mcs}"):
+            teacher_seq = test_sequences[seq_idx]
+            config = test_configs[seq_idx]
+            X_teacher = np.log(teacher_seq)
+
+            # Generate student
+            config_traj = [config] * len(teacher_seq)
+            student_results = inference.run_sequence(config_traj)
+            student_seq = np.array(student_results['gamma_eff'])
+
+            if np.all(np.isfinite(student_seq)) and np.all(student_seq > 0):
+                X_student = np.log(student_seq)
+
+                # Compute quantiles
+                q_teacher = np.quantile(X_teacher, quantile_levels)
+                q_student = np.quantile(X_student, quantile_levels)
+
+                # Quantile error
+                q_error = q_student - q_teacher
+                quantile_errors.append(q_error)
+
+        quantile_errors = np.array(quantile_errors)
+
+        # Aggregate: median and 10-90 percentiles
+        q_error_median = np.median(quantile_errors, axis=0)
+        q_error_10 = np.percentile(quantile_errors, 10, axis=0)
+        q_error_90 = np.percentile(quantile_errors, 90, axis=0)
+
+        results[mcs] = {
+            'median': q_error_median,
+            'p10': q_error_10,
+            'p90': q_error_90
+        }
+
+    # Plot
+    fig, ax = plt.subplots(1, 1, figsize=(10, 6))
+    colors = plt.cm.tab10(np.linspace(0, 1, 10))
+
+    for mcs in sorted(results.keys()):
+        data = results[mcs]
+        ax.plot(quantile_levels, data['median'], 'o-', label=f'MCS {mcs}', color=colors[mcs], linewidth=2)
+        ax.fill_between(quantile_levels, data['p10'], data['p90'], alpha=0.2, color=colors[mcs])
+
+    ax.axhline(y=0, color='k', linestyle='--', alpha=0.5)
+    ax.set_xlabel('Quantile Level α')
+    ax.set_ylabel('Quantile Error (log domain)')
+    ax.set_title('Figure 2: Quantile Error (Free-Running, Pooled Over SNR)')
+    ax.legend()
+    ax.grid(True, alpha=0.3)
+
+    plt.tight_layout()
+    plt.savefig(save_path, dpi=150, bbox_inches='tight')
+    print(f"Saved Figure 2 to {save_path}")
+    plt.close()
+
+    return results
+
+
+def generate_figure3_ccdf_error(model, test_sequences, test_configs, device='cpu',
+                                 save_path='fig3_ccdf_error.png'):
+    """Generate Figure 3: Aggregated CCDF error curve (per MCS, pooled over SNR)."""
+    print("\n" + "="*60)
+    print("Generating Figure 3: CCDF Error Curves")
+    print("="*60)
+
+    # Group by MCS (pool over SNR)
+    grouped_by_mcs = defaultdict(list)
+    for i, config in enumerate(test_configs):
+        mcs = config['MCS']
+        grouped_by_mcs[mcs].append(i)
+
+    # Create inference engine
+    from per_lut import AWGNPERLookup
+    from infer import PKDInference
+    per_lut = AWGNPERLookup.create_dummy_lut(num_mcs=10)
+    inference = PKDInference(model, per_lut, ar_order=model.ar_order, device=device)
+
+    results = {}
+
+    print("\nProcessing sequences by MCS...")
+    for mcs in sorted(grouped_by_mcs.keys()):
+        print(f"\nMCS {mcs}: {len(grouped_by_mcs[mcs])} sequences")
+        seq_indices = grouped_by_mcs[mcs]
+
+        # Collect all teacher values to determine threshold grid
+        all_teacher_values = []
+        for seq_idx in seq_indices:
+            X_teacher = np.log(test_sequences[seq_idx])
+            all_teacher_values.extend(X_teacher)
+
+        all_teacher_values = np.array(all_teacher_values)
+        tau_min = np.percentile(all_teacher_values, 1)
+        tau_max = np.percentile(all_teacher_values, 99)
+        thresholds = np.linspace(tau_min, tau_max, 100)
+
+        ccdf_errors = []
+
+        for seq_idx in tqdm(seq_indices, desc=f"MCS {mcs}"):
+            teacher_seq = test_sequences[seq_idx]
+            config = test_configs[seq_idx]
+            X_teacher = np.log(teacher_seq)
+
+            # Generate student
+            config_traj = [config] * len(teacher_seq)
+            student_results = inference.run_sequence(config_traj)
+            student_seq = np.array(student_results['gamma_eff'])
+
+            if np.all(np.isfinite(student_seq)) and np.all(student_seq > 0):
+                X_student = np.log(student_seq)
+
+                # Compute CCDF for each threshold
+                ccdf_error = []
+                for tau in thresholds:
+                    ccdf_teacher = np.mean(X_teacher > tau)
+                    ccdf_student = np.mean(X_student > tau)
+                    ccdf_error.append(np.abs(ccdf_student - ccdf_teacher))
+
+                ccdf_errors.append(ccdf_error)
+
+        ccdf_errors = np.array(ccdf_errors)
+
+        # Aggregate: median and 10-90 percentiles
+        ccdf_error_median = np.median(ccdf_errors, axis=0)
+        ccdf_error_10 = np.percentile(ccdf_errors, 10, axis=0)
+        ccdf_error_90 = np.percentile(ccdf_errors, 90, axis=0)
+
+        results[mcs] = {
+            'thresholds': thresholds,
+            'median': ccdf_error_median,
+            'p10': ccdf_error_10,
+            'p90': ccdf_error_90
+        }
+
+    # Plot
+    fig, ax = plt.subplots(1, 1, figsize=(10, 6))
+    colors = plt.cm.tab10(np.linspace(0, 1, 10))
+
+    for mcs in sorted(results.keys()):
+        data = results[mcs]
+        ax.plot(data['thresholds'], data['median'], '-', label=f'MCS {mcs}',
+                color=colors[mcs], linewidth=2)
+        ax.fill_between(data['thresholds'], data['p10'], data['p90'],
+                        alpha=0.2, color=colors[mcs])
+
+    ax.set_xlabel('Threshold τ (log-SINR)')
+    ax.set_ylabel('CCDF Absolute Error')
+    ax.set_title('Figure 3: CCDF Error (Free-Running, Pooled Over SNR)')
+    ax.legend()
+    ax.grid(True, alpha=0.3)
+
+    plt.tight_layout()
+    plt.savefig(save_path, dpi=150, bbox_inches='tight')
+    print(f"Saved Figure 3 to {save_path}")
+    plt.close()
+
+    return results
+
+
+def example_test_evaluation(data_dir='data', max_files=None):
+    """Evaluate trained model on the held-out test set.
+
+    This performs rigorous quantitative evaluation on all test sequences
+    from the 20% held-out test split and generates three comprehensive figures.
+
+    Args:
+        data_dir: Directory containing .mat files
+        max_files: Maximum number of files to load (should match training)
+    """
+    print("=" * 60)
+    print("PKD Model - Test Set Evaluation")
+    print("=" * 60)
+
+    # Load model
+    device = 'cuda' if torch.cuda.is_available() else 'cpu'
+    checkpoint = torch.load('pkd_model.pt', map_location=device)
+
+    print(f"\nLoaded checkpoint from pkd_model.pt")
+    if 'epoch' in checkpoint:
+        print(f"  Trained for {checkpoint['epoch']+1} epochs")
+    if 'val_loss' in checkpoint:
+        print(f"  Best validation loss: {checkpoint['val_loss']:.4f}")
+
+    if 'model_config' in checkpoint:
+        model_config = checkpoint['model_config']
+        if 'kappa_max' not in model_config:
+            model_config['kappa_max'] = 0.95
+        if 'innovation_type' not in model_config:
+            model_config['innovation_type'] = 'gaussian'
+            model_config['min_sigma'] = 0.1
+    else:
+        model_config = {
+            'num_channel_models': 5,
+            'num_mcs': 10,
+            'num_nss': 4,
+            'ar_order': 10,
+            'hidden_dim': 128,
+            'kappa_max': 0.95,
+            'innovation_type': 'gaussian',
+            'min_sigma': 0.1
+        }
+
+    model = PKDModel(**model_config)
+    model.load_state_dict(checkpoint['model_state_dict'])
+    model.to(device)
+    model.eval()
+
+    # Load test data (using same split as training)
+    print(f"\nLoading test data from {data_dir}")
+    _, _, _, _, test_sequences, test_configs = load_real_data(
+        data_dir=data_dir,
+        train_ratio=0.7,
+        val_ratio=0.1,
+        max_files=max_files,
+        random_seed=42  # MUST use same seed as training!
+    )
+
+    # Basic test set evaluation
+    test_metrics = evaluate_test_set(model, test_sequences, test_configs, device)
+
+    # Generate three comprehensive figures
+    print("\n" + "="*60)
+    print("Generating Comprehensive Test Set Figures")
+    print("="*60)
+
+    fig1_results = generate_figure1_per_mcs_metrics(model, test_sequences, test_configs, device)
+    fig2_results = generate_figure2_quantile_error(model, test_sequences, test_configs, device)
+    fig3_results = generate_figure3_ccdf_error(model, test_sequences, test_configs, device)
+
+    print("\n" + "="*60)
+    print("Test Set Evaluation Complete!")
+    print("="*60)
+    print("Generated files:")
+    print("  - fig1_per_mcs_metrics.png")
+    print("  - fig2_quantile_error.png")
+    print("  - fig3_ccdf_error.png")
+
+    return {
+        'test_metrics': test_metrics,
+        'fig1_results': fig1_results,
+        'fig2_results': fig2_results,
+        'fig3_results': fig3_results
+    }
+
+
+def example_evaluation(use_real_data=False, data_dir='data', test_idx=0, max_files=None):
+    """Run comprehensive evaluation of student model fidelity on a single test sequence.
+
+    This is a qualitative analysis tool for detailed inspection of individual sequences
+    from the held-out test set. For quantitative evaluation on the entire test set,
+    use example_test_evaluation().
 
     Args:
         use_real_data: If True, use real data from data_dir. If False, use synthetic data.
         data_dir: Directory containing .mat files (only used if use_real_data=True)
-        file_idx: Index of .mat file to use for evaluation (only used if use_real_data=True)
-        seq_idx: Index of sequence within the file to use (only used if use_real_data=True)
+        test_idx: Index within the test set (0 to num_test_sequences-1)
+        max_files: Maximum number of files to load (should match training)
+
+    Note:
+        The test_idx parameter selects from the held-out test set only (20% of data).
+        This ensures you're evaluating on data the model never saw during training.
     """
     print("=" * 50)
     print("PKD Model Fidelity Evaluation")
@@ -577,44 +1118,38 @@ def example_evaluation(use_real_data=False, data_dir='data', file_idx=0, seq_idx
     inference = PKDInference(model, per_lut, ar_order=model_config['ar_order'], device=device)
 
     if use_real_data:
-        # Load real teacher sequence from data
-        print(f"\nLoading real data from {data_dir}")
-        mat_files = sorted(glob.glob(os.path.join(data_dir, '*.mat')))
+        # Load test set from the held-out data (20% split)
+        print(f"\nLoading test data from {data_dir}")
+        _, _, _, _, test_sequences, test_configs = load_real_data(
+            data_dir=data_dir,
+            train_ratio=0.7,
+            val_ratio=0.1,
+            max_files=max_files,
+            random_seed=42  # MUST use same seed as training!
+        )
 
-        if file_idx >= len(mat_files):
-            raise ValueError(f"file_idx={file_idx} out of range, only {len(mat_files)} files available")
+        if test_idx >= len(test_sequences):
+            raise ValueError(f"test_idx={test_idx} out of range, only {len(test_sequences)} test sequences available")
 
-        mat_file = mat_files[file_idx]
-        print(f"Using file: {os.path.basename(mat_file)}")
+        # Get the specific test sequence
+        teacher_seq = test_sequences[test_idx]
+        config_dict = test_configs[test_idx]
 
-        with h5py.File(mat_file, 'r') as f:
-            # Load configuration for the specific sequence
-            config_array = f['config'][:, seq_idx]
+        print(f"\nUsing test sequence {test_idx} (out of {len(test_sequences)} test sequences)")
+        print(f"Configuration: channel_model_id={config_dict['channel_model_id']}, "
+              f"N_t={config_dict['N_t']}, N_r={config_dict['N_r']}, BW={config_dict['BW']}, "
+              f"SNR={config_dict['SNR_bar']}, MCS={config_dict['MCS']}, N_ss={config_dict['N_ss']}")
+        print(f"Sequence length: {len(teacher_seq)}")
 
-            channel_model_id = int(config_array[0])
-            N_t = int(config_array[1])
-            N_r = int(config_array[2])
-            BW = float(config_array[3])
-            SNR_bar = float(config_array[4])
-            MCS = int(config_array[5])
-            N_ss = int(config_array[6])
-
-            # Load gamma_eff sequence (stored in log scale, convert to linear)
-            log_gamma_eff = f['gamma_eff'][:, seq_idx]
-            teacher_seq = np.exp(log_gamma_eff)
-
-            print(f"Loaded sequence {seq_idx}: channel_model_id={channel_model_id}, N_t={N_t}, N_r={N_r}, BW={BW}, SNR={SNR_bar}, MCS={MCS}, N_ss={N_ss}")
-            print(f"Sequence length: {len(teacher_seq)}")
-
-        # Create config dict for student model
+        # Convert config dict to tensors for student model
         config = {
-            'channel_model_id': torch.tensor(channel_model_id),
-            'N_t': torch.tensor(N_t),
-            'N_r': torch.tensor(N_r),
-            'BW': torch.tensor(BW),
-            'SNR_bar': torch.tensor(SNR_bar),
-            'MCS': torch.tensor(MCS),
-            'N_ss': torch.tensor(N_ss)
+            'channel_model_id': torch.tensor(config_dict['channel_model_id']),
+            'N_t': torch.tensor(config_dict['N_t']),
+            'N_r': torch.tensor(config_dict['N_r']),
+            'BW': torch.tensor(config_dict['BW']),
+            'SNR_bar': torch.tensor(config_dict['SNR_bar']),
+            'MCS': torch.tensor(config_dict['MCS']),
+            'N_ss': torch.tensor(config_dict['N_ss'])
         }
     else:
         # Generate synthetic teacher sequence (log-AR(1) process)
@@ -724,11 +1259,19 @@ if __name__ == '__main__':
         max_files = int(sys.argv[2]) if len(sys.argv) > 2 else None
         trained_model = example_training(use_real_data=True, data_dir=data_dir, max_files=max_files)
 
+    elif mode == 'test':
+        # Run test set evaluation
+        print("=" * 50)
+        print("PKD Example - Test Set Evaluation")
+        print("=" * 50)
+        max_files = int(sys.argv[2]) if len(sys.argv) > 2 else None
+        test_metrics = example_test_evaluation(data_dir=data_dir, max_files=max_files)
+
     elif mode == 'eval-real':
-        # Run evaluation with real data
-        file_idx = int(sys.argv[2]) if len(sys.argv) > 2 else 0
-        seq_idx = int(sys.argv[3]) if len(sys.argv) > 3 else 0
-        example_evaluation(use_real_data=True, data_dir=data_dir, file_idx=file_idx, seq_idx=seq_idx)
+        # Run evaluation with real data (single test sequence)
+        test_idx = int(sys.argv[2]) if len(sys.argv) > 2 else 0
+        max_files = int(sys.argv[3]) if len(sys.argv) > 3 else None
+        example_evaluation(use_real_data=True, data_dir=data_dir, test_idx=test_idx, max_files=max_files)
 
     else:
         # Run evaluation with synthetic data (default mode)
