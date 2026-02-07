@@ -89,7 +89,7 @@ from pkd import PKDModel, PKDInference, AWGNPERLookup
 model = PKDModel(num_channel_models=5, num_mcs=10, num_nss=4)
 
 # 2. Setup inference
-per_lut = AWGNPERLookup.create_dummy_lut(num_mcs=10)
+per_lut = AWGNPERLookup.load_ldpc_lut()  # Loads embedded LDPC PER table (MCS 0-11)
 inference = PKDInference(model, per_lut, device='cuda')
 
 # 3. Define configuration

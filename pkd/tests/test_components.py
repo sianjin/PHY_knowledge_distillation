@@ -91,8 +91,8 @@ def test_time_skipping_correctness():
         num_flow_bins=8
     )
 
-    # Create dummy PER LUT
-    per_lut = AWGNPERLookup.create_dummy_lut(num_mcs=10)  # MCS 0-9
+    # Create LDPC PER LUT
+    per_lut = AWGNPERLookup.load_ldpc_lut()  # MCS 0-11
 
     # Create inference engine
     inference = PKDInference(model, per_lut, ar_order=5, burn_in=10, device='cpu')

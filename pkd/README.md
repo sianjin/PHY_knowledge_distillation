@@ -78,7 +78,7 @@ from pkd.infer import PKDInference
 from pkd.per_lut import AWGNPERLookup
 
 # Create PER lookup table
-per_lut = AWGNPERLookup.create_dummy_lut(num_mcs=10)
+per_lut = AWGNPERLookup.load_ldpc_lut()  # Loads embedded LDPC PER table (MCS 0-11)
 
 # Create inference engine
 inference = PKDInference(

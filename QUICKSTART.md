@@ -121,7 +121,7 @@ checkpoint = torch.load('pkd_model.pt')
 model.load_state_dict(checkpoint['model_state_dict'])
 
 # Setup inference
-per_lut = AWGNPERLookup.create_dummy_lut(num_mcs=10)
+per_lut = AWGNPERLookup.load_ldpc_lut()  # Loads embedded LDPC PER table (MCS 0-11)
 inference = PKDInference(model, per_lut)
 
 # Run simulation

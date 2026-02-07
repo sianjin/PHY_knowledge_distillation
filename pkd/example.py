@@ -105,7 +105,8 @@ def load_real_data(data_dir='data', train_ratio=0.7, val_ratio=0.1, max_files=No
                     'BW': BW,
                     'SNR_bar': SNR_bar,
                     'MCS': MCS,
-                    'N_ss': N_ss
+                    'N_ss': N_ss,
+                    'packet_length': 1000  # Data packet length in bytes
                 }
 
                 # Extract sequence for this index (column i)
@@ -211,7 +212,8 @@ def example_training(use_real_data=False, data_dir='data', max_files=None):
             'BW': 20.0,
             'SNR_bar': 15.0 + np.random.randn() * 2,
             'MCS': np.random.randint(0, 10),  # 0-9
-            'N_ss': np.random.randint(1, 5)   # 1-4
+            'N_ss': np.random.randint(1, 5),   # 1-4
+            'packet_length': 1000  # Data packet length in bytes
         } for _ in range(70)]
 
         # Validation data (10%)
@@ -223,7 +225,8 @@ def example_training(use_real_data=False, data_dir='data', max_files=None):
             'BW': 20.0,
             'SNR_bar': 15.0 + np.random.randn() * 2,
             'MCS': np.random.randint(0, 10),  # 0-9
-            'N_ss': np.random.randint(1, 5)   # 1-4
+            'N_ss': np.random.randint(1, 5),   # 1-4
+            'packet_length': 1000  # Data packet length in bytes
         } for _ in range(10)]
 
         # Test data (20%)
@@ -235,7 +238,8 @@ def example_training(use_real_data=False, data_dir='data', max_files=None):
             'BW': 20.0,
             'SNR_bar': 15.0 + np.random.randn() * 2,
             'MCS': np.random.randint(0, 10),  # 0-9
-            'N_ss': np.random.randint(1, 5)   # 1-4
+            'N_ss': np.random.randint(1, 5),   # 1-4
+            'packet_length': 1000  # Data packet length in bytes
         } for _ in range(20)]
         print(f"Test data: {len(test_sequences)} sequences (will be used for final evaluation)")
 
@@ -628,7 +632,8 @@ def generate_figure1_per_mcs_metrics(model, test_sequences, test_configs, device
     # Create inference engine for free-running
     from per_lut import AWGNPERLookup
     from infer import PKDInference
-    per_lut = AWGNPERLookup.create_dummy_lut(num_mcs=10)
+    # Load LDPC PER LUT (embedded data)
+    per_lut = AWGNPERLookup.load_ldpc_lut()
     inference = PKDInference(model, per_lut, ar_order=ar_order, device=device)
 
     print("\nProcessing sequences by (MCS, SNR)...")
@@ -773,7 +778,8 @@ def generate_figure2_quantile_error(model, test_sequences, test_configs, device=
     # Create inference engine
     from per_lut import AWGNPERLookup
     from infer import PKDInference
-    per_lut = AWGNPERLookup.create_dummy_lut(num_mcs=10)
+    # Load LDPC PER LUT (embedded data)
+    per_lut = AWGNPERLookup.load_ldpc_lut()
     inference = PKDInference(model, per_lut, ar_order=model.ar_order, device=device)
 
     quantile_levels = np.array([0.01, 0.05, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 0.95, 0.99])
@@ -861,7 +867,8 @@ def generate_figure3_ccdf_error(model, test_sequences, test_configs, device='cpu
     # Create inference engine
     from per_lut import AWGNPERLookup
     from infer import PKDInference
-    per_lut = AWGNPERLookup.create_dummy_lut(num_mcs=10)
+    # Load LDPC PER LUT (embedded data)
+    per_lut = AWGNPERLookup.load_ldpc_lut()
     inference = PKDInference(model, per_lut, ar_order=model.ar_order, device=device)
 
     results = {}
@@ -1105,7 +1112,8 @@ def example_evaluation(use_real_data=False, data_dir='data', test_idx=0, max_fil
             'BW': torch.tensor([20.0], device=device),
             'SNR_bar': torch.tensor([15.0], device=device),
             'MCS': torch.tensor([5], device=device),
-            'N_ss': torch.tensor([2], device=device)
+            'N_ss': torch.tensor([2], device=device),
+            'packet_length': torch.tensor([1000], device=device)  # Data packet length in bytes
         }
         h = model.encode_config(sample_config)
         params = model.generate_params(h)
@@ -1114,7 +1122,8 @@ def example_evaluation(use_real_data=False, data_dir='data', test_idx=0, max_fil
         print(f"  Sample AR offset (c): {params['c'].item():.4f}")
 
     # Create inference engine
-    per_lut = AWGNPERLookup.create_dummy_lut(num_mcs=10)
+    # Load LDPC PER LUT (embedded data)
+    per_lut = AWGNPERLookup.load_ldpc_lut()
     inference = PKDInference(model, per_lut, ar_order=model_config['ar_order'], device=device)
 
     if use_real_data:
@@ -1149,7 +1158,8 @@ def example_evaluation(use_real_data=False, data_dir='data', test_idx=0, max_fil
             'BW': torch.tensor(config_dict['BW']),
             'SNR_bar': torch.tensor(config_dict['SNR_bar']),
             'MCS': torch.tensor(config_dict['MCS']),
-            'N_ss': torch.tensor(config_dict['N_ss'])
+            'N_ss': torch.tensor(config_dict['N_ss']),
+            'packet_length': torch.tensor(config_dict.get('packet_length', 1000))  # Default to 1000 bytes
         }
     else:
         # Generate synthetic teacher sequence (log-AR(1) process)
@@ -1172,7 +1182,8 @@ def example_evaluation(use_real_data=False, data_dir='data', test_idx=0, max_fil
             'BW': torch.tensor(20.0),
             'SNR_bar': torch.tensor(15.0),
             'MCS': torch.tensor(5),
-            'N_ss': torch.tensor(2)
+            'N_ss': torch.tensor(2),
+            'packet_length': torch.tensor(1000)  # Data packet length in bytes
         }
 
     config_traj = [config] * len(teacher_seq)

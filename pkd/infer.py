@@ -175,7 +175,7 @@ class PKDInference:
         params = self._get_params(config_dict)
 
         # Current state as numpy array [X_{t-1}, ..., X_{t-p}]
-        # CRITICAL FIX: deque stores [X_{t-p}, ..., X_{t-1}] (oldest to newest)
+        # deque stores [X_{t-p}, ..., X_{t-1}] (oldest to newest)
         # Training expects [X_{t-1}, ..., X_{t-p}] (newest to oldest)
         # So we must reverse!
         state_array = np.array(list(self.state_buffer))[::-1]
@@ -211,7 +211,10 @@ class PKDInference:
 
         # Compute PER
         mcs = config_dict['MCS'].item() if torch.is_tensor(config_dict['MCS']) else config_dict['MCS']
-        per = self.per_lut.lookup(gamma_eff, mcs)
+        packet_length = config_dict.get('packet_length', 1458)  # Default to L0=1458 if not specified
+        if torch.is_tensor(packet_length):
+            packet_length = packet_length.item()
+        per = self.per_lut.lookup(gamma_eff, mcs, packet_length=packet_length)
 
         # Sample error event
         error_event = np.random.rand() < per
@@ -274,6 +277,9 @@ class PKDInference:
             # Parameters evaluated once per window
             params = self._get_params(config)
             mcs = config['MCS'].item() if torch.is_tensor(config['MCS']) else config['MCS']
+            packet_length = config.get('packet_length', 1458)  # Default to L0=1458 if not specified
+            if torch.is_tensor(packet_length):
+                packet_length = packet_length.item()
 
             for _ in range(num_packets):
                 # AR evolution with cached params (cheap O(p) per packet)
@@ -300,7 +306,7 @@ class PKDInference:
                 self.state_buffer.append(X_t)
 
                 # PER and error
-                per = self.per_lut.lookup(gamma_eff, mcs)
+                per = self.per_lut.lookup(gamma_eff, mcs, packet_length=packet_length)
                 error = np.random.rand() < per
 
                 gamma_eff_list.append(gamma_eff)

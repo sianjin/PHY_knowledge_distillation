@@ -36,7 +36,7 @@ This will:
 - Automatically locate the `data/` directory (relative to the script location)
 - Load all .mat files from the data directory
 - Randomly shuffle sequences (seed=42) before splitting
-- Use 80% of sequences for training, 20% for validation
+- Use 70% of sequences for training, 10% for validation, 20% for test
 - Extract real configurations from the data files
 - Train for 10 epochs
 - Save the best model to `pkd_model.pt`
@@ -53,6 +53,8 @@ python example.py train-real 5
 ```
 
 This loads only the first 5 .mat files (alphabetically sorted).
+
+**Note**: With the 70/10/20 split, training uses only 70% of sequences, validation 10%, and test 20%.
 
 ## Data Format
 
@@ -84,7 +86,39 @@ After loading with `load_real_data()`:
 
 ## Evaluation
 
-### 1. Evaluate with Synthetic Data
+### 1. Evaluate on Held-Out Test Set (Recommended)
+
+**This is the proper way to evaluate your trained model quantitatively.**
+
+After training with real data, evaluate on the held-out test set (20% of data, same split as training):
+
+```bash
+cd pkd
+python3 example.py test
+```
+
+This will:
+1. Load the trained model from `pkd_model.pt`
+2. Load the **held-out test set** (20% of sequences, same 70/10/20 split as training)
+3. Use PyTorch DataLoader to efficiently evaluate **all ~1,000 test sequences**
+4. Compute aggregate metrics:
+   - Average test loss (negative log-likelihood)
+   - Average log-likelihood across all test samples
+   - Total number of test sequences and samples evaluated
+
+**Important Notes**:
+- Uses the same random seed (42) as training to ensure consistent train/val/test split
+- Test set is completely held-out data that the model never saw during training
+- If you trained with a subset of files (e.g., `train-real 10`), use the same number for testing (e.g., `test 10`)
+
+```bash
+# If you trained with 10 files:
+python3 example.py train-real 10
+# Then test with the same 10 files:
+python3 example.py test 10
+```
+
+### 2. Evaluate with Synthetic Data (Quick Test)
 
 Evaluate the trained model using a synthetically generated teacher sequence:
 
@@ -103,35 +137,54 @@ This will:
    - `eval_innovations.png` - Innovation structure (PIT histogram, ACF)
 5. Print statistical test results
 
-### 2. Evaluate with Real Data
+### 3. Evaluate Single Test Sequence (Qualitative Analysis)
 
-Evaluate the trained model using real PHY simulator data as the teacher:
+Evaluate the trained model on a single sequence from the **held-out test set** for detailed qualitative analysis:
 
 ```bash
 cd pkd
 python3 example.py eval-real
 ```
 
-This uses the first sequence from the first .mat file.
+This uses the first test sequence (index 0 from the test set).
 
-To specify which file and sequence to use:
+To specify which test sequence to inspect:
 
 ```bash
-# Use file index 5, sequence index 10
+# Inspect the 51st test sequence
 cd pkd
-python3 example.py eval-real 5 10
+python3 example.py eval-real 50
 ```
 
 Parameters:
-- **file_idx** (default: 0): Index of the .mat file to use (0-49 for 50 files)
-- **seq_idx** (default: 0): Index of the sequence within the file (0-99 for 100 sequences per file)
+- **test_idx** (default: 0): Index within the test set
+  - **Valid range: 0 to (num_test_sequences - 1)**
+  - For all files: **0-999** (approximately 1,000 test sequences with 70/10/20 split)
+  - For subset: depends on how many files were used in training
+- **max_files** (optional): Should match the number used in training if you trained on a subset
+
+**Examples**:
+```bash
+# Inspect different test sequences
+python3 example.py eval-real 0      # First test sequence
+python3 example.py eval-real 100    # 101st test sequence
+python3 example.py eval-real 999    # Last test sequence (if using all files)
+
+# If you trained with only 10 files
+python3 example.py eval-real 50 10  # 51st test sequence from 10-file subset
+```
+
+**Important**: This mode now correctly uses the held-out test set (20% of data), ensuring you're inspecting sequences the model never saw during training. The test set is loaded using the same 70/10/20 split and random seed (42) as training.
 
 This will:
 1. Load the trained model from `pkd_model.pt`
 2. Load the specified real teacher sequence from the data
 3. Extract the actual configuration (SNR, MCS, etc.) from the data
 4. Generate a student sequence using the same configuration
-5. Compare teacher vs student and generate the same evaluation plots
+5. Compare teacher vs student and generate detailed evaluation plots:
+   - `eval_marginal.png` - Marginal distribution fidelity
+   - `eval_temporal.png` - Temporal correlation
+   - `eval_innovations.png` - Innovation structure
 
 ## Python API Usage
 
@@ -141,30 +194,36 @@ This will:
 from pkd.example import load_real_data
 
 # Load all data with random shuffling (default seed=42)
-train_seqs, train_configs, val_seqs, val_configs = load_real_data('data')
+# Returns: train, val, test sets (70/10/20 split)
+train_seqs, train_configs, val_seqs, val_configs, test_seqs, test_configs = load_real_data('data')
 
 # Load first 10 files only
-train_seqs, train_configs, val_seqs, val_configs = load_real_data(
+train_seqs, train_configs, val_seqs, val_configs, test_seqs, test_configs = load_real_data(
     data_dir='data',
-    train_ratio=0.8,
+    train_ratio=0.7,
+    val_ratio=0.1,
     max_files=10
 )
 
 # Use different random seed for different split
-train_seqs, train_configs, val_seqs, val_configs = load_real_data(
+train_seqs, train_configs, val_seqs, val_configs, test_seqs, test_configs = load_real_data(
     data_dir='data',
-    train_ratio=0.8,
-    random_seed=123  # Different seed = different train/val split
+    train_ratio=0.7,
+    val_ratio=0.1,
+    random_seed=123  # Different seed = different train/val/test split
 )
 
 # No shuffling (sequential split - not recommended)
-train_seqs, train_configs, val_seqs, val_configs = load_real_data(
+train_seqs, train_configs, val_seqs, val_configs, test_seqs, test_configs = load_real_data(
     data_dir='data',
-    train_ratio=0.8,
+    train_ratio=0.7,
+    val_ratio=0.1,
     random_seed=None  # None = no shuffling
 )
 
 print(f"Loaded {len(train_seqs)} training sequences")
+print(f"Loaded {len(val_seqs)} validation sequences")
+print(f"Loaded {len(test_seqs)} test sequences")
 print(f"First config: {train_configs[0]}")
 print(f"First sequence shape: {train_seqs[0].shape}")
 ```
@@ -193,8 +252,8 @@ from pkd.model.pkd_model import PKDModel
 from pkd.train import train_pkd
 from pkd.example import load_real_data
 
-# Load data
-train_seqs, train_configs, val_seqs, val_configs = load_real_data('data')
+# Load data (returns train/val/test with 70/10/20 split)
+train_seqs, train_configs, val_seqs, val_configs, test_seqs, test_configs = load_real_data('data')
 
 # Create model
 model = PKDModel(
@@ -236,7 +295,23 @@ trained_model = train_pkd(
 )
 ```
 
-### Custom Evaluation
+### Test Set Evaluation
+
+```python
+from pkd.example import example_test_evaluation
+
+# Evaluate on held-out test set (recommended for quantitative metrics)
+test_metrics = example_test_evaluation(data_dir='data')
+
+# With subset of files (must match training)
+test_metrics = example_test_evaluation(data_dir='data', max_files=10)
+
+print(f"Test loss: {test_metrics['test_loss']:.4f}")
+print(f"Avg log-likelihood: {test_metrics['avg_log_likelihood']:.4f}")
+print(f"Test sequences: {test_metrics['num_sequences']}")
+```
+
+### Single Test Sequence Evaluation (Qualitative)
 
 ```python
 from pkd.example import example_evaluation
@@ -244,11 +319,14 @@ from pkd.example import example_evaluation
 # Evaluate with synthetic data
 example_evaluation(use_real_data=False)
 
-# Evaluate with real data (file 0, sequence 0)
-example_evaluation(use_real_data=True, data_dir='data', file_idx=0, seq_idx=0)
+# Evaluate first test sequence
+example_evaluation(use_real_data=True, data_dir='data', test_idx=0)
 
-# Evaluate with different file and sequence
-example_evaluation(use_real_data=True, data_dir='data', file_idx=10, seq_idx=50)
+# Evaluate different test sequences
+example_evaluation(use_real_data=True, data_dir='data', test_idx=100)
+
+# With subset of files (must match training)
+example_evaluation(use_real_data=True, data_dir='data', test_idx=50, max_files=10)
 ```
 
 ## Dataset Statistics
@@ -261,9 +339,29 @@ Current dataset (as of 2026-02-03):
 - **5,000,000 time steps** (1000 per sequence)
 - Fixed parameters: Model-D, 4x2x2, BW=20MHz
 
-Using all files:
-- Training: 4,000 sequences (80%)
-- Validation: 1,000 sequences (20%)
+Using all files with 70/10/20 split:
+- Training: 3,500 sequences (70%)
+- Validation: 500 sequences (10%)
+- Test: 1,000 sequences (20%)
+
+### Test Set Distribution
+
+The test set (1,000 sequences) has the following distribution across MCS and SNR:
+
+| MCS | SNR Range | # SNR Values | # Test Sequences | Avg per SNR |
+|-----|-----------|--------------|------------------|-------------|
+| 0   | 0-18 dB   | 10           | 189              | ~19         |
+| 1   | 4-22 dB   | 10           | 191              | ~19         |
+| 2   | 8-26 dB   | 10           | 213              | ~21         |
+| 3   | 12-30 dB  | 10           | 204              | ~20         |
+| 4   | 16-34 dB  | 10           | 203              | ~20         |
+
+**Key points**:
+- Each MCS has approximately **190-213 test sequences**
+- Each (MCS, SNR) combination has approximately **14-31 test sequences**
+- Distribution is balanced due to random shuffling with seed=42
+- Each file originally contains 100 sequences with the same (MCS, SNR) pair
+- After 70/10/20 split, each (MCS, SNR) gets roughly 20 test sequences
 
 ## Quick Reference
 
@@ -272,22 +370,36 @@ Using all files:
 | **Train with dummy data** | `python3 example.py train` |
 | **Train with real data (all files)** | `python3 example.py train-real` |
 | **Train with real data (5 files)** | `python3 example.py train-real 5` |
+| **Evaluate on test set (recommended)** | `python3 example.py test` |
+| **Evaluate on test set (subset)** | `python3 example.py test 5` |
 | **Evaluate with synthetic data** | `python3 example.py eval` |
-| **Evaluate with real data (default)** | `python3 example.py eval-real` |
-| **Evaluate with specific file/sequence** | `python3 example.py eval-real 5 10` |
+| **Evaluate single test sequence** | `python3 example.py eval-real 50` |
+| **Evaluate test sequence (subset)** | `python3 example.py eval-real 50 10` |
 
-### Understanding File and Sequence Indices
+### Understanding Test Sequence Indices
 
-When using `eval-real`:
-- **file_idx**: Which .mat file to use (sorted alphabetically)
-  - `0` = `CBW20_Model-D_4-by-2-by-2_MCS0_SNR0.mat`
-  - `1` = `CBW20_Model-D_4-by-2-by-2_MCS0_SNR10.mat`
-  - etc.
-- **seq_idx**: Which of the 100 sequences in that file (0-99)
+When using `eval-real`, you specify which test sequence to inspect from the held-out test set:
 
-Example: `python3 example.py eval-real 10 50` evaluates using:
-- The 11th .mat file (sorted alphabetically)
-- The 51st sequence (out of 100) from that file
+**Command format**: `python3 example.py eval-real [test_idx] [max_files]`
+
+**Valid ranges**:
+- **test_idx**: Index within the test set
+  - For all files (50 .mat files): **0-999** (approximately 1,000 test sequences)
+  - For subset (e.g., 10 files): **0-199** (approximately 200 test sequences)
+  - The exact number depends on the 70/10/20 split of your data
+- **max_files** (optional): Must match the number used during training
+
+**Examples**:
+- `python3 example.py eval-real` → First test sequence (test_idx=0)
+- `python3 example.py eval-real 100` → 101st test sequence
+- `python3 example.py eval-real 999` → Last test sequence (with all files)
+- `python3 example.py eval-real 50 10` → 51st test sequence (when trained with 10 files)
+
+**Important**:
+- This now correctly uses the **held-out test set only** (20% of data)
+- Uses the same random seed (42) and split as training
+- Ensures you're inspecting data the model never saw during training
+- For comprehensive quantitative evaluation, use `python3 example.py test` instead
 
 ## Troubleshooting
 
