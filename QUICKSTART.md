@@ -49,13 +49,13 @@ python pkd/example.py train
 ```
 
 **What happens:**
-- Creates PKD model with Gaussian innovation
-- Trains on 100 synthetic AR(1) sequences
+- Creates PKD model with SGN (Skew Generalized Normal) innovation
+- Trains on multiple effective SINR sequences
 - Saves best model to `pkd_model.pt`
 
 **Expected output:**
 ```
-PKDModel initialized with gaussian innovation
+PKDModel initialized with sgn innovation
 PACFToAR initialized with kappa_max=0.950 for stability
 
 Epoch 1/10
@@ -165,7 +165,10 @@ model = PKDModel(
     num_nss=4,
     ar_order=10,
     kappa_max=0.95,
-    innovation_type='gaussian'
+    innovation_type='sgn',  # SGN (default), 'gaussian', or 'flow'
+    min_sigma=0.1,
+    min_beta=0.5,
+    max_beta=4.0
 )
 
 trained_model = train_pkd(
@@ -202,8 +205,10 @@ trained_model = train_pkd(
 | Parameter | Default | Range | Impact |
 |-----------|---------|-------|--------|
 | `kappa_max` | 0.95 | 0.90-0.98 | AR stability (lower=safer) |
-| `innovation_type` | 'gaussian' | 'gaussian'/'flow' | Innovation model |
-| `min_sigma` | 0.1 | 0.05-0.5 | Minimum variance |
+| `innovation_type` | 'sgn' | 'sgn'/'gaussian'/'flow' | Innovation distribution model |
+| `min_sigma` | 0.1 | 0.05-0.5 | Minimum scale (all innovations) |
+| `min_beta` | 0.5 | 0.3-1.0 | Min shape param (SGN only) |
+| `max_beta` | 4.0 | 2.0-6.0 | Max shape param (SGN only) |
 | `ar_order` | 10 | 5-20 | Temporal memory |
 
 ---

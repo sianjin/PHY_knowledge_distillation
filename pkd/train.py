@@ -1,4 +1,26 @@
-"""Training loop for PKD model."""
+"""Training loop for PKD model.
+
+Training with SGN Innovation:
+------------------------------
+The PKD model uses SGN (Skew Generalized Normal) innovations by default, which
+provides configuration-adaptive variance, skewness, and tail behavior. During
+training, the model learns to predict three SGN parameters from the configuration:
+  - sigma: scale parameter (variance)
+  - beta: shape parameter (tail heaviness, beta=2 is Gaussian-like)
+  - lambda: skewness parameter (lambda=0 is symmetric)
+
+The training objective minimizes the negative log-likelihood:
+  loss = -log p_SGN(eps_t | sigma_t, beta_t, lambda_t)
+
+where eps_t = X_t - mu_t is the innovation (residual) and mu_t is the AR mean.
+
+The SGN distribution generalizes Gaussian innovations:
+  - When lambda=0 and beta=2, SGN reduces to Gaussian
+  - This allows the model to learn both Gaussian and non-Gaussian residuals
+  - Better captures skewed and heavy-tailed effective SINR distributions
+
+Alternative innovations (Gaussian, Flow) are still supported via innovation_type parameter.
+"""
 import torch
 import torch.nn as nn
 import torch.optim as optim
@@ -116,8 +138,11 @@ def train_epoch(model, dataloader, optimizer, device, clip_grad=1.0):
             print(f"  mu finite ratio: {torch.isfinite(info['mu']).float().mean().item():.4f}")
             print(f"  eps: min={info['eps'].min():.4f}, max={info['eps'].max():.4f}, mean={info['eps'].mean():.4f}")
             print(f"  eps finite ratio: {torch.isfinite(info['eps']).float().mean().item():.4f}")
-            print(f"  z: min={info['z'].min():.4f}, max={info['z'].max():.4f}, mean={info['z'].mean():.4f}")
-            print(f"  z finite ratio: {torch.isfinite(info['z']).float().mean().item():.4f}")
+
+            # Check for standardized innovation (only exists for Gaussian)
+            if 'z' in info:
+                print(f"  z: min={info['z'].min():.4f}, max={info['z'].max():.4f}, mean={info['z'].mean():.4f}")
+                print(f"  z finite ratio: {torch.isfinite(info['z']).float().mean().item():.4f}")
 
             print(f"\nAR coefficients:")
             print(f"  phi: min={info['phi'].min():.4f}, max={info['phi'].max():.4f}, mean={info['phi'].mean():.4f}")
@@ -129,7 +154,11 @@ def train_epoch(model, dataloader, optimizer, device, clip_grad=1.0):
 
             print(f"\nInnovation parameters:")
             innov = info['innov_params']
-            if innov.ndim == 1:  # Gaussian (sigma)
+            if isinstance(innov, dict):  # SGN (sigma, beta, lambda)
+                print(f"  sigma: min={innov['sigma'].min():.4f}, max={innov['sigma'].max():.4f}, mean={innov['sigma'].mean():.4f}")
+                print(f"  beta: min={innov['beta'].min():.4f}, max={innov['beta'].max():.4f}, mean={innov['beta'].mean():.4f}")
+                print(f"  lambda: min={innov['lambda'].min():.4f}, max={innov['lambda'].max():.4f}, mean={innov['lambda'].mean():.4f}")
+            elif innov.ndim == 1:  # Gaussian (sigma)
                 print(f"  sigma: min={innov.min():.4f}, max={innov.max():.4f}, mean={innov.mean():.4f}")
             else:  # Flow (psi)
                 print(f"  psi shape: {innov.shape}")

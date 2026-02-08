@@ -1,35 +1,84 @@
-# PKD Usage Examples
+# PKD Example Package
 
-This document provides practical examples for training and evaluating the PKD model.
+This package contains refactored code from the original monolithic `example.py` (1473 lines), organized into logical modules for better maintainability and readability.
+
+## Structure
+
+```
+example/
+├── __init__.py           # Package exports
+├── sgn_cdf.py           # SGN CDF implementation for PIT (121 lines)
+├── data_loader.py       # Data loading from .mat files (118 lines)
+├── utils.py             # Utility functions: ACF, PSD, Ljung-Box (32 lines)
+├── evaluation.py        # Evaluation functions (269 lines)
+├── plotting.py          # Plotting and figure generation (454 lines)
+├── main.py              # Main entry points (503 lines)
+└── README.md            # This file
+```
+
+## Module Descriptions
+
+### sgn_cdf.py
+- `sgn_pdf()`: Compute SGN probability density function
+- `sgn_cdf()`: Compute SGN cumulative distribution function (numerical)
+- Critical for PIT (Probability Integral Transform) computation with SGN innovations
+
+### data_loader.py
+- `load_real_data()`: Load PHY simulator data from .mat files
+- Handles 70/10/20 train/val/test split
+- Converts log-scale data to linear scale
+
+### utils.py
+- `compute_acf()`: Compute autocorrelation function
+- `compute_psd()`: Compute power spectral density
+- `ljung_box_test()`: Ljung-Box test for autocorrelation
+
+### evaluation.py
+- `evaluate_marginal_distribution()`: Compare marginal distributions
+- `evaluate_temporal_dependence()`: Compare ACF and PSD
+- `evaluate_innovation_structure()`: Evaluate PIT calibration
+
+### plotting.py
+- `evaluate_test_set()`: Compute test set metrics
+- `generate_figure1_per_mcs_metrics()`: Per-MCS metrics vs SNR
+- `generate_figure2_quantile_error()`: Quantile error analysis
+- `generate_figure3_ccdf_error()`: CCDF error analysis
+
+### main.py
+- `example_training()`: Training with real PHY simulator data
+- `example_evaluation()`: Qualitative evaluation on single test sequence
+- `example_test_evaluation()`: Comprehensive test set evaluation
+
+## Usage
+
+**Prerequisites**: Ensure you have a Python environment with PyTorch installed. See [requirements.txt](../requirements.txt) for dependencies.
+
+The main entry point is `example.py` in the parent directory:
+
+```bash
+# Training
+python example.py train                   # Train with all real data files
+python example.py train 5                 # Train with first 5 files
+
+# Testing
+python example.py test                    # Evaluate on test set (all files)
+python example.py test 5                  # Evaluate on test set (5 files)
+
+# Qualitative Evaluation
+python example.py eval                    # Evaluate first test sequence
+python example.py eval 50                 # Evaluate 51st test sequence
+python example.py eval 50 10              # Evaluate 51st test seq (10-file subset)
+```
 
 ## Training Examples
 
-**Prerequisites**: Ensure you have a Python environment with PyTorch installed. See [requirements.txt](requirements.txt) for dependencies.
-
-### 1. Quick Test with Dummy Data
-
-Train the model with synthetically generated AR(1) sequences (fastest, for testing):
-
-```bash
-cd pkd
-python example.py train
-```
-
-Note: Use `python` (or `python3`) depending on your environment setup.
-
-This will:
-- Generate 100 training sequences and 20 validation sequences
-- Use random configurations
-- Train for 10 epochs
-- Save the best model to `pkd_model.pt`
-
-### 2. Train with Real PHY Simulator Data
+### 1. Train with Real PHY Simulator Data
 
 Train with the real data from the `data/` folder:
 
 ```bash
 cd pkd
-python example.py train-real
+python example.py train
 ```
 
 This will:
@@ -43,13 +92,13 @@ This will:
 
 **Path Resolution**: The script automatically finds the `data/` directory regardless of where you run it from. The path is resolved relative to the script location (`pkd/example.py` → `../data/`).
 
-### 3. Train with Subset of Real Data
+### 2. Train with Subset of Real Data
 
 To train with only a few files (useful for quick testing or debugging):
 
 ```bash
 cd pkd
-python example.py train-real 5
+python example.py train 5
 ```
 
 This loads only the first 5 .mat files (alphabetically sorted).
@@ -94,7 +143,7 @@ After training with real data, evaluate on the held-out test set (20% of data, s
 
 ```bash
 cd pkd
-python3 example.py test
+python example.py test
 ```
 
 This will:
@@ -113,37 +162,18 @@ This will:
 
 ```bash
 # If you trained with 10 files:
-python3 example.py train-real 10
+python example.py train 10
 # Then test with the same 10 files:
-python3 example.py test 10
+python example.py test 10
 ```
 
-### 2. Evaluate with Synthetic Data (Quick Test)
-
-Evaluate the trained model using a synthetically generated teacher sequence:
-
-```bash
-cd pkd
-python3 example.py eval
-```
-
-This will:
-1. Load the trained model from `pkd_model.pt`
-2. Generate a synthetic log-AR(1) teacher sequence
-3. Generate a student sequence using the PKD model
-4. Compare and generate evaluation plots:
-   - `eval_marginal.png` - Marginal distribution fidelity (CCDF, QQ plot, quantile error)
-   - `eval_temporal.png` - Temporal correlation (ACF, PSD)
-   - `eval_innovations.png` - Innovation structure (PIT histogram, ACF)
-5. Print statistical test results
-
-### 3. Evaluate Single Test Sequence (Qualitative Analysis)
+### 2. Evaluate Single Test Sequence (Qualitative Analysis)
 
 Evaluate the trained model on a single sequence from the **held-out test set** for detailed qualitative analysis:
 
 ```bash
 cd pkd
-python3 example.py eval-real
+python example.py eval
 ```
 
 This uses the first test sequence (index 0 from the test set).
@@ -153,7 +183,7 @@ To specify which test sequence to inspect:
 ```bash
 # Inspect the 51st test sequence
 cd pkd
-python3 example.py eval-real 50
+python example.py eval 50
 ```
 
 Parameters:
@@ -166,15 +196,15 @@ Parameters:
 **Examples**:
 ```bash
 # Inspect different test sequences
-python3 example.py eval-real 0      # First test sequence
-python3 example.py eval-real 100    # 101st test sequence
-python3 example.py eval-real 999    # Last test sequence (if using all files)
+python example.py eval 0      # First test sequence
+python example.py eval 100    # 101st test sequence
+python example.py eval 999    # Last test sequence (if using all files)
 
 # If you trained with only 10 files
-python3 example.py eval-real 50 10  # 51st test sequence from 10-file subset
+python example.py eval 50 10  # 51st test sequence from 10-file subset
 ```
 
-**Important**: This mode now correctly uses the held-out test set (20% of data), ensuring you're inspecting sequences the model never saw during training. The test set is loaded using the same 70/10/20 split and random seed (42) as training.
+**Important**: This mode correctly uses the **held-out test set only** (20% of data), ensuring you're inspecting sequences the model never saw during training. The test set is loaded using the same 70/10/20 split and random seed (42) as training.
 
 This will:
 1. Load the trained model from `pkd_model.pt`
@@ -233,14 +263,16 @@ print(f"First sequence shape: {train_seqs[0].shape}")
 ```python
 from pkd.example import example_training
 
-# Train with dummy data
-model = example_training(use_real_data=False)
-
 # Train with real data
 model = example_training(
-    use_real_data=True,
     data_dir='data',
-    max_files=10  # Optional: limit number of files
+    max_files=None  # None = load all files
+)
+
+# Train with subset of files
+model = example_training(
+    data_dir='data',
+    max_files=10
 )
 ```
 
@@ -316,17 +348,14 @@ print(f"Test sequences: {test_metrics['num_sequences']}")
 ```python
 from pkd.example import example_evaluation
 
-# Evaluate with synthetic data
-example_evaluation(use_real_data=False)
-
 # Evaluate first test sequence
-example_evaluation(use_real_data=True, data_dir='data', test_idx=0)
+example_evaluation(data_dir='data', test_idx=0)
 
 # Evaluate different test sequences
-example_evaluation(use_real_data=True, data_dir='data', test_idx=100)
+example_evaluation(data_dir='data', test_idx=100)
 
 # With subset of files (must match training)
-example_evaluation(use_real_data=True, data_dir='data', test_idx=50, max_files=10)
+example_evaluation(data_dir='data', test_idx=50, max_files=10)
 ```
 
 ## Dataset Statistics
@@ -367,20 +396,18 @@ The test set (1,000 sequences) has the following distribution across MCS and SNR
 
 | Task | Command |
 |------|---------|
-| **Train with dummy data** | `python3 example.py train` |
-| **Train with real data (all files)** | `python3 example.py train-real` |
-| **Train with real data (5 files)** | `python3 example.py train-real 5` |
-| **Evaluate on test set (recommended)** | `python3 example.py test` |
-| **Evaluate on test set (subset)** | `python3 example.py test 5` |
-| **Evaluate with synthetic data** | `python3 example.py eval` |
-| **Evaluate single test sequence** | `python3 example.py eval-real 50` |
-| **Evaluate test sequence (subset)** | `python3 example.py eval-real 50 10` |
+| **Train with real data (all files)** | `python example.py train` |
+| **Train with real data (5 files)** | `python example.py train 5` |
+| **Evaluate on test set (recommended)** | `python example.py test` |
+| **Evaluate on test set (subset)** | `python example.py test 5` |
+| **Evaluate single test sequence** | `python example.py eval 50` |
+| **Evaluate test sequence (subset)** | `python example.py eval 50 10` |
 
 ### Understanding Test Sequence Indices
 
-When using `eval-real`, you specify which test sequence to inspect from the held-out test set:
+When using `eval`, you specify which test sequence to inspect from the held-out test set:
 
-**Command format**: `python3 example.py eval-real [test_idx] [max_files]`
+**Command format**: `python example.py eval [test_idx] [max_files]`
 
 **Valid ranges**:
 - **test_idx**: Index within the test set
@@ -390,16 +417,24 @@ When using `eval-real`, you specify which test sequence to inspect from the held
 - **max_files** (optional): Must match the number used during training
 
 **Examples**:
-- `python3 example.py eval-real` → First test sequence (test_idx=0)
-- `python3 example.py eval-real 100` → 101st test sequence
-- `python3 example.py eval-real 999` → Last test sequence (with all files)
-- `python3 example.py eval-real 50 10` → 51st test sequence (when trained with 10 files)
+- `python example.py eval` → First test sequence (test_idx=0)
+- `python example.py eval 100` → 101st test sequence
+- `python example.py eval 999` → Last test sequence (with all files)
+- `python example.py eval 50 10` → 51st test sequence (when trained with 10 files)
 
 **Important**:
 - This now correctly uses the **held-out test set only** (20% of data)
 - Uses the same random seed (42) and split as training
 - Ensures you're inspecting data the model never saw during training
-- For comprehensive quantitative evaluation, use `python3 example.py test` instead
+- For comprehensive quantitative evaluation, use `python example.py test` instead
+
+## Benefits of Refactoring
+
+1. **Better Organization**: Related functions grouped into logical modules
+2. **Easier Navigation**: Each module is 100-500 lines instead of 1473 lines
+3. **Improved Maintainability**: Changes to evaluation don't affect plotting, etc.
+4. **Reusability**: Modules can be imported independently
+5. **Clear Dependencies**: Import statements show module relationships
 
 ## Troubleshooting
 
@@ -415,7 +450,7 @@ ValueError: num_samples should be a positive integer value, but got num_samples=
 **Solution**: The script uses automatic path resolution. Make sure:
 1. Your `data/` directory is at the project root (same level as `pkd/`)
 2. The data directory contains `.mat` files
-3. You're running the script with: `cd pkd && python example.py train-real`
+3. You're running the script with: `cd pkd && python example.py train`
 
 The script automatically resolves the path to `../data/` from its location at `pkd/example.py`.
 
@@ -433,5 +468,11 @@ Or install PyTorch separately following the instructions at [pytorch.org](https:
 If you encounter out-of-memory errors when loading all files:
 
 1. **Reduce batch size**: Edit the `batch_size` parameter in the training function
-2. **Load fewer files**: Use `python example.py train-real 10` to limit to 10 files
+2. **Load fewer files**: Use `python example.py train 10` to limit to 10 files
 3. **Use smaller model**: Reduce `hidden_dim` in the model configuration
+
+## Migration from Original
+
+The original `example.py` has been backed up as `example.py.backup`. The new `example.py` is a thin entry point that delegates to the refactored modules.
+
+All functionality is preserved - the refactoring only changes organization, not behavior.

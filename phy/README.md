@@ -4,7 +4,7 @@ This folder contains MATLAB code for wireless PHY layer simulation and tradition
 
 ## Requirements
 
-- **MATLAB R2024a or later**
+- **MATLAB R2026a or later**
 - **WLAN Toolbox** (required for 802.11ax simulation)
 
 ## Folder Structure

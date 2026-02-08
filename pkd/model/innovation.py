@@ -2,6 +2,7 @@
 import torch
 import torch.nn as nn
 import numpy as np
+from scipy.special import gamma as gamma_func
 
 
 class GaussianInnovation(nn.Module):
@@ -211,19 +212,262 @@ class FlowInnovation(nn.Module):
         return eps.item()
 
 
+class SGNInnovation(nn.Module):
+    """
+    Skew Generalized Normal (SGN) innovation distribution.
+
+    Models innovations as: eps ~ SGN(0, sigma, beta, lambda)
+    where sigma (scale), beta (shape), lambda (skewness) are predicted from conditioning.
+
+    The SGN distribution generalizes the Gaussian:
+    - When lambda = 0 and beta = 2, recovers standard Gaussian
+    - lambda controls skewness
+    - beta controls tail heaviness (beta=2 is Gaussian-like)
+    """
+
+    def __init__(self, hidden_dim: int = 128, min_sigma: float = 0.1,
+                 min_beta: float = 0.5, max_beta: float = 4.0):
+        """
+        Args:
+            hidden_dim: Input conditioning dimension
+            min_sigma: Minimum scale for numerical stability
+            min_beta: Minimum shape parameter
+            max_beta: Maximum shape parameter
+        """
+        super().__init__()
+        self.min_sigma = min_sigma
+        self.min_beta = min_beta
+        self.max_beta = max_beta
+
+        # MLP to predict SGN parameters
+        self.param_net = nn.Sequential(
+            nn.Linear(hidden_dim, hidden_dim),
+            nn.ReLU(),
+            nn.Linear(hidden_dim, hidden_dim // 2),
+            nn.ReLU(),
+            nn.Linear(hidden_dim // 2, 3)  # [sigma, beta, lambda]
+        )
+
+        # Initialize to predict near-Gaussian distribution initially
+        # [log(sigma) ≈ 0, beta ≈ 2, lambda ≈ 0]
+        with torch.no_grad():
+            self.param_net[-1].weight.mul_(0.1)
+            self.param_net[-1].bias.copy_(torch.tensor([0.0, 2.0, 0.0]))
+
+    def forward(self, h):
+        """
+        Predict innovation parameters from conditioning.
+
+        Args:
+            h: (batch, hidden_dim) conditioning representation
+
+        Returns:
+            params: dict with keys 'sigma', 'beta', 'lambda'
+                sigma: (batch,) scale parameter > 0
+                beta: (batch,) shape parameter > 0
+                lambda: (batch,) skewness parameter (unconstrained)
+        """
+        raw_params = self.param_net(h)  # (batch, 3)
+
+        # sigma: use softplus to ensure > 0, add min for stability
+        sigma = torch.nn.functional.softplus(raw_params[:, 0]) + self.min_sigma
+
+        # beta: use softplus and clamp to reasonable range
+        beta = torch.nn.functional.softplus(raw_params[:, 1])
+        beta = torch.clamp(beta, self.min_beta, self.max_beta)
+
+        # lambda: unconstrained skewness
+        lam = raw_params[:, 2]
+
+        return {'sigma': sigma, 'beta': beta, 'lambda': lam}
+
+    def _gn_base_pdf(self, u, beta):
+        """Generalized normal base PDF: phi(u; beta) with location 0, scale 1."""
+        # phi(u;beta) = beta / (2 * Gamma(1/beta)) * exp(-|u|^beta)
+        gamma_val = torch.tensor(gamma_func(1.0 / beta.cpu().numpy()),
+                                 device=beta.device, dtype=beta.dtype)
+        coef = beta / (2.0 * gamma_val)
+        return coef * torch.exp(-torch.abs(u) ** beta)
+
+    def _sgn_pdf(self, eps, sigma, beta, lam):
+        """
+        SGN probability density function.
+
+        f(eps) = (2/sigma) * phi(z; beta) * Phi(sqrt(2) * lambda * z)
+        where z = eps/sigma
+        """
+        z = eps / sigma
+
+        # Generalized normal base PDF
+        phi = self._gn_base_pdf(z, beta)
+
+        # Standard normal CDF for skewing
+        skew_term = torch.distributions.Normal(0, 1).cdf(np.sqrt(2) * lam * z)
+
+        # SGN PDF
+        pdf = (2.0 / sigma) * phi * skew_term
+
+        return pdf
+
+    def log_prob(self, eps, params):
+        """
+        Compute log probability of innovations.
+
+        Args:
+            eps: (batch,) innovation values
+            params: dict with 'sigma', 'beta', 'lambda'
+
+        Returns:
+            log_p: (batch,) log probability
+        """
+        sigma = params['sigma']
+        beta = params['beta']
+        lam = params['lambda']
+
+        z = eps / sigma
+
+        # log phi(z; beta) = log(beta) - log(2) - log(Gamma(1/beta)) - |z|^beta
+        gamma_val = torch.tensor([gamma_func(1.0 / b.item()) for b in beta],
+                                 device=beta.device, dtype=beta.dtype)
+
+        log_phi = (torch.log(beta) - torch.log(torch.tensor(2.0, device=beta.device))
+                   - torch.log(gamma_val) - torch.abs(z) ** beta)
+
+        # log Phi(sqrt(2) * lambda * z) - use log_cdf for numerical stability
+        # Phi(x) can be very small (near 0), so we use log space to avoid log(0) = -inf
+        skew_arg = np.sqrt(2) * lam * z
+        normal_dist = torch.distributions.Normal(0, 1)
+
+        # Clamp CDF to avoid log(0) issues
+        cdf_val = normal_dist.cdf(skew_arg)
+        cdf_val = torch.clamp(cdf_val, min=1e-10, max=1-1e-10)
+        log_skew = torch.log(cdf_val)
+
+        # log f(eps) = log(2) - log(sigma) + log_phi + log_skew
+        log_p = (torch.log(torch.tensor(2.0, device=eps.device))
+                 - torch.log(sigma) + log_phi + log_skew)
+
+        return log_p
+
+    def sample(self, params, num_samples=1):
+        """
+        Sample innovations from SGN using rejection sampling.
+
+        Args:
+            params: dict with 'sigma', 'beta', 'lambda'
+            num_samples: number of samples per parameter set
+
+        Returns:
+            eps: (..., num_samples) innovation samples
+        """
+        sigma = params['sigma']
+        beta = params['beta']
+        lam = params['lambda']
+
+        batch_shape = sigma.shape
+
+        # For each batch element, use rejection sampling
+        samples = []
+        for i in range(batch_shape[0]):
+            s_i = sigma[i].item()
+            b_i = beta[i].item()
+            l_i = lam[i].item()
+
+            batch_samples = []
+            for _ in range(num_samples):
+                # Use rejection sampling with proposal = GN(0, 1, beta)
+                accepted = False
+                max_tries = 1000
+                tries = 0
+
+                while not accepted and tries < max_tries:
+                    # Sample from generalized normal base
+                    u = np.random.randn()
+                    z = np.sign(u) * (np.abs(u) ** (1.0/b_i))
+
+                    # Accept with probability Phi(sqrt(2) * lambda * z) / 0.5
+                    # (using 0.5 as upper bound for CDF)
+                    from scipy.stats import norm
+                    accept_prob = 2.0 * norm.cdf(np.sqrt(2) * l_i * z)
+
+                    if np.random.rand() < accept_prob:
+                        accepted = True
+                        eps_val = s_i * z
+                        batch_samples.append(eps_val)
+
+                    tries += 1
+
+                if not accepted:
+                    # Fallback to Gaussian if rejection fails
+                    batch_samples.append(s_i * np.random.randn())
+
+            samples.append(batch_samples)
+
+        # Convert to tensor
+        samples_tensor = torch.tensor(samples, device=sigma.device, dtype=sigma.dtype)
+
+        if num_samples == 1:
+            return samples_tensor.squeeze(-1)
+        else:
+            return samples_tensor
+
+    def sample_numpy(self, params):
+        """
+        Sample single innovation (for numpy inference).
+
+        Args:
+            params: dict with 'sigma' (float), 'beta' (float), 'lambda' (float)
+
+        Returns:
+            eps: float, innovation sample
+        """
+        sigma = params['sigma']
+        beta = params['beta']
+        lam = params['lambda']
+
+        # Simple rejection sampling
+        accepted = False
+        max_tries = 1000
+        tries = 0
+
+        while not accepted and tries < max_tries:
+            # Sample from generalized normal base
+            u = np.random.randn()
+            z = np.sign(u) * (np.abs(u) ** (1.0/beta))
+
+            # Accept with probability Phi(sqrt(2) * lambda * z) / 0.5
+            from scipy.stats import norm
+            accept_prob = 2.0 * norm.cdf(np.sqrt(2) * lam * z)
+
+            if np.random.rand() < accept_prob:
+                accepted = True
+                return sigma * z
+
+            tries += 1
+
+        # Fallback to Gaussian
+        return sigma * np.random.randn()
+
+
 def create_innovation_model(innovation_type: str, hidden_dim: int = 128, **kwargs):
     """
     Factory function to create innovation models.
 
     Args:
-        innovation_type: 'gaussian' or 'flow'
+        innovation_type: 'sgn', 'gaussian', or 'flow'
         hidden_dim: Hidden dimension for conditioning
         **kwargs: Additional arguments for specific innovation types
 
     Returns:
-        innovation_model: GaussianInnovation or FlowInnovation
+        innovation_model: SGNInnovation, GaussianInnovation, or FlowInnovation
     """
-    if innovation_type == 'gaussian':
+    if innovation_type == 'sgn':
+        min_sigma = kwargs.get('min_sigma', 0.1)
+        min_beta = kwargs.get('min_beta', 0.5)
+        max_beta = kwargs.get('max_beta', 4.0)
+        return SGNInnovation(hidden_dim, min_sigma, min_beta, max_beta)
+
+    elif innovation_type == 'gaussian':
         min_sigma = kwargs.get('min_sigma', 0.1)
         return GaussianInnovation(hidden_dim, min_sigma)
 
@@ -237,4 +481,4 @@ def create_innovation_model(innovation_type: str, hidden_dim: int = 128, **kwarg
 
     else:
         raise ValueError(f"Unknown innovation type: {innovation_type}. "
-                        f"Choose 'gaussian' or 'flow'.")
+                        f"Choose 'sgn', 'gaussian', or 'flow'.")

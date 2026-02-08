@@ -46,6 +46,8 @@ Thumbs.db
 # Data
 data/
 datasets/
+validation/
+paper/
 *.npy
 *.npz
 *.mat
