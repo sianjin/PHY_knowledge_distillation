@@ -131,12 +131,15 @@ def evaluate_innovation_structure(model, inference, teacher_seq, config, device=
     - Tests z_t for independence via Ljung-Box
     - Evaluates PIT calibration using Gaussian CDF
 
+    Args:
+        teacher_seq: Teacher sequence in natural log scale (already converted from dB)
+
     Generates:
     - Innovation diagnostics table
     - PIT histogram and ACF
     """
-    # Convert teacher sequence to log domain
-    X_teacher = np.log(teacher_seq)
+    # Teacher sequence is already in natural log scale (converted in data_loader.py)
+    X_teacher = teacher_seq
 
     # Get model predictions for teacher data (teacher-forced)
     model.eval()

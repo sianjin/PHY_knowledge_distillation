@@ -149,6 +149,57 @@ Tests verify:
 - AR mean consistency
 - Time-skipping correctness
 
+## Data Flow & Scale Management
+
+### Critical Distinction: X_t vs gamma_eff
+
+The PKD model makes an important distinction between:
+
+- **`X_t`**: The internal AR(p) process variable in natural log scale
+- **`gamma_eff`**: The effective SINR that undergoes scale conversions for I/O
+
+#### Scale Conversion Pipeline
+
+1. **Input (.mat files)**: `gamma_eff` in **dB scale** (10*log10 of linear SINR)
+   ```
+   gamma_dB = 10 * log10(gamma_linear)
+   ```
+
+2. **Data Loading** (`data_loader.py`): Converts to natural log scale
+   ```python
+   X_t = gamma_dB * np.log(10) / 10  # Convert dB to natural log
+   ```
+
+3. **AR Process Model**: `X_t` follows AR(p) with Gaussian innovation
+   ```
+   X_t = μ_t + ε_t  where ε_t ~ N(0, σ²)
+   μ_t = c + Σ(φ_i * X_{t-i})  # AR mean
+   ```
+
+4. **Training/Inference**: All internal computations use `X_t` in natural log scale
+
+5. **Output** (`infer.py`): Converts back to dB scale for consistency
+   ```python
+   gamma_dB = X_t * 10 / np.log(10)  # Convert natural log to dB
+   ```
+
+6. **PER Lookup**: Uses dB scale directly (table expects dB inputs)
+
+#### Why Natural Log for X_t?
+
+- **Additivity**: AR process becomes additive rather than multiplicative
+- **Stability**: Gaussian innovations in log space → log-normal in linear space
+- **Positivity**: Ensures gamma_eff > 0 without explicit constraints
+- **Correlation**: Better captures temporal correlation structure
+
+#### Mathematical Relationship
+
+```
+gamma_linear = exp(X_t)           # Natural log → Linear
+gamma_dB = 10*log10(gamma_linear) # Linear → dB
+gamma_dB = X_t * 10/ln(10)        # Direct conversion: Natural log → dB
+```
+
 ## Key Implementation Details
 
 ### 1. Stability Guarantee

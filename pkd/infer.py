@@ -10,7 +10,7 @@ stochastic process model. At each time step:
 3. Sample innovation: eps_t ~ SGN(0, sigma_t, beta_t, lambda_t)
 4. Compute AR mean: mu_t = c_t + sum(phi_i * X_{t-i})
 5. Generate log-SINR: X_t = mu_t + eps_t
-6. Convert to linear: gamma_eff_t = exp(X_t)
+6. Convert to dB scale: gamma_eff_t = X_t * 10 / ln(10)
 
 The SGN distribution provides:
   - Adaptive variance through sigma_t
@@ -216,7 +216,7 @@ class PKDInference:
             return_per: if True, also compute PER
 
         Returns:
-            gamma_eff: effective SINR (linear scale)
+            gamma_eff: effective SINR (dB scale)
             per: packet error rate (if return_per=True)
             error_event: packet error (if return_per=True)
         """
@@ -249,26 +249,28 @@ class PKDInference:
         if not np.isfinite(X_t):
             raise RuntimeError(f"X_t became non-finite: {X_t} (mu={mu:.4f}, eps={eps:.4f})")
 
-        # Convert to linear domain
-        gamma_eff = np.exp(X_t)
+        # Convert from natural log to dB scale for consistent output
+        # X_t is in natural log scale: ln(gamma_linear)
+        # dB scale: gamma_dB = 10*log10(gamma_linear) = X_t * 10 / ln(10)
+        gamma_eff_db = X_t * 10 / np.log(10)
 
         # Update state
         self.state_buffer.append(X_t)
 
         if not return_per:
-            return gamma_eff
+            return gamma_eff_db
 
-        # Compute PER
+        # Compute PER (use dB scale directly)
         mcs = config_dict['MCS'].item() if torch.is_tensor(config_dict['MCS']) else config_dict['MCS']
         packet_length = config_dict.get('packet_length', 1458)  # Default to L0=1458 if not specified
         if torch.is_tensor(packet_length):
             packet_length = packet_length.item()
-        per = self.per_lut.lookup(gamma_eff, mcs, packet_length=packet_length)
+        per = self.per_lut.lookup(gamma_eff_db, mcs, packet_length=packet_length)
 
         # Sample error event
         error_event = np.random.rand() < per
 
-        return gamma_eff, per, error_event
+        return gamma_eff_db, per, error_event
 
     def run_sequence(self, config_trajectory, return_details=True):
         """
@@ -279,7 +281,7 @@ class PKDInference:
             return_details: if True, return full details
 
         Returns:
-            results: dict with gamma_eff, per, errors arrays
+            results: dict with gamma_eff (dB scale), per, errors arrays
         """
         # Cold start with first config
         self.cold_start(config_trajectory[0])
@@ -312,7 +314,7 @@ class PKDInference:
                            Each tuple represents a window with constant config
 
         Returns:
-            results: dict with gamma_eff, per, errors arrays
+            results: dict with gamma_eff (dB scale), per, errors arrays
         """
         # Cold start
         first_config, _ = config_windows[0]
@@ -350,15 +352,16 @@ class PKDInference:
                 if not np.isfinite(X_t):
                     raise RuntimeError(f"X_t became non-finite: {X_t}")
 
-                gamma_eff = np.exp(X_t)
+                # Convert from natural log to dB scale
+                gamma_eff_db = X_t * 10 / np.log(10)
 
                 self.state_buffer.append(X_t)
 
-                # PER and error
-                per = self.per_lut.lookup(gamma_eff, mcs, packet_length=packet_length)
+                # PER and error (use dB scale directly)
+                per = self.per_lut.lookup(gamma_eff_db, mcs, packet_length=packet_length)
                 error = np.random.rand() < per
 
-                gamma_eff_list.append(gamma_eff)
+                gamma_eff_list.append(gamma_eff_db)
                 per_list.append(per)
                 error_list.append(error)
 

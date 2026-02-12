@@ -17,18 +17,17 @@ def load_real_data(data_dir='data', train_ratio=0.7, val_ratio=0.1, max_files=No
         random_seed: Random seed for reproducible shuffling (None = no shuffling)
 
     Returns:
-        train_sequences: List of gamma_eff sequences for training (in LINEAR scale)
+        train_sequences: List of gamma_eff sequences for training (in natural log scale)
         train_configs: List of config dicts for training
-        val_sequences: List of gamma_eff sequences for validation (in LINEAR scale)
+        val_sequences: List of gamma_eff sequences for validation (in natural log scale)
         val_configs: List of config dicts for validation
-        test_sequences: List of gamma_eff sequences for testing (in LINEAR scale)
+        test_sequences: List of gamma_eff sequences for testing (in natural log scale)
         test_configs: List of config dicts for testing
 
     Note:
-        The .mat files contain gamma_eff in LOG scale (log of SINR).
-        This function converts them to LINEAR scale (exp(log_gamma)) for consistency
-        with the generate_dummy sequence function, which also returns linear scale values.
-        The training code will convert back to log scale internally.
+        The .mat files contain gamma_eff in dB scale (10*log10 of SINR).
+        This function converts to natural log scale: ln(gamma_linear) = gamma_dB * ln(10) / 10
+        The model training and inference code work with natural log scale values.
 
         Sequences are randomly shuffled before splitting to ensure train/val/test sets
         have representative samples from all configurations.
@@ -85,9 +84,10 @@ def load_real_data(data_dir='data', train_ratio=0.7, val_ratio=0.1, max_files=No
                 }
 
                 # Extract sequence for this index (column i)
-                # Note: Data is stored in LOG scale, convert to LINEAR scale
-                log_sequence = gamma_eff[:, i]  # Shape: (1000,), in log scale
-                sequence = np.exp(log_sequence)  # Convert to linear scale
+                # Data is in dB scale from .mat files, convert to natural log scale
+                gamma_dB = gamma_eff[:, i]  # Shape: (1000,), in dB scale
+                # Convert: ln(gamma_linear) = gamma_dB * ln(10) / 10
+                sequence = gamma_dB * np.log(10) / 10  # Convert to natural log scale
 
                 all_sequences.append(sequence)
                 all_configs.append(config_dict)

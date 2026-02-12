@@ -415,26 +415,19 @@ def example_evaluation(data_dir='data', test_idx=0, max_files=None):
         print(f"  Inf count: {np.isinf(student_arr).sum()}")
         raise ValueError("Student sequence contains non-finite values")
 
-    # Check for non-positive values
-    if not np.all(student_arr > 0):
-        print(f"  ERROR: Student sequence contains non-positive values!")
-        print(f"  Positive ratio: {(student_arr > 0).mean():.4f}")
-        print(f"  Min value: {student_arr.min():.4e}")
-        raise ValueError("Student sequence contains non-positive gamma_eff")
-
     # Diagnostics: check if student sequence is degenerate
     student_unique = len(np.unique(np.round(student_seq, 6)))
-    print(f"  ✓ All values finite and positive")
+    print(f"  ✓ All values finite")
     print(f"  Unique values: {student_unique} / {len(student_seq)}")
     if student_unique < len(student_seq) * 0.9:
         print(f"  WARNING: Low diversity! Expected ~{len(student_seq)}, got {student_unique}")
     print(f"  Min: {np.min(student_seq):.4f}, Max: {np.max(student_seq):.4f}")
     print(f"  Mean: {np.mean(student_seq):.4f}, Std: {np.std(student_seq):.4f}")
 
-    # Convert to log domain for analysis
-    # Note: validation above ensures all values are finite and positive
-    teacher_log = np.log(teacher_seq)
-    student_log = np.log(student_seq)
+    # Data is already in natural log scale (converted from dB in data_loader.py)
+    # No conversion needed here
+    teacher_log = teacher_seq  # Already in natural log scale
+    student_log = student_seq  # Already in natural log scale
 
     print("\n--- 1. Marginal Distribution Fidelity ---")
     marginal_metrics = evaluate_marginal_distribution(teacher_log, student_log)

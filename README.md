@@ -80,6 +80,19 @@ See **[QUICKSTART.md](QUICKSTART.md)** for detailed usage.
 4. **Efficiency**: Time-skipping via configuration caching (100-1000x speedup)
 5. **Integration**: Seamless AWGN PER lookup for packet error generation
 
+### 📊 Data Flow & Scale Conversions
+
+**Important Distinction**: The model internally works with `X_t` (natural log scale) while `gamma_eff` (effective SINR) undergoes scale conversions:
+
+1. **Input Data**: `.mat` files contain `gamma_eff` in **dB scale** (10*log10 of linear SINR)
+2. **Data Loading**: Converts dB → **natural log scale**: `X_t = gamma_dB * ln(10) / 10`
+3. **AR Process**: `X_t` follows AR(p) with Gaussian innovation: `X_t = μ_t + ε_t`
+4. **Training/Inference**: All internal processing uses `X_t` in **natural log scale**
+5. **Output**: Converts natural log → **dB scale** for consistency: `gamma_dB = X_t * 10 / ln(10)`
+6. **PER Lookup**: Uses dB scale directly for AWGN table lookup
+
+**Key Insight**: `X_t` represents `ln(gamma_eff_linear)` and models the temporal correlation in log space, making the process additive rather than multiplicative and ensuring positive SINR values.
+
 ## 💻 Basic Usage
 
 ```python
