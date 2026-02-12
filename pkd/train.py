@@ -44,8 +44,9 @@ class PKDDataset(Dataset):
         self.configs = configs
         self.ar_order = ar_order
 
-        # Precompute log domain with clipping to prevent -inf
-        self.X_sequences = [np.log(np.maximum(seq, eps)) for seq in sequences]
+        # Data is already in natural log scale (converted in data_loader.py)
+        # Just store as-is without conversion
+        self.X_sequences = sequences
 
         # Check for any non-finite values
         for i, X_seq in enumerate(self.X_sequences):

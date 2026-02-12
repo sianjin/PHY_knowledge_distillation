@@ -219,12 +219,12 @@ class AWGNPERLookup:
 
             self.lut_dict[mcs] = interpolator
 
-    def lookup(self, gamma_eff, mcs, packet_length=1458):
+    def lookup(self, gamma_eff_db, mcs, packet_length=1458):
         """
         Look up PER for given effective SINR and MCS.
 
         Args:
-            gamma_eff: effective SINR (linear scale, can be array or scalar)
+            gamma_eff_db: effective SINR in dB scale (can be array or scalar)
             mcs: MCS index (scalar)
             packet_length: data packet length in bytes (default: 1458)
 
@@ -236,9 +236,9 @@ class AWGNPERLookup:
             For different packet lengths, PER is adjusted using:
                 per_adj = 1 - (1 - per_base)^(packet_length / L0)
         """
-        # Convert to dB
-        gamma_eff_np = gamma_eff.cpu().numpy() if torch.is_tensor(gamma_eff) else gamma_eff
-        snr_db = 10 * np.log10(gamma_eff_np + 1e-10)
+        # Input is already in dB scale
+        gamma_eff_np = gamma_eff_db.cpu().numpy() if torch.is_tensor(gamma_eff_db) else gamma_eff_db
+        snr_db = gamma_eff_np
 
         # Lookup base PER for L0=1458 bytes
         if mcs not in self.lut_dict:

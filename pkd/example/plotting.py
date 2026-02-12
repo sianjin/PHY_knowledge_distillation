@@ -14,7 +14,7 @@ def evaluate_test_set(model, test_sequences, test_configs, device='cpu'):
 
     Args:
         model: Trained PKDModel
-        test_sequences: List of test gamma_eff sequences (in LINEAR scale)
+        test_sequences: List of test gamma_eff sequences (in natural log scale)
         test_configs: List of test config dicts
         device: Device to run evaluation on
 
@@ -130,7 +130,7 @@ def generate_figure1_per_mcs_metrics(model, test_sequences, test_configs, device
         for seq_idx in seq_indices:
             teacher_seq = test_sequences[seq_idx]
             config = test_configs[seq_idx]
-            X_teacher = np.log(teacher_seq)  # Log domain
+            X_teacher = teacher_seq  # Already in natural log scale  # Log domain
 
             # === Teacher-Forced Metrics (PKD v1: Gaussian innovation) ===
             with torch.no_grad():
@@ -181,8 +181,8 @@ def generate_figure1_per_mcs_metrics(model, test_sequences, test_configs, device
             student_results = inference.run_sequence(config_traj)
             student_seq = np.array(student_results['gamma_eff'])
 
-            if np.all(np.isfinite(student_seq)) and np.all(student_seq > 0):
-                X_student = np.log(student_seq)
+            if np.all(np.isfinite(student_seq)):
+                X_student = student_seq  # Already in natural log scale
 
                 # ACF RMSE
                 teacher_acf = compute_acf(X_teacher, max_lag=50)
@@ -318,15 +318,15 @@ def generate_figure2_quantile_error(model, test_sequences, test_configs, device=
         for seq_idx in tqdm(seq_indices, desc=f"MCS {mcs}"):
             teacher_seq = test_sequences[seq_idx]
             config = test_configs[seq_idx]
-            X_teacher = np.log(teacher_seq)
+            X_teacher = teacher_seq  # Already in natural log scale
 
             # Generate student
             config_traj = [config] * len(teacher_seq)
             student_results = inference.run_sequence(config_traj)
             student_seq = np.array(student_results['gamma_eff'])
 
-            if np.all(np.isfinite(student_seq)) and np.all(student_seq > 0):
-                X_student = np.log(student_seq)
+            if np.all(np.isfinite(student_seq)):
+                X_student = student_seq  # Already in natural log scale
 
                 # Compute quantiles
                 q_teacher = np.quantile(X_teacher, quantile_levels)
@@ -420,7 +420,7 @@ def generate_figure3_ccdf_error(model, test_sequences, test_configs, device='cpu
         # Collect all teacher values to determine threshold grid
         all_teacher_values = []
         for seq_idx in seq_indices:
-            X_teacher = np.log(test_sequences[seq_idx])
+            X_teacher = test_sequences[seq_idx]  # Already in natural log scale
             all_teacher_values.extend(X_teacher)
 
         all_teacher_values = np.array(all_teacher_values)
@@ -434,15 +434,15 @@ def generate_figure3_ccdf_error(model, test_sequences, test_configs, device='cpu
         for seq_idx in tqdm(seq_indices, desc=f"MCS {mcs}"):
             teacher_seq = test_sequences[seq_idx]
             config = test_configs[seq_idx]
-            X_teacher = np.log(teacher_seq)
+            X_teacher = teacher_seq  # Already in natural log scale
 
             # Generate student
             config_traj = [config] * len(teacher_seq)
             student_results = inference.run_sequence(config_traj)
             student_seq = np.array(student_results['gamma_eff'])
 
-            if np.all(np.isfinite(student_seq)) and np.all(student_seq > 0):
-                X_student = np.log(student_seq)
+            if np.all(np.isfinite(student_seq)):
+                X_student = student_seq  # Already in natural log scale
 
                 # Compute CCDF for each threshold
                 ccdf_error = []
