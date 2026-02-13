@@ -4,7 +4,6 @@ import torch
 import numpy as np
 import matplotlib.pyplot as plt
 from scipy import stats
-from sklearn.linear_model import LinearRegression
 
 from .utils import compute_acf, compute_psd, ljung_box_test
 
@@ -285,15 +284,19 @@ def evaluate_teacher_baseline_ar(teacher_seq, ar_order=5, save_path='eval_teache
     X_design = np.array(X_design)  # (T-p, p)
     y = np.array(y)  # (T-p,)
 
-    # Fit AR model with OLS
-    model = LinearRegression(fit_intercept=True)
-    model.fit(X_design, y)
+    # Fit AR model with OLS using numpy
+    # Add intercept column to design matrix
+    X_design_with_intercept = np.column_stack([np.ones(len(X_design)), X_design])  # (T-p, p+1)
 
-    phi = model.coef_  # (p,)
-    c = model.intercept_  # scalar
+    # Solve normal equations: (X^T X) beta = X^T y
+    # beta = [c, phi_1, ..., phi_p]
+    beta = np.linalg.lstsq(X_design_with_intercept, y, rcond=None)[0]
+
+    c = beta[0]  # Intercept
+    phi = beta[1:]  # AR coefficients (p,)
 
     # Compute residuals
-    y_pred = model.predict(X_design)
+    y_pred = X_design_with_intercept @ beta
     residuals = y - y_pred  # eps_t
 
     # Estimate constant sigma (MLE for Gaussian)
