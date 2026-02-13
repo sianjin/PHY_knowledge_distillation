@@ -13,7 +13,8 @@ from .data_loader import load_real_data
 from .evaluation import (
     evaluate_marginal_distribution,
     evaluate_temporal_dependence,
-    evaluate_innovation_structure
+    evaluate_innovation_structure,
+    evaluate_teacher_baseline_ar
 )
 from .plotting import (
     evaluate_test_set,
@@ -442,6 +443,10 @@ def example_evaluation(data_dir='data', test_idx=0, max_files=None):
     print("\n--- 3. Innovation Structure ---")
     innovation_metrics = evaluate_innovation_structure(model, inference, teacher_seq, config, device)
 
+    print("\n--- 4. Teacher Baseline (Classical AR) ---")
+    print("Running classical AR(5) baseline on teacher data for comparison...")
+    baseline_metrics = evaluate_teacher_baseline_ar(teacher_seq, ar_order=5)
+
     print("\n" + "=" * 50)
     print("Evaluation complete! Check generated PNG files.")
     print("=" * 50)
@@ -449,7 +454,8 @@ def example_evaluation(data_dir='data', test_idx=0, max_files=None):
     return {
         'marginal': marginal_metrics,
         'temporal': temporal_metrics,
-        'innovation': innovation_metrics
+        'innovation': innovation_metrics,
+        'baseline': baseline_metrics
     }
 
 

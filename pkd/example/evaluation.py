@@ -4,6 +4,7 @@ import torch
 import numpy as np
 import matplotlib.pyplot as plt
 from scipy import stats
+from sklearn.linear_model import LinearRegression
 
 from .utils import compute_acf, compute_psd, ljung_box_test
 
@@ -245,5 +246,151 @@ def evaluate_innovation_structure(model, inference, teacher_seq, config, device=
         'var_innov': np.var(standardized_innovations),
         'max_acf': max_acf,
         'pit_ks_pval': ks_pval
+    }
+
+
+def evaluate_teacher_baseline_ar(teacher_seq, ar_order=5, save_path='eval_teacher_baseline.png'):
+    """
+    Fit classical AR(p) + constant σ to teacher sequence as baseline diagnostic.
+
+    This checks if Ljung-Box rejection on z_t² is inherent to teacher data
+    or a student model issue.
+
+    Args:
+        teacher_seq: Teacher sequence in natural log scale
+        ar_order: AR order for baseline (default: 5)
+        save_path: Output path for diagnostic plot
+
+    Returns:
+        dict with baseline diagnostics
+    """
+    print(f"\n{'='*60}")
+    print(f"BASELINE DIAGNOSTIC: Classical AR({ar_order}) on Teacher Data")
+    print(f"{'='*60}")
+
+    X = teacher_seq
+    T = len(X)
+
+    # Build design matrix for AR(p) regression
+    # X_t = c + phi_1*X_{t-1} + ... + phi_p*X_{t-p} + eps_t
+    X_design = []
+    y = []
+
+    for t in range(ar_order, T):
+        # History: [X_{t-1}, ..., X_{t-p}]
+        X_hist = X[t-ar_order:t][::-1]  # Reverse to get [X_{t-1}, ..., X_{t-p}]
+        X_design.append(X_hist)
+        y.append(X[t])
+
+    X_design = np.array(X_design)  # (T-p, p)
+    y = np.array(y)  # (T-p,)
+
+    # Fit AR model with OLS
+    model = LinearRegression(fit_intercept=True)
+    model.fit(X_design, y)
+
+    phi = model.coef_  # (p,)
+    c = model.intercept_  # scalar
+
+    # Compute residuals
+    y_pred = model.predict(X_design)
+    residuals = y - y_pred  # eps_t
+
+    # Estimate constant sigma (MLE for Gaussian)
+    sigma_hat = np.std(residuals, ddof=ar_order+1)  # ddof accounts for p+1 parameters
+
+    # Standardized residuals
+    z = residuals / sigma_hat
+
+    print(f"\nFitted AR({ar_order}) parameters:")
+    print(f"  Intercept (c): {c:.4f}")
+    print(f"  AR coefficients (phi): {phi}")
+    print(f"  Residual std (σ̂): {sigma_hat:.4f}")
+    print(f"  Sum of AR coeffs: {np.sum(phi):.4f}")
+
+    # Diagnostics on standardized residuals
+    print(f"\n=== Teacher Baseline Diagnostics ===")
+    lb_stat, lb_pval = ljung_box_test(z, lags=20)
+    lb_stat_sq, lb_pval_sq = ljung_box_test(z**2, lags=20)
+
+    print(f"Ljung-Box test (z_t):     statistic={lb_stat:.2f}, p-value={lb_pval:.4f}")
+    print(f"Ljung-Box test (z_t²):    statistic={lb_stat_sq:.2f}, p-value={lb_pval_sq:.4f}")
+    print(f"Mean of z_t:              {np.mean(z):.4f}")
+    print(f"Variance of z_t:          {np.var(z):.4f}")
+
+    z_acf = compute_acf(z, max_lag=20)
+    z_sq_acf = compute_acf(z**2, max_lag=20)
+    max_acf_z = np.max(np.abs(z_acf[1:]))
+    max_acf_z_sq = np.max(np.abs(z_sq_acf[1:]))
+    print(f"Max |ACF(z_t)| (lags 1-20):   {max_acf_z:.4f}")
+    print(f"Max |ACF(z_t²)| (lags 1-20):  {max_acf_z_sq:.4f}")
+
+    # PIT test
+    pit_values = stats.norm.cdf(z)
+    ks_stat_pit, ks_pval_pit = stats.kstest(pit_values, 'uniform')
+    print(f"PIT uniformity KS test:   statistic={ks_stat_pit:.4f}, p-value={ks_pval_pit:.4f}")
+
+    # Plot diagnostics
+    fig, axes = plt.subplots(2, 2, figsize=(12, 10))
+
+    # (a) Standardized residuals z_t
+    axes[0, 0].plot(z, linewidth=0.5, alpha=0.7)
+    axes[0, 0].axhline(y=0, color='k', linestyle='--', alpha=0.5)
+    axes[0, 0].axhline(y=2, color='r', linestyle='--', alpha=0.3)
+    axes[0, 0].axhline(y=-2, color='r', linestyle='--', alpha=0.3)
+    axes[0, 0].set_xlabel('Time')
+    axes[0, 0].set_ylabel('z_t')
+    axes[0, 0].set_title(f'(a) Standardized Residuals (AR({ar_order}) Baseline)')
+    axes[0, 0].grid(True, alpha=0.3)
+
+    # (b) ACF of z_t
+    lags = np.arange(len(z_acf))
+    axes[0, 1].stem(lags, z_acf, basefmt=' ')
+    axes[0, 1].axhline(y=0, color='k', linestyle='-', alpha=0.3)
+    axes[0, 1].axhline(y=1.96/np.sqrt(len(z)), color='r', linestyle='--', alpha=0.5)
+    axes[0, 1].axhline(y=-1.96/np.sqrt(len(z)), color='r', linestyle='--', alpha=0.5)
+    axes[0, 1].set_xlabel('Lag')
+    axes[0, 1].set_ylabel('ACF')
+    axes[0, 1].set_title('(b) ACF of z_t')
+    axes[0, 1].grid(True, alpha=0.3)
+
+    # (c) ACF of z_t²
+    axes[1, 0].stem(lags, z_sq_acf, basefmt=' ')
+    axes[1, 0].axhline(y=0, color='k', linestyle='-', alpha=0.3)
+    axes[1, 0].axhline(y=1.96/np.sqrt(len(z)), color='r', linestyle='--', alpha=0.5)
+    axes[1, 0].axhline(y=-1.96/np.sqrt(len(z)), color='r', linestyle='--', alpha=0.5)
+    axes[1, 0].set_xlabel('Lag')
+    axes[1, 0].set_ylabel('ACF')
+    axes[1, 0].set_title(f'(c) ACF of z_t² (LB p-value: {lb_pval_sq:.4f})')
+    axes[1, 0].grid(True, alpha=0.3)
+
+    # (d) PIT histogram
+    axes[1, 1].hist(pit_values, bins=20, density=True, alpha=0.7, edgecolor='black')
+    axes[1, 1].axhline(y=1.0, color='r', linestyle='--', label='Uniform(0,1)', linewidth=2)
+    axes[1, 1].set_xlabel('PIT value')
+    axes[1, 1].set_ylabel('Density')
+    axes[1, 1].set_title(f'(d) PIT Histogram (KS p-value: {ks_pval_pit:.4f})')
+    axes[1, 1].legend()
+    axes[1, 1].grid(True, alpha=0.3)
+
+    plt.suptitle(f'Teacher Baseline: Classical AR({ar_order}) + Constant σ',
+                 fontsize=14, fontweight='bold')
+    plt.tight_layout()
+    plt.savefig(save_path, dpi=150, bbox_inches='tight')
+    print(f"\nSaved teacher baseline diagnostics to {save_path}")
+    plt.close()
+
+    return {
+        'ar_order': ar_order,
+        'phi': phi,
+        'c': c,
+        'sigma': sigma_hat,
+        'lb_pval_z': lb_pval,
+        'lb_pval_z_sq': lb_pval_sq,
+        'mean_z': np.mean(z),
+        'var_z': np.var(z),
+        'max_acf_z': max_acf_z,
+        'max_acf_z_sq': max_acf_z_sq,
+        'pit_ks_pval': ks_pval_pit
     }
 
