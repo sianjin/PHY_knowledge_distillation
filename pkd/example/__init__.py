@@ -9,7 +9,8 @@ from .utils import (
 from .evaluation import (
     evaluate_marginal_distribution,
     evaluate_temporal_dependence,
-    evaluate_innovation_structure
+    evaluate_innovation_structure,
+    evaluate_teacher_baseline_ar
 )
 from .plotting import (
     evaluate_test_set,
@@ -41,6 +42,7 @@ __all__ = [
     'evaluate_marginal_distribution',
     'evaluate_temporal_dependence',
     'evaluate_innovation_structure',
+    'evaluate_teacher_baseline_ar',
     'evaluate_test_set',
     # Plotting
     'generate_figure1_per_mcs_metrics',
