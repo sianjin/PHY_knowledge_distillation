@@ -179,10 +179,13 @@ def generate_figure1_per_mcs_metrics(model, test_sequences, test_configs, device
             # Generate student sequence
             config_traj = [config] * len(teacher_seq)
             student_results = inference.run_sequence(config_traj)
-            student_seq = np.array(student_results['gamma_eff'])
+            student_seq_db = np.array(student_results['gamma_eff'])  # Inference outputs dB scale
+
+            # Convert from dB to natural log scale
+            student_seq = student_seq_db * np.log(10) / 10
 
             if np.all(np.isfinite(student_seq)):
-                X_student = student_seq  # Already in natural log scale
+                X_student = student_seq  # Now in natural log scale
 
                 # ACF RMSE
                 teacher_acf = compute_acf(X_teacher, max_lag=50)
@@ -323,10 +326,13 @@ def generate_figure2_quantile_error(model, test_sequences, test_configs, device=
             # Generate student
             config_traj = [config] * len(teacher_seq)
             student_results = inference.run_sequence(config_traj)
-            student_seq = np.array(student_results['gamma_eff'])
+            student_seq_db = np.array(student_results['gamma_eff'])  # Inference outputs dB scale
+
+            # Convert from dB to natural log scale
+            student_seq = student_seq_db * np.log(10) / 10
 
             if np.all(np.isfinite(student_seq)):
-                X_student = student_seq  # Already in natural log scale
+                X_student = student_seq  # Now in natural log scale
 
                 # Compute quantiles
                 q_teacher = np.quantile(X_teacher, quantile_levels)
@@ -439,10 +445,13 @@ def generate_figure3_ccdf_error(model, test_sequences, test_configs, device='cpu
             # Generate student
             config_traj = [config] * len(teacher_seq)
             student_results = inference.run_sequence(config_traj)
-            student_seq = np.array(student_results['gamma_eff'])
+            student_seq_db = np.array(student_results['gamma_eff'])  # Inference outputs dB scale
+
+            # Convert from dB to natural log scale
+            student_seq = student_seq_db * np.log(10) / 10
 
             if np.all(np.isfinite(student_seq)):
-                X_student = student_seq  # Already in natural log scale
+                X_student = student_seq  # Now in natural log scale
 
                 # Compute CCDF for each threshold
                 ccdf_error = []

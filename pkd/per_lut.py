@@ -258,8 +258,8 @@ class AWGNPERLookup:
             per = per_base
 
         # Convert back to torch if needed
-        if torch.is_tensor(gamma_eff):
-            per = torch.from_numpy(per).to(gamma_eff.device).float()
+        if torch.is_tensor(gamma_eff_db):
+            per = torch.from_numpy(per).to(gamma_eff_db.device).float()
 
         return per
 
