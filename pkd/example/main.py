@@ -400,7 +400,12 @@ def example_evaluation(data_dir='data', test_idx=0, max_files=None):
 
     config_traj = [config] * len(teacher_seq)
     student_results = inference.run_sequence(config_traj)
-    student_seq = student_results['gamma_eff']
+    student_seq_db = student_results['gamma_eff']  # Inference outputs dB scale
+
+    # Convert student sequence from dB to natural log scale for comparison
+    # dB scale: gamma_dB = 10*log10(gamma_linear)
+    # Natural log: ln(gamma_linear) = gamma_dB * ln(10) / 10
+    student_seq = student_seq_db * np.log(10) / 10
 
     # CRITICAL VALIDATION: Check student sequence validity
     print(f"\nStudent sequence validation:")
@@ -424,10 +429,9 @@ def example_evaluation(data_dir='data', test_idx=0, max_files=None):
     print(f"  Min: {np.min(student_seq):.4f}, Max: {np.max(student_seq):.4f}")
     print(f"  Mean: {np.mean(student_seq):.4f}, Std: {np.std(student_seq):.4f}")
 
-    # Data is already in natural log scale (converted from dB in data_loader.py)
-    # No conversion needed here
-    teacher_log = teacher_seq  # Already in natural log scale
-    student_log = student_seq  # Already in natural log scale
+    # Both sequences now in natural log scale for fair comparison
+    teacher_log = teacher_seq  # Already in natural log scale (from data_loader)
+    student_log = student_seq  # Converted from dB to natural log scale
 
     print("\n--- 1. Marginal Distribution Fidelity ---")
     marginal_metrics = evaluate_marginal_distribution(teacher_log, student_log)
