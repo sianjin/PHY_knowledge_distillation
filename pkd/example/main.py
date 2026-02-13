@@ -444,8 +444,8 @@ def example_evaluation(data_dir='data', test_idx=0, max_files=None):
     innovation_metrics = evaluate_innovation_structure(model, inference, teacher_seq, config, device)
 
     print("\n--- 4. Teacher Baseline (Classical AR) ---")
-    print("Running classical AR(5) baseline on teacher data for comparison...")
-    baseline_metrics = evaluate_teacher_baseline_ar(teacher_seq, ar_order=5)
+    print(f"Running classical AR({model.ar_order}) baseline on teacher data for comparison...")
+    baseline_metrics = evaluate_teacher_baseline_ar(teacher_seq, ar_order=model.ar_order)
 
     print("\n" + "=" * 50)
     print("Evaluation complete! Check generated PNG files.")
