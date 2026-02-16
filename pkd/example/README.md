@@ -61,8 +61,10 @@ python example.py train                   # Train with all real data files
 python example.py train 5                 # Train with first 5 files
 
 # Testing
-python example.py test                    # Evaluate on test set (all files)
-python example.py test 5                  # Evaluate on test set (5 files)
+python example.py test                                      # Auto-select most common slice
+python example.py test 5                                    # Test with 5 files
+python example.py test --slice N_t:4 N_r:2                  # Specify configuration slice
+python example.py test --slice channel_model_id:2 N_t:4 N_r:2 BW:20.0 N_ss:2  # Full slice spec
 
 # Qualitative Evaluation
 python example.py eval                    # Evaluate first test sequence
@@ -149,22 +151,71 @@ python example.py test
 This will:
 1. Load the trained model from `pkd_model.pt`
 2. Load the **held-out test set** (20% of sequences, same 70/10/20 split as training)
-3. Use PyTorch DataLoader to efficiently evaluate **all ~1,000 test sequences**
-4. Compute aggregate metrics:
-   - Average test loss (negative log-likelihood)
-   - Average log-likelihood across all test samples
-   - Total number of test sequences and samples evaluated
+3. **Filter to a configuration slice** to ensure clean regime behavior without mixing heterogeneous configs
+4. Evaluate all test sequences in the filtered slice
+5. Generate three comprehensive evaluation figures:
+   - `fig1_per_mcs_metrics.png` - Per-MCS metrics vs SNR
+   - `fig2_quantile_error.png` - Quantile error analysis
+   - `fig3_ccdf_error.png` - CCDF error analysis
+
+#### Configuration Slicing
+
+**PKD v1** filters test evaluation to a single configuration slice (fixed antenna config, bandwidth, channel model, etc.) to ensure figures show clean regime behavior without mixing heterogeneous configurations. Only MCS and SNR_bar vary within the slice.
+
+**Auto-selection (default)**:
+```bash
+python example.py test
+```
+Automatically selects the most common configuration slice in your test set.
+
+**Manual slice specification**:
+```bash
+# Specify partial slice (other params auto-selected)
+python example.py test --slice N_t:4 N_r:2
+
+# Full slice specification
+python example.py test --slice channel_model_id:2 N_t:4 N_r:2 BW:20.0 N_ss:2 packet_length:1000
+```
+
+**Available slice parameters**:
+- `channel_model_id` (int): Channel model ID (e.g., 0-4, where 4=Model-D)
+- `N_t` (int): Number of transmit antennas (e.g., 2, 4, 8)
+- `N_r` (int): Number of receive antennas (e.g., 2, 4, 8)
+- `BW` (float): Bandwidth in MHz (e.g., 20.0, 40.0, 80.0)
+- `N_ss` (int): Number of spatial streams (e.g., 1, 2, 4)
+
+**Notes**:
+- MCS and SNR_bar are NOT included in the slice specification as they are the varying dimensions for analysis
+- `packet_length` is always 1000 bytes in the current dataset and does not need to be specified
+
+**Examples**:
+```bash
+# Evaluate 4x2 MIMO configuration
+python example.py test --slice N_t:4 N_r:2
+
+# Evaluate Model-D channel with 20 MHz bandwidth
+python example.py test --slice channel_model_id:4 BW:20.0
+
+# Evaluate 2 spatial streams on 4x4 MIMO
+python example.py test --slice N_t:4 N_r:4 N_ss:2
+
+# Combine with file limit
+python example.py test 10 --slice N_t:4 N_r:2
+```
 
 **Important Notes**:
 - Uses the same random seed (42) as training to ensure consistent train/val/test split
 - Test set is completely held-out data that the model never saw during training
-- If you trained with a subset of files (e.g., `train-real 10`), use the same number for testing (e.g., `test 10`)
+- If you trained with a subset of files (e.g., `train 10`), use the same number for testing (e.g., `test 10`)
+- The slice filter ensures sufficient (MCS, SNR) coverage for meaningful analysis
 
 ```bash
 # If you trained with 10 files:
 python example.py train 10
 # Then test with the same 10 files:
 python example.py test 10
+# Or with specific slice:
+python example.py test 10 --slice N_t:4 N_r:2
 ```
 
 ### 2. Evaluate Single Test Sequence (Qualitative Analysis)
@@ -332,15 +383,26 @@ trained_model = train_pkd(
 ```python
 from pkd.example import example_test_evaluation
 
-# Evaluate on held-out test set (recommended for quantitative metrics)
-test_metrics = example_test_evaluation(data_dir='data')
+# Auto-select most common slice (recommended)
+results = example_test_evaluation(data_dir='data')
+
+# With manual slice specification
+slice_spec = {
+    'channel_model_id': 2,  # int: 0-4 (4=Model-D)
+    'N_t': 4,               # int: number of transmit antennas
+    'N_r': 2,               # int: number of receive antennas
+    'BW': 20.0,             # float: bandwidth in MHz
+    'N_ss': 2               # int: number of spatial streams
+}
+results = example_test_evaluation(data_dir='data', slice_spec=slice_spec)
 
 # With subset of files (must match training)
-test_metrics = example_test_evaluation(data_dir='data', max_files=10)
+results = example_test_evaluation(data_dir='data', max_files=10, slice_spec=slice_spec)
 
-print(f"Test loss: {test_metrics['test_loss']:.4f}")
-print(f"Avg log-likelihood: {test_metrics['avg_log_likelihood']:.4f}")
-print(f"Test sequences: {test_metrics['num_sequences']}")
+# Access results
+print(f"Slice label: {results['slice_label']}")
+print(f"Evaluated sequences: {len(results['test_metrics'])}")
+print(f"Figure 1 results: {results['fig1_results'].keys()}")
 ```
 
 ### Single Test Sequence Evaluation (Qualitative)
@@ -398,8 +460,10 @@ The test set (1,000 sequences) has the following distribution across MCS and SNR
 |------|---------|
 | **Train with real data (all files)** | `python example.py train` |
 | **Train with real data (5 files)** | `python example.py train 5` |
-| **Evaluate on test set (recommended)** | `python example.py test` |
-| **Evaluate on test set (subset)** | `python example.py test 5` |
+| **Evaluate on test set (auto-slice)** | `python example.py test` |
+| **Evaluate with specific slice** | `python example.py test --slice N_t:4 N_r:2` |
+| **Evaluate with full slice spec** | `python example.py test --slice channel_model_id:2 N_t:4 N_r:2 BW:20.0 N_ss:2` |
+| **Evaluate on test set (subset)** | `python example.py test 5 --slice N_t:4 N_r:2` |
 | **Evaluate single test sequence** | `python example.py eval 50` |
 | **Evaluate test sequence (subset)** | `python example.py eval 50 10` |
 
