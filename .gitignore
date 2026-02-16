@@ -60,3 +60,6 @@ outputs/
 figures/
 plots/
 eval_*.png
+
+# Generated test figures
+fig*.png
