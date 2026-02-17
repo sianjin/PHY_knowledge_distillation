@@ -76,23 +76,24 @@ def evaluate_test_set(model, test_sequences, test_configs, device='cpu'):
 
 
 def generate_figure1_per_mcs_metrics(model, test_sequences, test_configs, device='cpu',
-                                      save_path='fig1_per_mcs_metrics.png', slice_label=None):
-    """Generate Figure 1: Per-MCS metrics vs SNR (4 panels) - Gaussian innovation.
+                                      save_path='test_metrics', slice_label=None):
+    """Generate Figure 1: Per-MCS metrics vs SNR (5 separate files) - Gaussian innovation.
 
     PKD v1: All metrics assume Gaussian innovation N(0, σ²).
 
-    Panels:
-    A) PIT pass rate vs SNR (teacher-forced, Gaussian CDF)
-    B) Ljung-Box pass rate vs SNR (teacher-forced, standardized innovations)
-    C) Median ACF RMSE vs SNR (free-running)
-    D) Median KS statistic vs SNR (free-running)
+    Output files:
+    - test_metrics_pit_pass_rate.png: PIT pass rate vs SNR (teacher-forced, Gaussian CDF)
+    - test_metrics_lb_pass_rate_zt.png: Ljung-Box pass rate (z_t) vs SNR (teacher-forced)
+    - test_metrics_lb_pass_rate_zt2.png: Ljung-Box pass rate (z_t²) vs SNR (teacher-forced, volatility)
+    - test_metrics_acf_rmse.png: Median ACF RMSE vs SNR (free-running)
+    - test_metrics_ks_stat.png: Median KS statistic vs SNR (free-running)
 
     Args:
         model: Trained PKD model
         test_sequences: Filtered test sequences (single config slice)
         test_configs: Filtered test configs (single config slice)
         device: Computation device
-        save_path: Output file path
+        save_path: Output file prefix (without extension)
         slice_label: Configuration slice label for plot title
     """
     from collections import defaultdict
@@ -112,7 +113,7 @@ def generate_figure1_per_mcs_metrics(model, test_sequences, test_configs, device
 
     # Storage for metrics
     metrics_by_mcs_snr = defaultdict(lambda: {
-        'pit_pass': [], 'lb_pass': [], 'acf_rmse': [], 'ks_stat': []
+        'pit_pass': [], 'lb_pass': [], 'lb_pass_sq': [], 'acf_rmse': [], 'ks_stat': []
     })
 
     model.eval()
@@ -175,6 +176,10 @@ def generate_figure1_per_mcs_metrics(model, test_sequences, test_configs, device
                 lb_stat, p_lb = ljung_box_test(standardized_innovations, lags=20)
                 lb_pass = 1 if p_lb > 0.05 else 0
 
+                # Ljung-Box test (on squared standardized innovations z_t²) for volatility clustering
+                lb_stat_sq, p_lb_sq = ljung_box_test(standardized_innovations**2, lags=20)
+                lb_pass_sq = 1 if p_lb_sq > 0.05 else 0
+
             # === Free-Running Metrics ===
             # Generate student sequence
             config_traj = [config] * len(teacher_seq)
@@ -201,73 +206,107 @@ def generate_figure1_per_mcs_metrics(model, test_sequences, test_configs, device
             # Store metrics
             metrics_by_mcs_snr[(mcs, snr)]['pit_pass'].append(pit_pass)
             metrics_by_mcs_snr[(mcs, snr)]['lb_pass'].append(lb_pass)
+            metrics_by_mcs_snr[(mcs, snr)]['lb_pass_sq'].append(lb_pass_sq)
             metrics_by_mcs_snr[(mcs, snr)]['acf_rmse'].append(acf_rmse)
             metrics_by_mcs_snr[(mcs, snr)]['ks_stat'].append(ks_stat_marg)
 
     # Aggregate metrics
-    results = defaultdict(lambda: {'snr': [], 'pit_rate': [], 'lb_rate': [],
+    results = defaultdict(lambda: {'snr': [], 'pit_rate': [], 'lb_rate': [], 'lb_rate_sq': [],
                                     'acf_rmse_med': [], 'ks_med': []})
 
     for (mcs, snr), metrics in sorted(metrics_by_mcs_snr.items()):
         pit_rate = np.mean(metrics['pit_pass'])
         lb_rate = np.mean(metrics['lb_pass'])
+        lb_rate_sq = np.mean(metrics['lb_pass_sq'])
         acf_rmse_med = np.nanmedian(metrics['acf_rmse'])
         ks_med = np.nanmedian(metrics['ks_stat'])
 
         results[mcs]['snr'].append(snr)
         results[mcs]['pit_rate'].append(pit_rate)
         results[mcs]['lb_rate'].append(lb_rate)
+        results[mcs]['lb_rate_sq'].append(lb_rate_sq)
         results[mcs]['acf_rmse_med'].append(acf_rmse_med)
         results[mcs]['ks_med'].append(ks_med)
 
-    # Plot
-    fig, axes = plt.subplots(4, 1, figsize=(10, 12), sharex=True)
+    # Plot each metric as a separate figure
     colors = plt.cm.tab10(np.linspace(0, 1, 10))
 
+    # 1. PIT Pass Rate
+    fig, ax = plt.subplots(1, 1, figsize=(8, 5))
     for mcs in sorted(results.keys()):
         data = results[mcs]
         snr = np.array(data['snr'])
-
-        axes[0].plot(snr, data['pit_rate'], 'o-', label=f'MCS {mcs}', color=colors[mcs])
-        axes[1].plot(snr, data['lb_rate'], 'o-', label=f'MCS {mcs}', color=colors[mcs])
-        axes[2].plot(snr, data['acf_rmse_med'], 'o-', label=f'MCS {mcs}', color=colors[mcs])
-        axes[3].plot(snr, data['ks_med'], 'o-', label=f'MCS {mcs}', color=colors[mcs])
-
-    # Note: Higher pass rate is better (pass = do NOT reject uniformity/independence)
-    # The y=0.05 line was REMOVED because it's a significance level, not a pass rate target
-    axes[0].set_ylabel('PIT Pass Rate')
-    axes[0].set_title('(A) PIT Calibration (Gaussian Innovation, Teacher-Forced)')
-    axes[0].set_ylim([0, 1.05])  # Pass rate is between 0 and 1
-    axes[0].legend(bbox_to_anchor=(1.05, 1), loc='upper left')
-    axes[0].grid(True, alpha=0.3)
-
-    axes[1].set_ylabel('Ljung-Box Pass Rate')
-    axes[1].set_title('(B) Innovation Independence (z_t, Teacher-Forced)')
-    axes[1].set_ylim([0, 1.05])  # Pass rate is between 0 and 1
-    axes[1].legend(bbox_to_anchor=(1.05, 1), loc='upper left')
-    axes[1].grid(True, alpha=0.3)
-
-    axes[2].set_ylabel('Median ACF RMSE')
-    axes[2].set_title('(C) Temporal Correlation Error (Free-Running)')
-    axes[2].legend(bbox_to_anchor=(1.05, 1), loc='upper left')
-    axes[2].grid(True, alpha=0.3)
-
-    axes[3].set_ylabel('Median KS Statistic')
-    axes[3].set_xlabel('SNR (dB)')
-    axes[3].set_title('(D) Marginal Distribution Error (Free-Running)')
-    axes[3].legend(bbox_to_anchor=(1.05, 1), loc='upper left')
-    axes[3].grid(True, alpha=0.3)
-
-    # Add super-title with slice information
-    if slice_label:
-        title = f'PKD v1 Evaluation Metrics ({slice_label})'
-    else:
-        title = 'PKD v1 Evaluation Metrics (Gaussian Innovation)'
-    fig.suptitle(title, fontsize=13, fontweight='bold', y=0.995)
-
+        ax.plot(snr, data['pit_rate'], 'o-', label=f'MCS {mcs}', color=colors[mcs])
+    ax.set_ylabel('PIT Pass Rate')
+    ax.set_xlabel('SNR (dB)')
+    ax.set_ylim([0, 1.05])
+    ax.legend(bbox_to_anchor=(1.05, 1), loc='upper left')
+    ax.grid(True, alpha=0.3)
     plt.tight_layout()
-    plt.savefig(save_path, dpi=150, bbox_inches='tight')
-    print(f"Saved Figure 1 to {save_path}")
+    plt.savefig(f'{save_path}_pit_pass_rate.png', dpi=150, bbox_inches='tight')
+    print(f"Saved {save_path}_pit_pass_rate.png")
+    plt.close()
+
+    # 2. Ljung-Box Pass Rate (z_t)
+    fig, ax = plt.subplots(1, 1, figsize=(8, 5))
+    for mcs in sorted(results.keys()):
+        data = results[mcs]
+        snr = np.array(data['snr'])
+        ax.plot(snr, data['lb_rate'], 'o-', label=f'MCS {mcs}', color=colors[mcs])
+    ax.set_ylabel('Ljung-Box Pass Rate (z_t)')
+    ax.set_xlabel('SNR (dB)')
+    ax.set_ylim([0, 1.05])
+    ax.legend(bbox_to_anchor=(1.05, 1), loc='upper left')
+    ax.grid(True, alpha=0.3)
+    plt.tight_layout()
+    plt.savefig(f'{save_path}_lb_pass_rate_zt.png', dpi=150, bbox_inches='tight')
+    print(f"Saved {save_path}_lb_pass_rate_zt.png")
+    plt.close()
+
+    # 3. Ljung-Box Pass Rate (z_t²) - volatility clustering
+    fig, ax = plt.subplots(1, 1, figsize=(8, 5))
+    for mcs in sorted(results.keys()):
+        data = results[mcs]
+        snr = np.array(data['snr'])
+        ax.plot(snr, data['lb_rate_sq'], 'o-', label=f'MCS {mcs}', color=colors[mcs])
+    ax.set_ylabel('Ljung-Box Pass Rate (z_t²)')
+    ax.set_xlabel('SNR (dB)')
+    ax.set_ylim([0, 1.05])
+    ax.legend(bbox_to_anchor=(1.05, 1), loc='upper left')
+    ax.grid(True, alpha=0.3)
+    plt.tight_layout()
+    plt.savefig(f'{save_path}_lb_pass_rate_zt2.png', dpi=150, bbox_inches='tight')
+    print(f"Saved {save_path}_lb_pass_rate_zt2.png")
+    plt.close()
+
+    # 4. ACF RMSE
+    fig, ax = plt.subplots(1, 1, figsize=(8, 5))
+    for mcs in sorted(results.keys()):
+        data = results[mcs]
+        snr = np.array(data['snr'])
+        ax.plot(snr, data['acf_rmse_med'], 'o-', label=f'MCS {mcs}', color=colors[mcs])
+    ax.set_ylabel('Median ACF RMSE')
+    ax.set_xlabel('SNR (dB)')
+    ax.legend(bbox_to_anchor=(1.05, 1), loc='upper left')
+    ax.grid(True, alpha=0.3)
+    plt.tight_layout()
+    plt.savefig(f'{save_path}_acf_rmse.png', dpi=150, bbox_inches='tight')
+    print(f"Saved {save_path}_acf_rmse.png")
+    plt.close()
+
+    # 5. KS Statistic
+    fig, ax = plt.subplots(1, 1, figsize=(8, 5))
+    for mcs in sorted(results.keys()):
+        data = results[mcs]
+        snr = np.array(data['snr'])
+        ax.plot(snr, data['ks_med'], 'o-', label=f'MCS {mcs}', color=colors[mcs])
+    ax.set_ylabel('Median KS Statistic')
+    ax.set_xlabel('SNR (dB)')
+    ax.legend(bbox_to_anchor=(1.05, 1), loc='upper left')
+    ax.grid(True, alpha=0.3)
+    plt.tight_layout()
+    plt.savefig(f'{save_path}_ks_stat.png', dpi=150, bbox_inches='tight')
+    print(f"Saved {save_path}_ks_stat.png")
     plt.close()
 
     return results
@@ -367,10 +406,6 @@ def generate_figure2_quantile_error(model, test_sequences, test_configs, device=
     ax.axhline(y=0, color='k', linestyle='--', alpha=0.5)
     ax.set_xlabel('Quantile Level α')
     ax.set_ylabel('Quantile Error (log domain)')
-    if slice_label:
-        ax.set_title(f'Figure 2: Quantile Error ({slice_label}, α ∈ [0.05, 0.95])')
-    else:
-        ax.set_title('Figure 2: Quantile Error (Gaussian Innovation, α ∈ [0.05, 0.95])')
     ax.legend()
     ax.grid(True, alpha=0.3)
 
@@ -489,10 +524,6 @@ def generate_figure3_ccdf_error(model, test_sequences, test_configs, device='cpu
 
     ax.set_xlabel('Threshold τ (log-SINR)')
     ax.set_ylabel('CCDF Absolute Error')
-    if slice_label:
-        ax.set_title(f'Figure 3: CCDF Error ({slice_label}, τ ∈ [5%, 95%])')
-    else:
-        ax.set_title('Figure 3: CCDF Error (Gaussian Innovation, τ ∈ [5%, 95%])')
     ax.legend()
     ax.grid(True, alpha=0.3)
 

@@ -7,64 +7,66 @@ from scipy import stats
 
 from .utils import compute_acf, compute_psd, ljung_box_test
 
-def evaluate_marginal_distribution(teacher_seq, student_seq, save_path='eval_marginal.png'):
+def evaluate_marginal_distribution(teacher_seq, student_seq, save_prefix='eval_marginal'):
     """Evaluate marginal distribution fidelity (PKD v1: Gaussian innovation).
 
     PKD v1: Restricts quantile analysis to α ∈ [0.05, 0.95] to avoid
     over-penalizing extreme tail mismatch.
 
-    Generates:
-    - (a) CCDF comparison
-    - (b) QQ plot
-    - (c) Quantile error plot
+    Generates 3 separate files:
+    - eval_marginal_ccdf.png: CCDF comparison
+    - eval_marginal_qq.png: QQ plot
+    - eval_marginal_quantile_error.png: Quantile error plot
     """
-    fig, axes = plt.subplots(1, 3, figsize=(15, 4))
-
-    # (a) CCDF
+    # Prepare data for all plots
     teacher_sorted = np.sort(teacher_seq)
     student_sorted = np.sort(student_seq)
     teacher_ccdf = 1 - np.arange(len(teacher_sorted)) / len(teacher_sorted)
     student_ccdf = 1 - np.arange(len(student_sorted)) / len(student_sorted)
 
-    axes[0].semilogy(teacher_sorted, teacher_ccdf, 'b-', label='Teacher', alpha=0.7)
-    axes[0].semilogy(student_sorted, student_ccdf, 'r--', label='Student', alpha=0.7)
-    axes[0].set_xlabel('log(SINR)')
-    axes[0].set_ylabel('CCDF')
-    axes[0].set_title('(a) Marginal CCDF')
-    axes[0].legend()
-    axes[0].grid(True, alpha=0.3)
-
-    # (b) QQ plot - restrict to [0.05, 0.95]
     quantiles = np.linspace(0.05, 0.95, 100)
     teacher_q = np.quantile(teacher_seq, quantiles)
     student_q = np.quantile(student_seq, quantiles)
-
-    axes[1].plot(teacher_q, student_q, 'o', alpha=0.5)
-    axes[1].plot([teacher_q.min(), teacher_q.max()],
-                 [teacher_q.min(), teacher_q.max()], 'k--', label='y=x')
-    axes[1].set_xlabel('Teacher Quantiles')
-    axes[1].set_ylabel('Student Quantiles')
-    axes[1].set_title('(b) QQ Plot (α ∈ [0.05, 0.95])')
-    axes[1].legend()
-    axes[1].grid(True, alpha=0.3)
-
-    # (c) Quantile error
     quantile_error = student_q - teacher_q
-    axes[2].plot(quantiles, quantile_error, 'g-', linewidth=2)
-    axes[2].axhline(y=0, color='k', linestyle='--', alpha=0.5)
-    axes[2].fill_between(quantiles, quantile_error, 0, alpha=0.3)
-    axes[2].set_xlabel('Quantile α')
-    axes[2].set_ylabel('Quantile Error')
-    axes[2].set_title('(c) Quantile Error (α ∈ [0.05, 0.95])')
-    axes[2].grid(True, alpha=0.3)
 
-    # Add super-title
-    fig.suptitle('Marginal Distribution Evaluation (Gaussian Innovation)',
-                 fontsize=12, fontweight='bold', y=1.00)
-
+    # Plot 1: CCDF
+    fig, ax = plt.subplots(1, 1, figsize=(6, 4))
+    ax.semilogy(teacher_sorted, teacher_ccdf, 'b-', label='Teacher', alpha=0.7)
+    ax.semilogy(student_sorted, student_ccdf, 'r--', label='Student', alpha=0.7)
+    ax.set_xlabel('log(SINR)')
+    ax.set_ylabel('CCDF')
+    ax.legend()
+    ax.grid(True, alpha=0.3)
     plt.tight_layout()
-    plt.savefig(save_path, dpi=150, bbox_inches='tight')
-    print(f"Saved marginal distribution evaluation to {save_path}")
+    plt.savefig(f'{save_prefix}_ccdf.png', dpi=150, bbox_inches='tight')
+    print(f"Saved {save_prefix}_ccdf.png")
+    plt.close()
+
+    # Plot 2: QQ plot
+    fig, ax = plt.subplots(1, 1, figsize=(6, 6))
+    ax.plot(teacher_q, student_q, 'o', alpha=0.5)
+    ax.plot([teacher_q.min(), teacher_q.max()],
+            [teacher_q.min(), teacher_q.max()], 'k--', label='y=x')
+    ax.set_xlabel('Teacher Quantiles')
+    ax.set_ylabel('Student Quantiles')
+    ax.legend()
+    ax.grid(True, alpha=0.3)
+    plt.tight_layout()
+    plt.savefig(f'{save_prefix}_qq.png', dpi=150, bbox_inches='tight')
+    print(f"Saved {save_prefix}_qq.png")
+    plt.close()
+
+    # Plot 3: Quantile error
+    fig, ax = plt.subplots(1, 1, figsize=(6, 4))
+    ax.plot(quantiles, quantile_error, 'g-', linewidth=2)
+    ax.axhline(y=0, color='k', linestyle='--', alpha=0.5)
+    ax.fill_between(quantiles, quantile_error, 0, alpha=0.3)
+    ax.set_xlabel('Quantile α')
+    ax.set_ylabel('Quantile Error')
+    ax.grid(True, alpha=0.3)
+    plt.tight_layout()
+    plt.savefig(f'{save_prefix}_quantile_error.png', dpi=150, bbox_inches='tight')
+    print(f"Saved {save_prefix}_quantile_error.png")
     plt.close()
 
     # Compute KS statistic
@@ -74,45 +76,47 @@ def evaluate_marginal_distribution(teacher_seq, student_seq, save_path='eval_mar
     return {'ks_stat': ks_stat, 'ks_pval': ks_pval, 'quantile_error': quantile_error}
 
 
-def evaluate_temporal_dependence(teacher_seq, student_seq, save_path='eval_temporal.png'):
+def evaluate_temporal_dependence(teacher_seq, student_seq, save_prefix='eval_temporal'):
     """Evaluate temporal correlation structure.
 
-    Generates:
-    - (a) ACF comparison
-    - (b) PSD comparison
+    Generates 2 separate files:
+    - eval_temporal_acf.png: ACF comparison
+    - eval_temporal_psd.png: PSD comparison
     """
-    fig, axes = plt.subplots(1, 2, figsize=(12, 4))
-
-    # (a) ACF
+    # Prepare data
     max_lag = min(50, len(teacher_seq) // 10)
     teacher_acf = compute_acf(teacher_seq, max_lag)
     student_acf = compute_acf(student_seq, max_lag)
-
     lags = np.arange(len(teacher_acf))
-    axes[0].plot(lags, teacher_acf, 'b-o', label='Teacher', markersize=4)
-    axes[0].plot(lags, student_acf, 'r--s', label='Student', markersize=3)
-    axes[0].axhline(y=0, color='k', linestyle='-', alpha=0.3)
-    axes[0].set_xlabel('Lag')
-    axes[0].set_ylabel('ACF')
-    axes[0].set_title('(a) Autocorrelation Function')
-    axes[0].legend()
-    axes[0].grid(True, alpha=0.3)
 
-    # (b) PSD
     teacher_freqs, teacher_psd = compute_psd(teacher_seq)
     student_freqs, student_psd = compute_psd(student_seq)
 
-    axes[1].semilogy(teacher_freqs, teacher_psd, 'b-', label='Teacher', alpha=0.7)
-    axes[1].semilogy(student_freqs, student_psd, 'r--', label='Student', alpha=0.7)
-    axes[1].set_xlabel('Frequency')
-    axes[1].set_ylabel('PSD')
-    axes[1].set_title('(b) Power Spectral Density')
-    axes[1].legend()
-    axes[1].grid(True, alpha=0.3)
-
+    # Plot 1: ACF
+    fig, ax = plt.subplots(1, 1, figsize=(6, 4))
+    ax.plot(lags, teacher_acf, 'b-o', label='Teacher', markersize=4)
+    ax.plot(lags, student_acf, 'r--s', label='Student', markersize=3)
+    ax.axhline(y=0, color='k', linestyle='-', alpha=0.3)
+    ax.set_xlabel('Lag')
+    ax.set_ylabel('ACF')
+    ax.legend()
+    ax.grid(True, alpha=0.3)
     plt.tight_layout()
-    plt.savefig(save_path, dpi=150, bbox_inches='tight')
-    print(f"Saved temporal dependence evaluation to {save_path}")
+    plt.savefig(f'{save_prefix}_acf.png', dpi=150, bbox_inches='tight')
+    print(f"Saved {save_prefix}_acf.png")
+    plt.close()
+
+    # Plot 2: PSD
+    fig, ax = plt.subplots(1, 1, figsize=(6, 4))
+    ax.semilogy(teacher_freqs, teacher_psd, 'b-', label='Teacher', alpha=0.7)
+    ax.semilogy(student_freqs, student_psd, 'r--', label='Student', alpha=0.7)
+    ax.set_xlabel('Frequency')
+    ax.set_ylabel('PSD')
+    ax.legend()
+    ax.grid(True, alpha=0.3)
+    plt.tight_layout()
+    plt.savefig(f'{save_prefix}_psd.png', dpi=150, bbox_inches='tight')
+    print(f"Saved {save_prefix}_psd.png")
     plt.close()
 
     # Compute ACF RMSE
@@ -123,7 +127,7 @@ def evaluate_temporal_dependence(teacher_seq, student_seq, save_path='eval_tempo
 
 
 def evaluate_innovation_structure(model, inference, teacher_seq, config, device='cpu',
-                                  save_path='eval_innovations.png'):
+                                  save_prefix='eval_innovations'):
     """Evaluate innovation structure and PIT calibration (PKD v1: Gaussian innovation).
 
     PKD v1 uses Gaussian innovations only. This function:
@@ -134,9 +138,9 @@ def evaluate_innovation_structure(model, inference, teacher_seq, config, device=
     Args:
         teacher_seq: Teacher sequence in natural log scale (already converted from dB)
 
-    Generates:
-    - Innovation diagnostics table
-    - PIT histogram and ACF
+    Generates 2 separate files:
+    - eval_innovations_pit_hist.png: PIT histogram
+    - eval_innovations_pit_acf.png: ACF of centered PIT
     """
     # Teacher sequence is already in natural log scale (converted in data_loader.py)
     X_teacher = teacher_seq
@@ -199,39 +203,35 @@ def evaluate_innovation_structure(model, inference, teacher_seq, config, device=
     max_acf = np.max(np.abs(innov_acf[1:]))
     print(f"Max |ACF| (lags 1-20):    {max_acf:.4f}")
 
-    # PIT evaluation
-    fig, axes = plt.subplots(1, 2, figsize=(12, 4))
+    # PIT evaluation - Plot 1: Histogram
+    fig, ax = plt.subplots(1, 1, figsize=(6, 4))
+    ax.hist(pit_values, bins=20, density=True, alpha=0.7, edgecolor='black')
+    ax.axhline(y=1.0, color='r', linestyle='--', label='Uniform(0,1)', linewidth=2)
+    ax.set_xlabel('PIT value')
+    ax.set_ylabel('Density')
+    ax.legend()
+    ax.grid(True, alpha=0.3)
+    plt.tight_layout()
+    plt.savefig(f'{save_prefix}_pit_hist.png', dpi=150, bbox_inches='tight')
+    print(f"Saved {save_prefix}_pit_hist.png")
+    plt.close()
 
-    # (a) PIT histogram
-    axes[0].hist(pit_values, bins=20, density=True, alpha=0.7, edgecolor='black')
-    axes[0].axhline(y=1.0, color='r', linestyle='--', label='Uniform(0,1)', linewidth=2)
-    axes[0].set_xlabel('PIT value')
-    axes[0].set_ylabel('Density')
-    axes[0].set_title('(a) PIT Histogram (Gaussian Innovation)')
-    axes[0].legend()
-    axes[0].grid(True, alpha=0.3)
-
-    # (b) ACF of centered PIT
+    # Plot 2: ACF of centered PIT
     pit_centered = pit_values - 0.5
     pit_acf = compute_acf(pit_centered, max_lag=20)
     lags = np.arange(len(pit_acf))
 
-    axes[1].stem(lags, pit_acf, basefmt=' ')
-    axes[1].axhline(y=0, color='k', linestyle='-', alpha=0.3)
-    axes[1].axhline(y=1.96/np.sqrt(len(pit_values)), color='r', linestyle='--', alpha=0.5)
-    axes[1].axhline(y=-1.96/np.sqrt(len(pit_values)), color='r', linestyle='--', alpha=0.5)
-    axes[1].set_xlabel('Lag')
-    axes[1].set_ylabel('ACF')
-    axes[1].set_title('(b) ACF of Centered PIT (Gaussian)')
-    axes[1].grid(True, alpha=0.3)
-
-    # Add overall title
-    fig.suptitle('Innovation Structure Evaluation (Gaussian Innovation)',
-                 fontsize=12, fontweight='bold', y=1.02)
-
+    fig, ax = plt.subplots(1, 1, figsize=(6, 4))
+    ax.stem(lags, pit_acf, basefmt=' ')
+    ax.axhline(y=0, color='k', linestyle='-', alpha=0.3)
+    ax.axhline(y=1.96/np.sqrt(len(pit_values)), color='r', linestyle='--', alpha=0.5)
+    ax.axhline(y=-1.96/np.sqrt(len(pit_values)), color='r', linestyle='--', alpha=0.5)
+    ax.set_xlabel('Lag')
+    ax.set_ylabel('ACF')
+    ax.grid(True, alpha=0.3)
     plt.tight_layout()
-    plt.savefig(save_path, dpi=150, bbox_inches='tight')
-    print(f"Saved innovation evaluation to {save_path}")
+    plt.savefig(f'{save_prefix}_pit_acf.png', dpi=150, bbox_inches='tight')
+    print(f"Saved {save_prefix}_pit_acf.png")
     plt.close()
 
     # KS test for uniformity
@@ -248,7 +248,7 @@ def evaluate_innovation_structure(model, inference, teacher_seq, config, device=
     }
 
 
-def evaluate_teacher_baseline_ar(teacher_seq, ar_order=5, save_path='eval_teacher_baseline.png'):
+def evaluate_teacher_baseline_ar(teacher_seq, ar_order=5, save_prefix='eval_teacher_baseline'):
     """
     Fit classical AR(p) + constant σ to teacher sequence as baseline diagnostic.
 
@@ -258,7 +258,13 @@ def evaluate_teacher_baseline_ar(teacher_seq, ar_order=5, save_path='eval_teache
     Args:
         teacher_seq: Teacher sequence in natural log scale
         ar_order: AR order for baseline (default: 5)
-        save_path: Output path for diagnostic plot
+        save_prefix: Output file prefix (without extension)
+
+    Generates 4 separate files:
+    - eval_teacher_baseline_residuals.png: Standardized residuals time series
+    - eval_teacher_baseline_acf_zt.png: ACF of z_t
+    - eval_teacher_baseline_acf_zt2.png: ACF of z_t²
+    - eval_teacher_baseline_pit_hist.png: PIT histogram
 
     Returns:
         dict with baseline diagnostics
@@ -333,54 +339,62 @@ def evaluate_teacher_baseline_ar(teacher_seq, ar_order=5, save_path='eval_teache
     ks_stat_pit, ks_pval_pit = stats.kstest(pit_values, 'uniform')
     print(f"PIT uniformity KS test:   statistic={ks_stat_pit:.4f}, p-value={ks_pval_pit:.4f}")
 
-    # Plot diagnostics
-    fig, axes = plt.subplots(2, 2, figsize=(12, 10))
-
-    # (a) Standardized residuals z_t
-    axes[0, 0].plot(z, linewidth=0.5, alpha=0.7)
-    axes[0, 0].axhline(y=0, color='k', linestyle='--', alpha=0.5)
-    axes[0, 0].axhline(y=2, color='r', linestyle='--', alpha=0.3)
-    axes[0, 0].axhline(y=-2, color='r', linestyle='--', alpha=0.3)
-    axes[0, 0].set_xlabel('Time')
-    axes[0, 0].set_ylabel('z_t')
-    axes[0, 0].set_title(f'(a) Standardized Residuals (AR({ar_order}) Baseline)')
-    axes[0, 0].grid(True, alpha=0.3)
-
-    # (b) ACF of z_t
+    # Plot diagnostics - 4 separate files
     lags = np.arange(len(z_acf))
-    axes[0, 1].stem(lags, z_acf, basefmt=' ')
-    axes[0, 1].axhline(y=0, color='k', linestyle='-', alpha=0.3)
-    axes[0, 1].axhline(y=1.96/np.sqrt(len(z)), color='r', linestyle='--', alpha=0.5)
-    axes[0, 1].axhline(y=-1.96/np.sqrt(len(z)), color='r', linestyle='--', alpha=0.5)
-    axes[0, 1].set_xlabel('Lag')
-    axes[0, 1].set_ylabel('ACF')
-    axes[0, 1].set_title('(b) ACF of z_t')
-    axes[0, 1].grid(True, alpha=0.3)
 
-    # (c) ACF of z_t²
-    axes[1, 0].stem(lags, z_sq_acf, basefmt=' ')
-    axes[1, 0].axhline(y=0, color='k', linestyle='-', alpha=0.3)
-    axes[1, 0].axhline(y=1.96/np.sqrt(len(z)), color='r', linestyle='--', alpha=0.5)
-    axes[1, 0].axhline(y=-1.96/np.sqrt(len(z)), color='r', linestyle='--', alpha=0.5)
-    axes[1, 0].set_xlabel('Lag')
-    axes[1, 0].set_ylabel('ACF')
-    axes[1, 0].set_title(f'(c) ACF of z_t² (LB p-value: {lb_pval_sq:.4f})')
-    axes[1, 0].grid(True, alpha=0.3)
-
-    # (d) PIT histogram
-    axes[1, 1].hist(pit_values, bins=20, density=True, alpha=0.7, edgecolor='black')
-    axes[1, 1].axhline(y=1.0, color='r', linestyle='--', label='Uniform(0,1)', linewidth=2)
-    axes[1, 1].set_xlabel('PIT value')
-    axes[1, 1].set_ylabel('Density')
-    axes[1, 1].set_title(f'(d) PIT Histogram (KS p-value: {ks_pval_pit:.4f})')
-    axes[1, 1].legend()
-    axes[1, 1].grid(True, alpha=0.3)
-
-    plt.suptitle(f'Teacher Baseline: Classical AR({ar_order}) + Constant σ',
-                 fontsize=14, fontweight='bold')
+    # Plot 1: Standardized residuals z_t
+    fig, ax = plt.subplots(1, 1, figsize=(8, 4))
+    ax.plot(z, linewidth=0.5, alpha=0.7)
+    ax.axhline(y=0, color='k', linestyle='--', alpha=0.5)
+    ax.axhline(y=2, color='r', linestyle='--', alpha=0.3)
+    ax.axhline(y=-2, color='r', linestyle='--', alpha=0.3)
+    ax.set_xlabel('Time')
+    ax.set_ylabel('z_t')
+    ax.grid(True, alpha=0.3)
     plt.tight_layout()
-    plt.savefig(save_path, dpi=150, bbox_inches='tight')
-    print(f"\nSaved teacher baseline diagnostics to {save_path}")
+    plt.savefig(f'{save_prefix}_residuals.png', dpi=150, bbox_inches='tight')
+    print(f"Saved {save_prefix}_residuals.png")
+    plt.close()
+
+    # Plot 2: ACF of z_t
+    fig, ax = plt.subplots(1, 1, figsize=(6, 4))
+    ax.stem(lags, z_acf, basefmt=' ')
+    ax.axhline(y=0, color='k', linestyle='-', alpha=0.3)
+    ax.axhline(y=1.96/np.sqrt(len(z)), color='r', linestyle='--', alpha=0.5)
+    ax.axhline(y=-1.96/np.sqrt(len(z)), color='r', linestyle='--', alpha=0.5)
+    ax.set_xlabel('Lag')
+    ax.set_ylabel('ACF')
+    ax.grid(True, alpha=0.3)
+    plt.tight_layout()
+    plt.savefig(f'{save_prefix}_acf_zt.png', dpi=150, bbox_inches='tight')
+    print(f"Saved {save_prefix}_acf_zt.png")
+    plt.close()
+
+    # Plot 3: ACF of z_t²
+    fig, ax = plt.subplots(1, 1, figsize=(6, 4))
+    ax.stem(lags, z_sq_acf, basefmt=' ')
+    ax.axhline(y=0, color='k', linestyle='-', alpha=0.3)
+    ax.axhline(y=1.96/np.sqrt(len(z)), color='r', linestyle='--', alpha=0.5)
+    ax.axhline(y=-1.96/np.sqrt(len(z)), color='r', linestyle='--', alpha=0.5)
+    ax.set_xlabel('Lag')
+    ax.set_ylabel('ACF')
+    ax.grid(True, alpha=0.3)
+    plt.tight_layout()
+    plt.savefig(f'{save_prefix}_acf_zt2.png', dpi=150, bbox_inches='tight')
+    print(f"Saved {save_prefix}_acf_zt2.png")
+    plt.close()
+
+    # Plot 4: PIT histogram
+    fig, ax = plt.subplots(1, 1, figsize=(6, 4))
+    ax.hist(pit_values, bins=20, density=True, alpha=0.7, edgecolor='black')
+    ax.axhline(y=1.0, color='r', linestyle='--', label='Uniform(0,1)', linewidth=2)
+    ax.set_xlabel('PIT value')
+    ax.set_ylabel('Density')
+    ax.legend()
+    ax.grid(True, alpha=0.3)
+    plt.tight_layout()
+    plt.savefig(f'{save_prefix}_pit_hist.png', dpi=150, bbox_inches='tight')
+    print(f"Saved {save_prefix}_pit_hist.png")
     plt.close()
 
     return {

@@ -59,7 +59,8 @@ results/
 outputs/
 figures/
 plots/
-eval_*.png
 
-# Generated test figures
+# Generated evaluation figures
+eval_*.png
+test_metrics_*.png
 fig*.png
