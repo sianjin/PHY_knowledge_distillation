@@ -1,5 +1,5 @@
-function simParams = getBox0SimParams(chans,numTxRx,numSs,mcs,cfgHE,maxNumErrors,maxNumPackets,isnr)
-% getBox0SimParams Helper function
+function simParams = getBox0ValParams(chans,numTxRx,numSs,mcs,cfgHE,maxNumErrors,maxNumPackets)
+% getBox0ValParams Helper function
 %
 % SNR now depends on (channel model, numTx, numRx, numSs, MCS).
 % We encode the antenna+spatial-stream configuration via a 3-column matrix:
@@ -283,7 +283,7 @@ tgaxChannel = wlanTGaxChannel;
 tgaxChannel.DelayProfile = 'Model-D';
 tgaxChannel.NumTransmitAntennas = cfgHE.NumTransmitAntennas;
 tgaxChannel.NumReceiveAntennas = 1;
-tgaxChannel.TransmitReceiveDistance = 15; % Distance in meters for NLOS
+tgaxChannel.TransmitReceiveDistance = 15; % meters (NLOS)
 tgaxChannel.ChannelBandwidth = cfgHE.ChannelBandwidth;
 tgaxChannel.LargeScaleFadingEffect = 'None';
 fs = wlanSampleRate(cfgHE);
@@ -291,98 +291,75 @@ tgaxChannel.SampleRate = fs;
 tgaxChannel.PathGainsOutputPort = true;
 tgaxChannel.NormalizeChannelOutputs = false;
 
-switch cfgHE.ChannelBandwidth
-    case 'CBW20'
-        BW = 20;
-    case 'CBW40'
-        BW = 40;
-    otherwise
-        error('Unsupported ChannelBandwidth: %s', cfgHE.ChannelBandwidth);
-end
-
-% NOTE: original code used "switch chans" (vector) which is brittle.
-% Here we set ChannelModelID per-ichan inside the loop.
-
-% -----------------------------
 % Reference sim param struct
-% -----------------------------
 simParamsRef = struct('MCS',0,'SNR',0,'RandomSubstream',0,'Config',cfgHE, ...
     'MaxNumPackets',maxNumPackets,'MaxNumErrors',maxNumErrors, ...
     'NumTransmitAntennas',0,'NumReceiveAntennas',0,'DelayProfile',"Model-B",...
-    'Channel',tgaxChannel,'BW',BW,'ChannelModelID',0);
+    'Channel',tgaxChannel);
+
+simParams = repmat(simParamsRef,0,0);
 
 % -----------------------------
 % Sanity checks
 % -----------------------------
 assert(numel(channelConfigs)==numel(snr), ...
     'snr must have one entry per channelConfigs element.');
+
+% For each channel, snr{ichan} must have one row per antennaSNR config
 assert(all(cellfun(@(x)size(x,1),snr) == size(anteannaSNRConfigs,1)), ...
     'Each snr{ichan} must have size [size(anteannaSNRConfigs,1) x 10].');
 
 % -----------------------------
-% Build simParams (single SNR index)
+% Build simParams
 % -----------------------------
-simParams = simParamsRef; % pre-init
-
 for ichan = 1:numel(chans)
     channelIdx = find(chans(ichan)==channelConfigs, 1);
     if isempty(channelIdx)
         error('Unsupported channel "%s". Supported: %s', chans(ichan), join(channelConfigs,", "));
     end
 
-    % channelModelId mapping (your original: B->2, D->4)
-    switch chans(ichan)
-        case "Model-B"
-            channelModelId = 2;
-        case "Model-D"
-            channelModelId = 4;
-        otherwise
-            error('Unsupported channel "%s" for ChannelModelID mapping.', chans(ichan));
-    end
-
     for itxrx = 1:size(numTxRx,1)
         cfgTriplet = [numTxRx(itxrx,1), numTxRx(itxrx,2), numSs];
         numTxRxSsIdx = find(all(anteannaSNRConfigs == cfgTriplet, 2), 1);
+
         if isempty(numTxRxSsIdx)
             error('Unsupported (numTx,numRx,numSs) = (%d,%d,%d). Supported rows in anteannaSNRConfigs:\n%s', ...
                 cfgTriplet(1), cfgTriplet(2), cfgTriplet(3), mat2str(anteannaSNRConfigs));
         end
 
         for imcs = 1:numel(mcs)
-            mcsIdx = mcs(imcs) + 1;
+            snrIdx = mcs(imcs) + 1; % 1..10
 
-            snrVec = snr{channelIdx}{numTxRxSsIdx, mcsIdx};
-            if isnr < 1 || isnr > numel(snrVec)
-                error('isnr=%d out of range for channel=%s, cfg=(%d,%d,%d), MCS=%d. Valid: 1..%d', ...
-                    isnr, chans(ichan), cfgTriplet(1), cfgTriplet(2), cfgTriplet(3), mcs(imcs), numel(snrVec));
+            snrVec = snr{channelIdx}{numTxRxSsIdx, snrIdx};
+            for isnr = 1:numel(snrVec)
+                sp = simParamsRef;
+
+                % Simulation-specific parameters
+                sp.MCS = mcs(imcs);
+                sp.NumTransmitAntennas = cfgTriplet(1);
+                sp.NumReceiveAntennas  = cfgTriplet(2);
+                sp.DelayProfile = chans(ichan);
+
+                % Reproducible random substream
+                sp.RandomSubstream = isnr;
+
+                % PHY config
+                sp.Config.MCS = mcs(imcs);
+                sp.Config.NumTransmitAntennas   = cfgTriplet(1);
+                sp.Config.NumSpaceTimeStreams   = cfgTriplet(3);
+                sp.Config.SpatialMapping        = 'Fourier';
+
+                % Channel config
+                sp.Channel = clone(tgaxChannel);
+                sp.Channel.DelayProfile        = chans(ichan);
+                sp.Channel.NumTransmitAntennas = cfgTriplet(1);
+                sp.Channel.NumReceiveAntennas  = cfgTriplet(2);
+
+                % Lookup SNR
+                sp.SNR = snrVec(isnr);
+
+                simParams = [simParams sp]; %#ok<AGROW>
             end
-
-            % Set simulation specific parameters
-            sp = simParamsRef;
-            sp.MCS = mcs(imcs);
-            sp.NumTransmitAntennas = cfgTriplet(1);
-            sp.NumReceiveAntennas  = cfgTriplet(2);
-            sp.DelayProfile        = chans(ichan);
-            sp.BW                 = BW;
-            sp.ChannelModelID     = channelModelId;
-
-            % Setup PHY configuration
-            sp.Config.MCS = mcs(imcs);
-            sp.Config.NumTransmitAntennas = cfgTriplet(1);
-            sp.Config.NumSpaceTimeStreams = cfgTriplet(3);
-            sp.Config.SpatialMapping = 'Fourier';
-
-            % Configure channel model
-            sp.Channel = clone(tgaxChannel);
-            sp.Channel.DelayProfile        = chans(ichan);
-            sp.Channel.NumTransmitAntennas = cfgTriplet(1);
-            sp.Channel.NumReceiveAntennas  = cfgTriplet(2);
-
-            % Lookup SNR to simulate
-            sp.SNR = snrVec(isnr);
-
-            % Save to simulation parameters
-            simParams = sp;  % (matches your original behavior: last assignment wins)
         end
     end
 end
