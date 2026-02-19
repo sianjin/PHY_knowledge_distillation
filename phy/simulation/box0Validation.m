@@ -1,8 +1,9 @@
-function out = box0Simulation(simParams,beta)
-% box0Simulation Example helper function
+function out = box0Validation(simParams,beta)
+% box0Validation Example helper function
 
 % Extract configuration
 cfgHE = simParams.Config;
+substreamidx = simParams.RandomSubstream;
 maxNumPackets = simParams.MaxNumPackets;
 maxNumErrors = simParams.MaxNumErrors;
 snr = simParams.SNR;
@@ -12,6 +13,12 @@ cfgNDP = wlanHESUConfig('APEPLength',0,'GuardInterval',0.8); % No data in an NDP
 cfgNDP.ChannelBandwidth = cfgHE.ChannelBandwidth;
 cfgNDP.NumTransmitAntennas = cfgHE.NumTransmitAntennas;
 cfgNDP.NumSpaceTimeStreams = cfgHE.NumTransmitAntennas;
+
+% Set random substream index per iteration to ensure that each
+% iteration uses a repeatable set of random numbers
+stream = RandStream('combRecursive','Seed',99);
+stream.Substream = substreamidx;
+RandStream.setGlobalStream(stream);
 
 % Indices to extract fields from the PPDU
 ind = wlanFieldIndices(cfgHE);
@@ -55,7 +62,7 @@ tgaxDopplerShift = tgaxChannel.EnvironmentalSpeed*(5/18)/wavelength; % Change km
 mimoChan.MaximumDopplerShift = tgaxDopplerShift; % For Jakes model
 mimoChan.PathGainsOutputPort = true; 
 mimoChan.InitialTimeSource = 'Input port'; % Set comm.MIMOChannel property to define the InitialTime for each packet
-mimoChan.RandomStream = 'Global stream';
+mimoChan.RandomStream = 'mt19937ar with seed';
 
 % Transmit period in microseconds
 coherenceTime = 0.423/tgaxDopplerShift;
@@ -69,7 +76,7 @@ perStore = nan(maxNumPackets,1);
 perAbsStore = nan(maxNumPackets,1);
 perAbsRawStore = nan(maxNumPackets,1);
 snreffStore = nan(maxNumPackets,1);
-% sinrStore = nan(ofdmInfo.NumTones,cfgHE.NumSpaceTimeStreams,maxNumPackets); % Nsc-by-Nsts-by-maxNumPackets
+sinrStore = nan(ofdmInfo.NumTones,cfgHE.NumSpaceTimeStreams,maxNumPackets); % Nsc-by-Nsts-by-maxNumPackets
 numPacketErrors = 0;
 numPacketErrorsAbs = 0;
 numPkt = 1; % Index of packet transmitted
@@ -102,7 +109,7 @@ while numPacketErrors<=maxNumErrors && numPkt<=maxNumPackets
     Htxrx = permute(mean(chan,2),[1 3 4 2]); % Nst-by-Nt-by-Nr
     Ptxrx = 1; % Assume transmit power is 0dBW
     sinr = calculateSINR(Htxrx,Ptxrx,Wtx,N0);
-    % sinrStore(:,:,numPkt) = sinr;
+    sinrStore(:,:,numPkt) = sinr;
     
     % Link performance model - estimate PER using abstraction
     effSINR = tgaxLinkPerformanceModel.effectiveSINR(sinr,beta);
@@ -164,7 +171,7 @@ out = struct;
 out.packetErrorRateAbs = packetErrorRateAbs;
 out.packetErrorRate = packetErrorRate;
 out.perStore = perStore;
-% out.sinrStore = sinrStore;
+out.sinrStore = sinrStore;
 out.numPkt = numPkt;
 out.snreffStore = snreffStore;
 out.perAbsRawStore = perAbsRawStore;
@@ -185,7 +192,8 @@ disp([char(cfgHE.ChannelBandwidth) ', '...
   
 end
 
-%% Get spatial correlation prameters
+%% Get spatial correlation parameters
+
 function chInfo = getChanInfoParams(tgaxChannel)
 %getChanInfoParams Get TGax spatial parameters
 
