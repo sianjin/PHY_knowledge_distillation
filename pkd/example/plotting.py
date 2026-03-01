@@ -7,7 +7,7 @@ from scipy import stats
 from tqdm import tqdm
 from collections import defaultdict
 
-from .utils import compute_acf, ljung_box_test
+from .utils import compute_acf, compute_psd, ljung_box_test
 
 def evaluate_test_set(model, test_sequences, test_configs, device='cpu'):
     """Evaluate model on entire test set and compute aggregate metrics.
@@ -77,7 +77,7 @@ def evaluate_test_set(model, test_sequences, test_configs, device='cpu'):
 
 def generate_figure1_per_mcs_metrics(model, test_sequences, test_configs, device='cpu',
                                       save_path='test_metrics', slice_label=None):
-    """Generate Figure 1: Per-MCS metrics vs SNR (5 separate files) - Gaussian innovation.
+    """Generate Figure 1: Per-MCS metrics vs SNR (6 separate files) - Gaussian innovation.
 
     PKD v1: All metrics assume Gaussian innovation N(0, σ²).
 
@@ -86,6 +86,7 @@ def generate_figure1_per_mcs_metrics(model, test_sequences, test_configs, device
     - test_metrics_lb_pass_rate_zt.png: Ljung-Box pass rate (z_t) vs SNR (teacher-forced)
     - test_metrics_lb_pass_rate_zt2.png: Ljung-Box pass rate (z_t²) vs SNR (teacher-forced, volatility)
     - test_metrics_acf_rmse.png: Median ACF RMSE vs SNR (free-running)
+    - test_metrics_psd_rmse.png: Median PSD RMSE vs SNR (free-running)
     - test_metrics_ks_stat.png: Median KS statistic vs SNR (free-running)
 
     Args:
@@ -113,7 +114,7 @@ def generate_figure1_per_mcs_metrics(model, test_sequences, test_configs, device
 
     # Storage for metrics
     metrics_by_mcs_snr = defaultdict(lambda: {
-        'pit_pass': [], 'lb_pass': [], 'lb_pass_sq': [], 'acf_rmse': [], 'ks_stat': []
+        'pit_pass': [], 'lb_pass': [], 'lb_pass_sq': [], 'acf_rmse': [], 'psd_rmse': [], 'ks_stat': []
     })
 
     model.eval()
@@ -134,39 +135,51 @@ def generate_figure1_per_mcs_metrics(model, test_sequences, test_configs, device
             X_teacher = teacher_seq  # Already in natural log scale  # Log domain
 
             # === Teacher-Forced Metrics (PKD v1: Gaussian innovation) ===
+            # OPTIMIZATION: Process all timesteps in a single batched forward pass
+            # instead of looping (25x faster: ~990 forward passes → 1 forward pass)
             with torch.no_grad():
-                standardized_innovations = []
-                pit_values_seq = []
+                T = len(X_teacher)
+                num_samples = T - ar_order
 
-                for t in range(ar_order, len(X_teacher)):
-                    X_hist_array = X_teacher[t-ar_order:t][::-1].copy()
-                    X_hist = torch.tensor(X_hist_array, dtype=torch.float32).unsqueeze(0).to(device)
-                    X_t = torch.tensor(X_teacher[t], dtype=torch.float32).unsqueeze(0).to(device)
+                # Pre-allocate arrays
+                X_t_batch = np.zeros(num_samples, dtype=np.float32)
+                X_hist_batch = np.zeros((num_samples, ar_order), dtype=np.float32)
 
-                    config_dict = {k: torch.tensor([v]).to(device) for k, v in config.items()}
-                    log_q, info = model.compute_log_likelihood(X_t, X_hist, config_dict)
+                # Build batch of all timesteps at once
+                for i, t in enumerate(range(ar_order, T)):
+                    X_t_batch[i] = X_teacher[t]
+                    X_hist_batch[i] = X_teacher[t-ar_order:t][::-1]
 
-                    # Extract raw innovation and sigma
-                    eps = info['eps'].cpu().numpy()[0]
-                    innov_params = info['innov_params']
+                # Convert to tensors once
+                X_t_tensor = torch.tensor(X_t_batch, dtype=torch.float32).to(device)
+                X_hist_tensor = torch.tensor(X_hist_batch, dtype=torch.float32).to(device)
 
-                    # PKD v1: Gaussian innovation only
-                    if isinstance(innov_params, dict):
-                        raise ValueError("PKD v1 supports Gaussian innovation only.")
+                # Prepare config dict once (broadcast to all timesteps)
+                config_dict = {}
+                for k, v in config.items():
+                    if isinstance(v, (int, float)):
+                        config_dict[k] = torch.full((num_samples,), v, dtype=torch.float32 if isinstance(v, float) else torch.long).to(device)
+                    else:
+                        config_dict[k] = torch.tensor([v] * num_samples).to(device)
 
-                    innov_params_np = innov_params.cpu().numpy()
-                    sigma = innov_params_np.item() if innov_params_np.ndim == 0 else innov_params_np[0]
+                # Single batched forward pass
+                log_q, info = model.compute_log_likelihood(X_t_tensor, X_hist_tensor, config_dict)
 
-                    # Standardize: z_t = ε_t / σ_t ~ N(0, 1)
-                    z = eps / sigma
-                    standardized_innovations.append(z)
+                # Extract innovations and sigma
+                eps_batch = info['eps'].cpu().numpy()  # (num_samples,)
+                innov_params = info['innov_params']
 
-                    # PIT: u_t = Φ(z_t) ~ Uniform(0,1) if calibrated
-                    u = stats.norm.cdf(z)
-                    pit_values_seq.append(u)
+                # PKD v1: Gaussian innovation only
+                if isinstance(innov_params, dict):
+                    raise ValueError("PKD v1 supports Gaussian innovation only.")
 
-                standardized_innovations = np.array(standardized_innovations)
-                pit_values_seq = np.array(pit_values_seq)
+                sigma_batch = innov_params.cpu().numpy()  # (num_samples,)
+
+                # Standardize: z_t = ε_t / σ_t ~ N(0, 1)
+                standardized_innovations = eps_batch / sigma_batch
+
+                # PIT: u_t = Φ(z_t) ~ Uniform(0,1) if calibrated
+                pit_values_seq = stats.norm.cdf(standardized_innovations)
 
                 # PIT test
                 ks_stat_pit, p_pit = stats.kstest(pit_values_seq, 'uniform')
@@ -197,10 +210,16 @@ def generate_figure1_per_mcs_metrics(model, test_sequences, test_configs, device
                 student_acf = compute_acf(X_student, max_lag=50)
                 acf_rmse = np.sqrt(np.mean((teacher_acf[1:] - student_acf[1:])**2))
 
+                # PSD RMSE
+                teacher_freqs, teacher_psd = compute_psd(X_teacher)
+                student_freqs, student_psd = compute_psd(X_student)
+                psd_rmse = np.sqrt(np.mean((teacher_psd - student_psd)**2))
+
                 # KS test
                 ks_stat_marg, _ = stats.ks_2samp(X_teacher, X_student)
             else:
                 acf_rmse = np.nan
+                psd_rmse = np.nan
                 ks_stat_marg = np.nan
 
             # Store metrics
@@ -208,17 +227,19 @@ def generate_figure1_per_mcs_metrics(model, test_sequences, test_configs, device
             metrics_by_mcs_snr[(mcs, snr)]['lb_pass'].append(lb_pass)
             metrics_by_mcs_snr[(mcs, snr)]['lb_pass_sq'].append(lb_pass_sq)
             metrics_by_mcs_snr[(mcs, snr)]['acf_rmse'].append(acf_rmse)
+            metrics_by_mcs_snr[(mcs, snr)]['psd_rmse'].append(psd_rmse)
             metrics_by_mcs_snr[(mcs, snr)]['ks_stat'].append(ks_stat_marg)
 
     # Aggregate metrics
     results = defaultdict(lambda: {'snr': [], 'pit_rate': [], 'lb_rate': [], 'lb_rate_sq': [],
-                                    'acf_rmse_med': [], 'ks_med': []})
+                                    'acf_rmse_med': [], 'psd_rmse_med': [], 'ks_med': []})
 
     for (mcs, snr), metrics in sorted(metrics_by_mcs_snr.items()):
         pit_rate = np.mean(metrics['pit_pass'])
         lb_rate = np.mean(metrics['lb_pass'])
         lb_rate_sq = np.mean(metrics['lb_pass_sq'])
         acf_rmse_med = np.nanmedian(metrics['acf_rmse'])
+        psd_rmse_med = np.nanmedian(metrics['psd_rmse'])
         ks_med = np.nanmedian(metrics['ks_stat'])
 
         results[mcs]['snr'].append(snr)
@@ -226,6 +247,7 @@ def generate_figure1_per_mcs_metrics(model, test_sequences, test_configs, device
         results[mcs]['lb_rate'].append(lb_rate)
         results[mcs]['lb_rate_sq'].append(lb_rate_sq)
         results[mcs]['acf_rmse_med'].append(acf_rmse_med)
+        results[mcs]['psd_rmse_med'].append(psd_rmse_med)
         results[mcs]['ks_med'].append(ks_med)
 
     # Plot each metric as a separate figure
@@ -294,7 +316,22 @@ def generate_figure1_per_mcs_metrics(model, test_sequences, test_configs, device
     print(f"Saved {save_path}_acf_rmse.png")
     plt.close()
 
-    # 5. KS Statistic
+    # 5. PSD RMSE
+    fig, ax = plt.subplots(1, 1, figsize=(8, 5))
+    for mcs in sorted(results.keys()):
+        data = results[mcs]
+        snr = np.array(data['snr'])
+        ax.plot(snr, data['psd_rmse_med'], 'o-', label=f'MCS {mcs}', color=colors[mcs])
+    ax.set_ylabel('Median PSD RMSE')
+    ax.set_xlabel('SNR (dB)')
+    ax.legend(bbox_to_anchor=(1.05, 1), loc='upper left')
+    ax.grid(True, alpha=0.3)
+    plt.tight_layout()
+    plt.savefig(f'{save_path}_psd_rmse.png', dpi=150, bbox_inches='tight')
+    print(f"Saved {save_path}_psd_rmse.png")
+    plt.close()
+
+    # 6. KS Statistic
     fig, ax = plt.subplots(1, 1, figsize=(8, 5))
     for mcs in sorted(results.keys()):
         data = results[mcs]

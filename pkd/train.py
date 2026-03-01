@@ -253,10 +253,12 @@ def train_pkd(model, train_sequences, train_configs,
 
     train_loader = DataLoader(train_dataset, batch_size=batch_size,
                              shuffle=True, collate_fn=collate_fn,
-                             num_workers=4)
+                             num_workers=8, pin_memory=True,
+                             persistent_workers=True, prefetch_factor=2)
     val_loader = DataLoader(val_dataset, batch_size=batch_size,
                            shuffle=False, collate_fn=collate_fn,
-                           num_workers=4)
+                           num_workers=4, pin_memory=True,
+                           persistent_workers=True, prefetch_factor=2)
 
     # Optimizer
     optimizer = optim.AdamW(model.parameters(), lr=lr, weight_decay=1e-5)

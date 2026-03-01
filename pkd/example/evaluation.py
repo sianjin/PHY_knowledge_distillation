@@ -43,7 +43,7 @@ def evaluate_marginal_distribution(teacher_seq, student_seq, save_prefix='eval_m
     plt.close()
 
     # Plot 2: QQ plot
-    fig, ax = plt.subplots(1, 1, figsize=(6, 6))
+    fig, ax = plt.subplots(1, 1, figsize=(6, 4))
     ax.plot(teacher_q, student_q, 'o', alpha=0.5)
     ax.plot([teacher_q.min(), teacher_q.max()],
             [teacher_q.min(), teacher_q.max()], 'k--', label='y=x')

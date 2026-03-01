@@ -108,7 +108,7 @@ def example_training(data_dir='data', max_files=None):
         val_sequences,
         val_configs,
         num_epochs=10,
-        batch_size=256,
+        batch_size=1024,
         lr=1e-3,
         device=device,
         early_stopping_patience=3,
@@ -260,11 +260,12 @@ def example_test_evaluation(data_dir='data', max_files=None, slice_spec=None):
     print("Test Set Evaluation Complete!")
     print("="*60)
     print("Generated files:")
-    print("  Test metrics (5 files):")
+    print("  Test metrics (6 files):")
     print("    - test_metrics_pit_pass_rate.png")
     print("    - test_metrics_lb_pass_rate_zt.png")
     print("    - test_metrics_lb_pass_rate_zt2.png")
     print("    - test_metrics_acf_rmse.png")
+    print("    - test_metrics_psd_rmse.png")
     print("    - test_metrics_ks_stat.png")
     print("  Quantile error:")
     print("    - fig2_quantile_error.png")
