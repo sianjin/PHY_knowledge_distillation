@@ -44,13 +44,11 @@ logs/
 Thumbs.db
 
 # Data
-data/
 datasets/
 validation/
 paper/
 *.npy
 *.npz
-*.mat
 *.h5
 *.hdf5
 
