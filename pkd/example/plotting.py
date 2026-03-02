@@ -210,10 +210,10 @@ def generate_figure1_per_mcs_metrics(model, test_sequences, test_configs, device
                 student_acf = compute_acf(X_student, max_lag=50)
                 acf_rmse = np.sqrt(np.mean((teacher_acf[1:] - student_acf[1:])**2))
 
-                # PSD RMSE
+                # PSD RMSE (normalized by mean teacher PSD for scale invariance)
                 teacher_freqs, teacher_psd = compute_psd(X_teacher)
                 student_freqs, student_psd = compute_psd(X_student)
-                psd_rmse = np.sqrt(np.mean((teacher_psd - student_psd)**2))
+                psd_rmse = np.sqrt(np.mean((teacher_psd - student_psd)**2)) / np.mean(teacher_psd)
 
                 # KS test
                 ks_stat_marg, _ = stats.ks_2samp(X_teacher, X_student)
@@ -316,13 +316,13 @@ def generate_figure1_per_mcs_metrics(model, test_sequences, test_configs, device
     print(f"Saved {save_path}_acf_rmse.png")
     plt.close()
 
-    # 5. PSD RMSE
+    # 5. PSD RMSE (Normalized)
     fig, ax = plt.subplots(1, 1, figsize=(8, 5))
     for mcs in sorted(results.keys()):
         data = results[mcs]
         snr = np.array(data['snr'])
         ax.plot(snr, data['psd_rmse_med'], 'o-', label=f'MCS {mcs}', color=colors[mcs])
-    ax.set_ylabel('Median PSD RMSE')
+    ax.set_ylabel('Median Normalized PSD RMSE')
     ax.set_xlabel('SNR (dB)')
     ax.legend(bbox_to_anchor=(1.05, 1), loc='upper left')
     ax.grid(True, alpha=0.3)
