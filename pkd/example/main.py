@@ -54,12 +54,13 @@ INNOVATION_PARAMS = {
 }
 # ============================================================================
 
-def example_training(data_dir='data', max_files=None):
+def example_training(data_dir='data', max_files=None, exclusion_config=None):
     """Example training workflow with real PHY simulator data.
 
     Args:
         data_dir: Directory containing .mat files
         max_files: Maximum number of .mat files to load (None = load all)
+        exclusion_config: Path to exclusion config file (None = no filtering)
     """
 
     # Create model using configured innovation type
@@ -85,7 +86,24 @@ def example_training(data_dir='data', max_files=None):
         val_ratio=0.1,
         max_files=max_files
     )
-    print(f"Test data: {len(test_sequences)} sequences (will be used for final evaluation)")
+    print(f"Loaded {len(train_sequences)} training, {len(val_sequences)} validation, {len(test_sequences)} test sequences")
+
+    # Apply exclusion filter if config provided
+    if exclusion_config is not None:
+        print(f"\nApplying exclusion filter from {exclusion_config}")
+        from .exclusion_filter import filter_dataset_with_exclusions
+
+        (train_sequences, train_configs,
+         val_sequences, val_configs,
+         test_sequences, test_configs,
+         filter_stats) = filter_dataset_with_exclusions(
+            train_sequences, train_configs,
+            val_sequences, val_configs,
+            test_sequences, test_configs,
+            exclusion_config_path=exclusion_config
+        )
+
+    print(f"\nFinal counts: {len(train_sequences)} training, {len(val_sequences)} validation, {len(test_sequences)} test sequences")
 
     # Train
     device = 'cuda' if torch.cuda.is_available() else 'cpu'

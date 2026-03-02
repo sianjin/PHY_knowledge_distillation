@@ -107,6 +107,217 @@ This loads only the first 5 .mat files (alphabetically sorted).
 
 **Note**: With the 70/10/20 split, training uses only 70% of sequences, validation 10%, and test 20%.
 
+### 3. Training with Configuration Exclusions (Generalization Testing)
+
+PKD supports **selective exclusion** of training data based on specific (config_slice, MCS, SNR) combinations to test model generalization on held-out configurations.
+
+#### Why Use Exclusions?
+
+When training on all available data, the model learns parameters for all configurations. To test whether the model can **generalize** to unseen configurations, you can:
+1. Exclude specific configurations from training (e.g., MCS 7 for a particular antenna setup)
+2. Train the model without seeing those configurations
+3. Evaluate on the held-out configurations to measure generalization performance
+
+#### Quick Start
+
+1. **Create an exclusion configuration file** (or use the provided example):
+
+```bash
+# Use the provided example
+cp pkd/example/training_exclusions.yaml my_exclusions.yaml
+
+# Edit to specify your exclusions
+# (see YAML Schema section below for details)
+```
+
+2. **Train with exclusions**:
+
+```bash
+python example.py train --exclusion-config pkd/example/training_exclusions.yaml
+```
+
+3. **Test on held-out configuration**:
+
+```bash
+# Test only on the excluded configuration
+python example.py test --slice channel_model_id:2 N_t:3 N_r:2 BW:20.0 N_ss:1 MCS:7
+```
+
+#### YAML Configuration Schema
+
+See [training_exclusions.yaml](training_exclusions.yaml) for a fully documented example.
+
+**Basic Structure**:
+```yaml
+version: "1.0"
+
+settings:
+  apply_to_train: true    # Exclude from training
+  apply_to_val: true      # Exclude from validation
+  apply_to_test: false    # Keep test untouched
+
+exclusions:
+  - name: "Descriptive name"
+    description: "Why this exclusion?"
+    config:
+      channel_model_id: 2   # Config slice to match
+      N_t: 3
+      N_r: 2
+      BW: 20.0
+      N_ss: 1
+    mcs_list: [7]           # MCS values to exclude
+    snr_filter:             # Optional SNR filtering
+      type: "range"
+      min: 10.0
+      max: 25.0
+```
+
+**SNR Filtering Options**:
+
+1. **No SNR filter** (default) - Exclude at ALL SNR values:
+   ```yaml
+   mcs_list: [7]
+   # No snr_filter → applies to all SNRs
+   ```
+
+2. **Specific SNR values** - Exclude only at certain SNR points:
+   ```yaml
+   snr_filter:
+     type: "values"
+     values: [15, 20, 25]  # Only these SNR values (dB)
+   ```
+
+3. **SNR range** - Exclude in a range [min, max]:
+   ```yaml
+   snr_filter:
+     type: "range"
+     min: 10.0   # SNR >= 10
+     max: 25.0   # SNR <= 25
+   ```
+
+4. **SNR threshold** - Exclude above/below a threshold:
+   ```yaml
+   snr_filter:
+     type: "threshold"
+     operator: "gte"  # >= (or "lte", "gt", "lt")
+     value: 20.0
+   ```
+
+#### Example Use Cases
+
+**Example 1**: Test generalization to high MCS
+```yaml
+exclusions:
+  - name: "Exclude MCS 8-9 for 2x2 MIMO"
+    config:
+      N_t: 2
+      N_r: 2
+      BW: 20.0
+      N_ss: 2
+    mcs_list: [8, 9]
+```
+
+**Example 2**: Test generalization at specific SNR
+```yaml
+exclusions:
+  - name: "Exclude MCS 5 at high SNR"
+    config:
+      channel_model_id: 2
+      N_t: 4
+      N_r: 2
+      BW: 20.0
+      N_ss: 2
+    mcs_list: [5]
+    snr_filter:
+      type: "values"
+      values: [25, 30]  # Only at 25 and 30 dB
+```
+
+**Example 3**: Test generalization in operating range
+```yaml
+exclusions:
+  - name: "Exclude MCS 7 in typical SNR range"
+    config:
+      channel_model_id: 2
+      N_t: 3
+      N_r: 2
+      BW: 20.0
+      N_ss: 1
+    mcs_list: [7]
+    snr_filter:
+      type: "range"
+      min: 15.0
+      max: 25.0
+```
+
+#### CLI Examples
+
+```bash
+# Train with exclusions
+python example.py train --exclusion-config pkd/example/training_exclusions.yaml
+
+# Train subset of files with exclusions
+python example.py train 10 --exclusion-config my_exclusions.yaml
+
+# Train normally (no exclusions - backward compatible)
+python example.py train
+
+# Test on held-out configuration (note: MCS now supported in --slice!)
+python example.py test --slice channel_model_id:2 N_t:3 N_r:2 BW:20.0 N_ss:1 MCS:7
+
+# Test with auto-selected slice
+python example.py test
+```
+
+#### What Happens During Training?
+
+When you train with exclusions:
+
+1. **Data is loaded** normally (all .mat files)
+2. **Exclusion rules are applied** to training and validation sets
+3. **Statistics are reported**:
+   ```
+   EXCLUSION FILTER REPORT
+   =====================================
+   TRAIN SET:
+     Total sequences before: 3500
+     Total sequences after:  3450
+     Excluded sequences:     50 (1.43%)
+
+     Exclusion rules applied (1):
+       [  50 seqs] Exclude MCS7 for Model-B 3x2:1 config
+                   Config: channel_model_id:2, N_t:3, N_r:2, BW:20.0, N_ss:1
+                   MCS:    [7]
+   ```
+4. **Model is trained** on filtered data
+5. **Test set remains untouched** (for unbiased evaluation)
+
+#### Best Practices
+
+1. **Start simple**: Exclude one configuration first to verify the approach
+2. **Check statistics**: Ensure you're not excluding too much data (>50% triggers warning)
+3. **Document your exclusions**: Use descriptive names and descriptions in YAML
+4. **Version control**: Commit your exclusion configs alongside code
+5. **Test generalization**: Use `--slice MCS:X` to evaluate on held-out configurations
+
+#### Configuration Parameter Reference
+
+- `channel_model_id`: int (1-6)
+  1=Model-A, 2=Model-B, 3=Model-C, 4=Model-D, 5=Model-E, 6=Model-F
+
+- `N_t`: int (1-8) - Number of transmit antennas
+
+- `N_r`: int (1-8) - Number of receive antennas
+
+- `BW`: float - Bandwidth in MHz (typically 20.0, 40.0, 80.0, 160.0)
+
+- `N_ss`: int (1-4) - Number of spatial streams (≤ min(N_t, N_r))
+
+- `MCS`: int (0-9) - Modulation and Coding Scheme
+  0=lowest rate (most robust), 9=highest rate (least robust)
+
+- `SNR_bar`: float - Average SNR in dB (typical range: -10 to +63)
+
 ## Data Format
 
 ### Real Data Structure
@@ -183,9 +394,11 @@ python example.py test --slice channel_model_id:2 N_t:4 N_r:2 BW:20.0 N_ss:2 pac
 - `N_r` (int): Number of receive antennas (e.g., 2, 4, 8)
 - `BW` (float): Bandwidth in MHz (e.g., 20.0, 40.0, 80.0)
 - `N_ss` (int): Number of spatial streams (e.g., 1, 2, 4)
+- `MCS` (int): ✨ **NEW** - Modulation and Coding Scheme (0-9) for testing held-out configurations
 
 **Notes**:
-- MCS and SNR_bar are NOT included in the slice specification as they are the varying dimensions for analysis
+- `MCS` parameter is now supported for filtering to specific MCS values (useful for generalization testing)
+- SNR_bar is typically the varying dimension for analysis within a slice
 - `packet_length` is always 1000 bytes in the current dataset and does not need to be specified
 
 **Examples**:
@@ -460,9 +673,11 @@ The test set (1,000 sequences) has the following distribution across MCS and SNR
 |------|---------|
 | **Train with real data (all files)** | `python example.py train` |
 | **Train with real data (5 files)** | `python example.py train 5` |
+| **Train with exclusions** | `python example.py train --exclusion-config pkd/example/training_exclusions.yaml` |
 | **Evaluate on test set (auto-slice)** | `python example.py test` |
 | **Evaluate with specific slice** | `python example.py test --slice N_t:4 N_r:2` |
 | **Evaluate with full slice spec** | `python example.py test --slice channel_model_id:2 N_t:4 N_r:2 BW:20.0 N_ss:2` |
+| **Evaluate held-out MCS (NEW)** | `python example.py test --slice N_t:3 N_r:2 MCS:7` |
 | **Evaluate on test set (subset)** | `python example.py test 5 --slice N_t:4 N_r:2` |
 | **Evaluate single test sequence** | `python example.py eval 50` |
 | **Evaluate test sequence (subset)** | `python example.py eval 50 10` |

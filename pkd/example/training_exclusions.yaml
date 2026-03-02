@@ -1,0 +1,173 @@
+# Training Data Exclusion Configuration
+# ======================================
+#
+# This file specifies which (config_slice, MCS, SNR) combinations to exclude
+# from training/validation data to test model generalization on held-out configurations.
+#
+# Schema Version: 1.0
+
+version: "1.0"
+
+# Global Settings
+# ---------------
+# Control which dataset splits are affected by exclusion rules
+settings:
+  apply_to_train: true    # Exclude from training set
+  apply_to_val: true      # Exclude from validation set
+  apply_to_test: false    # Keep test set untouched (recommended)
+
+# Exclusion Rules
+# ---------------
+# Each rule specifies:
+#   - name: Human-readable identifier
+#   - description: Purpose of this exclusion
+#   - config: Configuration slice to match
+#   - mcs_list: List of MCS values to exclude for this config
+#   - snr_filter (optional): SNR filtering (if omitted, applies to ALL SNR values)
+
+exclusions:
+  # Example 1: Exclude for ALL SNR values (default behavior)
+  # ========================================================
+  # Use this when you want to test generalization to a specific MCS
+  # across all SNR conditions
+  - name: "Exclude MCS7 for Model-B 3x2:1 config"
+    description: "Test generalization to MCS 7 across all SNR conditions"
+    config:
+      channel_model_id: 2   # Model-B (1=A, 2=B, 3=C, 4=D, 5=E, 6=F)
+      N_t: 3                # 3 transmit antennas
+      N_r: 2                # 2 receive antennas
+      BW: 20.0              # 20 MHz bandwidth
+      N_ss: 1               # 1 spatial stream
+    mcs_list: [7]           # Exclude MCS 7
+    # No snr_filter specified → applies to ALL SNR values
+
+  # Example 2: Exclude for specific SNR values
+  # ===========================================
+  # Use this when you want to test generalization only at specific SNR points
+  - name: "Exclude MCS5 at high SNR for Model-D 4x4:2"
+    description: "Test generalization at high SNR only"
+    config:
+      channel_model_id: 4   # Model-D
+      N_t: 4
+      N_r: 1
+      BW: 20.0
+      N_ss: 1
+    mcs_list: [5]
+    snr_filter:
+      type: "values"        # Match exact SNR values
+      values: [20, 25, 30]  # Only exclude at these specific SNR values (dB)
+
+  # Example 3: Exclude for SNR range
+  # =================================
+  # Use this when you want to test generalization in a typical operating range
+  - name: "Exclude MCS8 in mid-SNR range"
+    description: "Test generalization in typical operating conditions (10-25 dB)"
+    config:
+      channel_model_id: 2
+      N_t: 4
+      N_r: 2
+      BW: 20.0
+      N_ss: 2
+    mcs_list: [8, 9]        # Exclude multiple MCS values
+    snr_filter:
+      type: "range"         # Match SNR range
+      min: 10.0             # Exclude if SNR >= 10 dB
+      max: 25.0             # Exclude if SNR <= 25 dB
+
+  # Example 4: Exclude for SNR threshold
+  # =====================================
+  # Use this when you want to exclude only high/low SNR conditions
+  - name: "Exclude MCS6 at low SNR"
+    description: "Test generalization at low SNR (unreliable region)"
+    config:
+      channel_model_id: 2
+      N_t: 2
+      N_r: 2
+      BW: 40.0
+      N_ss: 1
+    mcs_list: [6]
+    snr_filter:
+      type: "threshold"     # Match SNR threshold
+      operator: "lte"       # Less than or equal (also: "gte", "lt", "gt")
+      value: 15.0           # Exclude if SNR <= 15 dB
+
+  # Example 5: Multiple MCS values, all SNRs
+  # =========================================
+  # Use this to exclude multiple high MCS values that may be unreliable
+  - name: "Exclude multiple high MCS for 1x1 SISO"
+    description: "High MCS unreliable at low antenna diversity"
+    config:
+      channel_model_id: 2
+      N_t: 1
+      N_r: 1
+      BW: 20.0
+      N_ss: 1
+    mcs_list: [7, 8, 9]     # Exclude MCS 7, 8, and 9
+    # No snr_filter → applies to all SNR values
+
+# SNR Filter Options Summary
+# ==========================
+#
+# 1. No snr_filter (default):
+#    Exclude for ALL SNR values
+#
+# 2. Exact SNR values:
+#    snr_filter:
+#      type: "values"
+#      values: [15, 20, 25]
+#
+# 3. SNR range:
+#    snr_filter:
+#      type: "range"
+#      min: 10.0   # SNR >= 10
+#      max: 20.0   # SNR <= 20
+#
+# 4. SNR threshold:
+#    snr_filter:
+#      type: "threshold"
+#      operator: "gte"  # >= (or "lte", "gt", "lt")
+#      value: 20.0
+
+# Configuration Parameter Reference
+# ==================================
+#
+# channel_model_id: int (1-6)
+#   1 = Model-A (small office/residential)
+#   2 = Model-B (medium office)
+#   3 = Model-C (large office)
+#   4 = Model-D (large office, high delay spread)
+#   5 = Model-E (large office/outdoor)
+#   6 = Model-F (outdoor)
+#
+# N_t: int (1-8)
+#   Number of transmit antennas
+#
+# N_r: int (1-8)
+#   Number of receive antennas
+#
+# BW: float
+#   Bandwidth in MHz (typically 20.0, 40.0, 80.0, or 160.0)
+#
+# N_ss: int (1-4)
+#   Number of spatial streams (limited by min(N_t, N_r))
+#
+# MCS: int (0-9)
+#   Modulation and Coding Scheme
+#   0 = lowest rate (most robust)
+#   9 = highest rate (least robust)
+#
+# SNR_bar: float
+#   Average Signal-to-Noise Ratio in dB
+#   Typical range: -10 to +63 dB
+
+# Usage Examples
+# ==============
+#
+# Train with exclusions:
+#   python example.py train --exclusion-config pkd/example/training_exclusions.yaml
+#
+# Test on specific held-out configuration:
+#   python example.py test --slice channel_model_id:2 N_t:3 N_r:2 BW:20.0 N_ss:1 MCS:7
+#
+# Train normally (no exclusions):
+#   python example.py train
