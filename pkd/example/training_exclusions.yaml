@@ -98,7 +98,7 @@ exclusions:
     description: "High MCS unreliable at low antenna diversity"
     config:
       channel_model_id: 2
-      N_t: 1
+      N_t: 2
       N_r: 1
       BW: 20.0
       N_ss: 1
