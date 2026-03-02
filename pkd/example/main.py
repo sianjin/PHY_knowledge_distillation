@@ -286,9 +286,9 @@ def example_test_evaluation(data_dir='data', max_files=None, slice_spec=None):
     print("    - test_metrics_psd_rmse.png")
     print("    - test_metrics_ks_stat.png")
     print("  Quantile error:")
-    print("    - fig2_quantile_error.png")
+    print("    - test_quantile_error.png")
     print("  CCDF error:")
-    print("    - fig3_ccdf_error.png")
+    print("    - test_ccdf_error.png")
     print(f"\nConfiguration slice: {slice_label}")
     print(f"Evaluated on {len(test_sequences)} test sequences")
 

@@ -374,8 +374,8 @@ This will:
 4. Evaluate all test sequences in the filtered slice
 5. Generate three comprehensive evaluation figures:
    - `fig1_per_mcs_metrics.png` - Per-MCS metrics vs SNR
-   - `fig2_quantile_error.png` - Quantile error analysis
-   - `fig3_ccdf_error.png` - CCDF error analysis
+   - `test_quantile_error.png` - Quantile error analysis
+   - `test_ccdf_error.png` - CCDF error analysis
 
 #### Configuration Slicing
 
