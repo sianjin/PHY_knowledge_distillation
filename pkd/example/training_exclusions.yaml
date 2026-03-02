@@ -55,13 +55,13 @@ exclusions:
     mcs_list: [5]
     snr_filter:
       type: "values"        # Match exact SNR values
-      values: [20, 25, 30]  # Only exclude at these specific SNR values (dB)
+      values: [24, 27, 30]  # Only exclude at these specific SNR values (dB)
 
   # Example 3: Exclude for SNR range
   # =================================
   # Use this when you want to test generalization in a typical operating range
   - name: "Exclude MCS8 in mid-SNR range"
-    description: "Test generalization in typical operating conditions (10-25 dB)"
+    description: "Test generalization in typical operating conditions (40-55 dB)"
     config:
       channel_model_id: 2
       N_t: 4
@@ -71,8 +71,8 @@ exclusions:
     mcs_list: [8, 9]        # Exclude multiple MCS values
     snr_filter:
       type: "range"         # Match SNR range
-      min: 10.0             # Exclude if SNR >= 10 dB
-      max: 25.0             # Exclude if SNR <= 25 dB
+      min: 40.0             # Exclude if SNR >= 40 dB
+      max: 55.0             # Exclude if SNR <= 55 dB
 
   # Example 4: Exclude for SNR threshold
   # =====================================
@@ -89,7 +89,7 @@ exclusions:
     snr_filter:
       type: "threshold"     # Match SNR threshold
       operator: "lte"       # Less than or equal (also: "gte", "lt", "gt")
-      value: 15.0           # Exclude if SNR <= 15 dB
+      value: 25.0           # Exclude if SNR <= 25 dB
 
   # Example 5: Multiple MCS values, all SNRs
   # =========================================
@@ -162,7 +162,6 @@ exclusions:
 
 # Usage Examples
 # ==============
-# Note: Run these commands from the pkd/ directory
 #
 # Train with exclusions:
 #   python example.py train --exclusion-config example/training_exclusions.yaml
