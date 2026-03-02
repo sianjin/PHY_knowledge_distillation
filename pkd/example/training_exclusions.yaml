@@ -44,7 +44,7 @@ exclusions:
   # Example 2: Exclude for specific SNR values
   # ===========================================
   # Use this when you want to test generalization only at specific SNR points
-  - name: "Exclude MCS5 at high SNR for Model-D 4x4:2"
+  - name: "Exclude MCS5 at high SNR for Model-D 4x1:1"
     description: "Test generalization at high SNR only"
     config:
       channel_model_id: 4   # Model-D
@@ -162,9 +162,10 @@ exclusions:
 
 # Usage Examples
 # ==============
+# Note: Run these commands from the pkd/ directory
 #
 # Train with exclusions:
-#   python example.py train --exclusion-config pkd/example/training_exclusions.yaml
+#   python example.py train --exclusion-config example/training_exclusions.yaml
 #
 # Test on specific held-out configuration:
 #   python example.py test --slice channel_model_id:2 N_t:3 N_r:2 BW:20.0 N_ss:1 MCS:7

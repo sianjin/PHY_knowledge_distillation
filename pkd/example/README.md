@@ -53,18 +53,22 @@ example/
 
 **Prerequisites**: Ensure you have a Python environment with PyTorch installed. See [requirements.txt](../requirements.txt) for dependencies.
 
-The main entry point is `example.py` in the parent directory:
+The main entry point is `example.py`. Run all commands from the `pkd/` directory:
 
 ```bash
+cd pkd
+
 # Training
 python example.py train                   # Train with all real data files
 python example.py train 5                 # Train with first 5 files
+python example.py train --exclusion-config example/training_exclusions.yaml  # Train with configuration exclusions
 
 # Testing
 python example.py test                                      # Auto-select most common slice
 python example.py test 5                                    # Test with 5 files
 python example.py test --slice N_t:4 N_r:2                  # Specify configuration slice
 python example.py test --slice channel_model_id:2 N_t:4 N_r:2 BW:20.0 N_ss:2  # Full slice spec
+python example.py test --slice N_t:3 N_r:2 MCS:7            # Test held-out configuration
 
 # Qualitative Evaluation
 python example.py eval                    # Evaluate first test sequence
@@ -130,10 +134,11 @@ cp pkd/example/training_exclusions.yaml my_exclusions.yaml
 # (see YAML Schema section below for details)
 ```
 
-2. **Train with exclusions**:
+2. **Train with exclusions** (run from `pkd/` directory):
 
 ```bash
-python example.py train --exclusion-config pkd/example/training_exclusions.yaml
+cd pkd
+python example.py train --exclusion-config example/training_exclusions.yaml
 ```
 
 3. **Test on held-out configuration**:
@@ -252,9 +257,12 @@ exclusions:
 
 #### CLI Examples
 
+Note: Run these commands from the `pkd/` directory.
+
 ```bash
 # Train with exclusions
-python example.py train --exclusion-config pkd/example/training_exclusions.yaml
+cd pkd
+python example.py train --exclusion-config example/training_exclusions.yaml
 
 # Train subset of files with exclusions
 python example.py train 10 --exclusion-config my_exclusions.yaml
@@ -669,11 +677,13 @@ The test set (1,000 sequences) has the following distribution across MCS and SNR
 
 ## Quick Reference
 
+Note: Run all commands from the `pkd/` directory (`cd pkd`).
+
 | Task | Command |
 |------|---------|
 | **Train with real data (all files)** | `python example.py train` |
 | **Train with real data (5 files)** | `python example.py train 5` |
-| **Train with exclusions** | `python example.py train --exclusion-config pkd/example/training_exclusions.yaml` |
+| **Train with exclusions** | `python example.py train --exclusion-config example/training_exclusions.yaml` |
 | **Evaluate on test set (auto-slice)** | `python example.py test` |
 | **Evaluate with specific slice** | `python example.py test --slice N_t:4 N_r:2` |
 | **Evaluate with full slice spec** | `python example.py test --slice channel_model_id:2 N_t:4 N_r:2 BW:20.0 N_ss:2` |
