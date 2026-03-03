@@ -68,7 +68,6 @@ python example.py test                                      # Auto-select most c
 python example.py test 5                                    # Test with 5 files
 python example.py test --slice N_t:4 N_r:2                  # Specify configuration slice
 python example.py test --slice channel_model_id:2 N_t:4 N_r:2 BW:20.0 N_ss:2  # Full slice spec
-python example.py test --slice N_t:3 N_r:2 MCS:7            # Test held-out configuration
 
 # Qualitative Evaluation
 python example.py eval                    # Evaluate first test sequence
@@ -441,20 +440,67 @@ python example.py test 10 --slice N_t:4 N_r:2
 
 ### 2. Evaluate Single Test Sequence (Qualitative Analysis)
 
-Evaluate the trained model on a single sequence from the **held-out test set** for detailed qualitative analysis:
+Evaluate the trained model on a single sequence from the **held-out test set** for detailed qualitative analysis.
+
+#### Slice-Based Selection (NEW)
+
+**Filter by configuration and select a matching sequence:**
 
 ```bash
 cd pkd
-python example.py eval
+# Random selection from matching sequences (seed=42 for reproducibility)
+python example.py eval --slice N_t:3 N_r:2 BW:20.0 N_ss:2 MCS:7
+
+# Include SNR in the filter
+python example.py eval --slice N_t:3 N_r:2 BW:20.0 N_ss:2 MCS:7 SNR_bar:29
+
+# Deterministic selection: pick the 6th matching sequence (0-indexed)
+python example.py eval --slice N_t:3 N_r:2 MCS:7 --idx 5
+
+# Exact config with specific index
+python example.py eval --slice N_t:3 N_r:2 MCS:7 SNR_bar:29 --idx 0
 ```
 
-This uses the first test sequence (index 0 from the test set).
+**How slice selection works:**
+1. Filters test set to sequences matching the slice specification
+2. If `--idx` provided: selects the Nth matching sequence (deterministic)
+3. If `--idx` omitted: randomly selects from matches (seed=42 for reproducibility)
+4. Displays the selected sequence's full config and indices
 
-To specify which test sequence to inspect:
+**Available slice parameters:**
+- `channel_model_id` (int): 1-6 (1=Model-A through 6=Model-F)
+- `N_t` (int): Number of transmit antennas
+- `N_r` (int): Number of receive antennas
+- `BW` (float): Bandwidth in MHz (e.g., 20.0, 40.0)
+- `N_ss` (int): Number of spatial streams
+- `MCS` (int): Modulation and Coding Scheme (0-9)
+- `SNR_bar` (float): Average SNR in dB
+
+**Examples:**
+```bash
+# Randomly select from 4x2 MIMO configs with MCS 5
+python example.py eval --slice N_t:4 N_r:2 MCS:5
+
+# Specific high-SNR scenario
+python example.py eval --slice N_t:4 N_r:2 MCS:7 SNR_bar:30
+
+# Pick 3rd sequence from Model-D configs
+python example.py eval --slice channel_model_id:4 --idx 2
+
+# Combine with file limit
+python example.py eval --slice N_t:4 N_r:2 10  # Use 10-file subset
+```
+
+#### Direct Indexing (Backward Compatible)
+
+**Traditional index-based selection (still supported):**
 
 ```bash
-# Inspect the 51st test sequence
 cd pkd
+# Default: first test sequence
+python example.py eval
+
+# Inspect the 51st test sequence (direct indexing)
 python example.py eval 50
 ```
 
@@ -467,7 +513,7 @@ Parameters:
 
 **Examples**:
 ```bash
-# Inspect different test sequences
+# Inspect different test sequences by direct index
 python example.py eval 0      # First test sequence
 python example.py eval 100    # 101st test sequence
 python example.py eval 999    # Last test sequence (if using all files)
@@ -476,7 +522,13 @@ python example.py eval 999    # Last test sequence (if using all files)
 python example.py eval 50 10  # 51st test sequence from 10-file subset
 ```
 
-**Important**: This mode correctly uses the **held-out test set only** (20% of data), ensuring you're inspecting sequences the model never saw during training. The test set is loaded using the same 70/10/20 split and random seed (42) as training.
+#### Which Method to Use?
+
+- **Use --slice** when you want to inspect specific configurations (e.g., MCS 7 with 3x2 antennas)
+- **Use direct indexing** when you want to inspect a specific sequence from the full test set
+- **Combine --slice with --idx** for reproducible selection from a config subset
+
+**Important**: Both modes correctly use the **held-out test set only** (20% of data), ensuring you're inspecting sequences the model never saw during training. The test set is loaded using the same 70/10/20 split and random seed (42) as training.
 
 This will:
 1. Load the trained model from `pkd_model.pt`
@@ -687,10 +739,13 @@ Note: Run all commands from the `pkd/` directory (`cd pkd`).
 | **Evaluate on test set (auto-slice)** | `python example.py test` |
 | **Evaluate with specific slice** | `python example.py test --slice N_t:4 N_r:2` |
 | **Evaluate with full slice spec** | `python example.py test --slice channel_model_id:2 N_t:4 N_r:2 BW:20.0 N_ss:2` |
-| **Evaluate held-out MCS (NEW)** | `python example.py test --slice N_t:3 N_r:2 MCS:7` |
+| **Evaluate held-out MCS** | `python example.py test --slice N_t:3 N_r:2 MCS:7` |
 | **Evaluate on test set (subset)** | `python example.py test 5 --slice N_t:4 N_r:2` |
-| **Evaluate single test sequence** | `python example.py eval 50` |
-| **Evaluate test sequence (subset)** | `python example.py eval 50 10` |
+| **Evaluate single sequence (direct index)** | `python example.py eval 50` |
+| **Evaluate single sequence (subset)** | `python example.py eval 50 10` |
+| **Evaluate specific config (random)** | `python example.py eval --slice N_t:4 N_r:2 MCS:7` |
+| **Evaluate specific config (deterministic)** | `python example.py eval --slice N_t:4 N_r:2 MCS:7 --idx 3` |
+| **Evaluate with SNR filter** | `python example.py eval --slice N_t:4 N_r:2 MCS:7 SNR_bar:29` |
 
 ### Understanding Test Sequence Indices
 

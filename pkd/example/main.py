@@ -265,30 +265,33 @@ def example_test_evaluation(data_dir='data', max_files=None, slice_spec=None):
     print("="*60)
 
     fig1_results = generate_figure1_per_mcs_metrics(
-        model, test_sequences, test_configs, device, slice_label=slice_label
+        model, test_sequences, test_configs, device,
+        save_path='figures/test_metrics', slice_label=slice_label
     )
     fig2_results = generate_figure2_quantile_error(
-        model, test_sequences, test_configs, device, slice_label=slice_label
+        model, test_sequences, test_configs, device,
+        save_path='figures/test_quantile_error.png', slice_label=slice_label
     )
     fig3_results = generate_figure3_ccdf_error(
-        model, test_sequences, test_configs, device, slice_label=slice_label
+        model, test_sequences, test_configs, device,
+        save_path='figures/test_ccdf_error.png', slice_label=slice_label
     )
 
     print("\n" + "="*60)
     print("Test Set Evaluation Complete!")
     print("="*60)
-    print("Generated files:")
+    print("Generated files in figures/:")
     print("  Test metrics (6 files):")
-    print("    - test_metrics_pit_pass_rate.png")
-    print("    - test_metrics_lb_pass_rate_zt.png")
-    print("    - test_metrics_lb_pass_rate_zt2.png")
-    print("    - test_metrics_acf_rmse.png")
-    print("    - test_metrics_psd_rmse.png")
-    print("    - test_metrics_ks_stat.png")
+    print("    - figures/test_metrics_pit_pass_rate.png")
+    print("    - figures/test_metrics_lb_pass_rate_zt.png")
+    print("    - figures/test_metrics_lb_pass_rate_zt2.png")
+    print("    - figures/test_metrics_acf_rmse.png")
+    print("    - figures/test_metrics_psd_rmse.png")
+    print("    - figures/test_metrics_ks_stat.png")
     print("  Quantile error:")
-    print("    - test_quantile_error.png")
+    print("    - figures/test_quantile_error.png")
     print("  CCDF error:")
-    print("    - test_ccdf_error.png")
+    print("    - figures/test_ccdf_error.png")
     print(f"\nConfiguration slice: {slice_label}")
     print(f"Evaluated on {len(test_sequences)} test sequences")
 
@@ -303,7 +306,7 @@ def example_test_evaluation(data_dir='data', max_files=None, slice_spec=None):
 
 
 
-def example_evaluation(data_dir='data', test_idx=0, max_files=None):
+def example_evaluation(data_dir='data', test_idx=None, max_files=None, slice_spec=None, slice_idx=None):
     """Run comprehensive evaluation of student model fidelity on a single test sequence.
 
     This is a qualitative analysis tool for detailed inspection of individual sequences
@@ -312,12 +315,17 @@ def example_evaluation(data_dir='data', test_idx=0, max_files=None):
 
     Args:
         data_dir: Directory containing .mat files
-        test_idx: Index within the test set (0 to num_test_sequences-1)
+        test_idx: Index within the test set (0 to num_test_sequences-1) - for backward compatibility
         max_files: Maximum number of files to load (should match training)
+        slice_spec: Dict of config filters (e.g., {'N_t': 4, 'MCS': 7}) - new slice-based selection
+        slice_idx: Index into filtered sequences (None = random selection with seed=42)
 
     Note:
-        The test_idx parameter selects from the held-out test set only (20% of data).
-        This ensures you're evaluating on data the model never saw during training.
+        Two selection modes:
+        1. Direct indexing (backward compatible): Provide test_idx
+        2. Slice-based (new): Provide slice_spec, optionally with slice_idx
+
+        The test set is the held-out 20% of data that the model never saw during training.
     """
     print("=" * 50)
     print("PKD Model Fidelity Evaluation")
@@ -400,14 +408,85 @@ def example_evaluation(data_dir='data', test_idx=0, max_files=None):
         random_seed=42  # MUST use same seed as training!
     )
 
-    if test_idx >= len(test_sequences):
-        raise ValueError(f"test_idx={test_idx} out of range, only {len(test_sequences)} test sequences available")
+    print(f"Loaded {len(test_sequences)} test sequences")
 
-    # Get the specific test sequence
-    teacher_seq = test_sequences[test_idx]
-    config_dict = test_configs[test_idx]
+    # Sequence selection: three modes (direct index, slice+idx, slice+random)
+    if test_idx is not None:
+        # Backward compatibility mode: direct indexing
+        if test_idx >= len(test_sequences):
+            raise ValueError(f"test_idx={test_idx} out of range, only {len(test_sequences)} test sequences available")
 
-    print(f"\nUsing test sequence {test_idx} (out of {len(test_sequences)} test sequences)")
+        final_idx = test_idx
+        teacher_seq = test_sequences[test_idx]
+        config_dict = test_configs[test_idx]
+
+        print(f"\nUsing test sequence {test_idx} (out of {len(test_sequences)} test sequences)")
+
+    elif slice_spec is not None:
+        # New slice-based mode
+        from .utils import filter_by_slice, format_slice_label
+
+        print("\n" + "="*60)
+        print("Filtering test set by configuration slice:")
+        print("="*60)
+        for k, v in slice_spec.items():
+            print(f"  {k}: {v}")
+
+        # Filter test set
+        filtered_sequences, filtered_configs, kept_indices = filter_by_slice(
+            test_sequences, test_configs, slice_spec
+        )
+
+        print(f"\nMatching sequences: {len(filtered_sequences)}/{len(test_sequences)} " +
+              f"({100*len(filtered_sequences)/len(test_sequences):.1f}%)")
+
+        # Handle empty filter result
+        if len(filtered_sequences) == 0:
+            print("\nERROR: No sequences match the specified slice.")
+            print("\nSlice specification:")
+            for k, v in slice_spec.items():
+                print(f"  {k}: {v}")
+            print("\nSuggestions:")
+            print("  1. Check that config values are valid (e.g., N_t, N_r, MCS ranges)")
+            print("  2. Try a less restrictive slice (remove some parameters)")
+            print("  3. Use 'python example.py test --slice ...' to see available configs")
+            raise ValueError("No sequences match the specified slice")
+
+        # Select from filtered sequences
+        if slice_idx is not None:
+            # Deterministic selection by index
+            if slice_idx >= len(filtered_sequences):
+                raise ValueError(
+                    f"--idx {slice_idx} out of range for filtered sequences. "
+                    f"Only {len(filtered_sequences)} sequences match the slice."
+                )
+            selection_idx = slice_idx
+            print(f"\nUsing --idx {slice_idx} (deterministic selection)")
+        else:
+            # Random selection with fixed seed for reproducibility
+            np.random.seed(42)
+            selection_idx = np.random.randint(0, len(filtered_sequences))
+            print(f"\nRandom selection (seed=42): index {selection_idx}/{len(filtered_sequences)-1}")
+
+        # Get the selected sequence
+        teacher_seq = filtered_sequences[selection_idx]
+        config_dict = filtered_configs[selection_idx]
+        final_idx = kept_indices[selection_idx]  # Original index in full test set
+
+        # Display selection details
+        slice_label = format_slice_label(slice_spec)
+        print(f"\nSelected sequence details:")
+        print(f"  Slice: {slice_label}")
+        print(f"  Index within filtered set: {selection_idx}/{len(filtered_sequences)-1}")
+        print(f"  Original test set index: {final_idx}/{len(test_sequences)-1}")
+
+    else:
+        # Neither test_idx nor slice_spec provided - use default (first sequence)
+        final_idx = 0
+        teacher_seq = test_sequences[0]
+        config_dict = test_configs[0]
+        print(f"\nUsing default test sequence 0 (out of {len(test_sequences)} test sequences)")
+
     print(f"Configuration: channel_model_id={config_dict['channel_model_id']}, "
           f"N_t={config_dict['N_t']}, N_r={config_dict['N_r']}, BW={config_dict['BW']}, "
           f"SNR={config_dict['SNR_bar']}, MCS={config_dict['MCS']}, N_ss={config_dict['N_ss']}")
@@ -461,37 +540,37 @@ def example_evaluation(data_dir='data', test_idx=0, max_files=None):
     student_log = student_seq  # Converted from dB to natural log scale
 
     print("\n--- 1. Marginal Distribution Fidelity ---")
-    marginal_metrics = evaluate_marginal_distribution(teacher_log, student_log)
+    marginal_metrics = evaluate_marginal_distribution(teacher_log, student_log, save_prefix='figures/eval_marginal')
 
     print("\n--- 2. Temporal Dependence ---")
-    temporal_metrics = evaluate_temporal_dependence(teacher_log, student_log)
+    temporal_metrics = evaluate_temporal_dependence(teacher_log, student_log, save_prefix='figures/eval_temporal')
 
     print("\n--- 3. Innovation Structure ---")
-    innovation_metrics = evaluate_innovation_structure(model, inference, teacher_seq, config, device)
+    innovation_metrics = evaluate_innovation_structure(model, inference, teacher_seq, config, device, save_prefix='figures/eval_innovations')
 
     print("\n--- 4. Teacher Baseline (Classical AR) ---")
     print(f"Running classical AR({model.ar_order}) baseline on teacher data for comparison...")
-    baseline_metrics = evaluate_teacher_baseline_ar(teacher_seq, ar_order=model.ar_order)
+    baseline_metrics = evaluate_teacher_baseline_ar(teacher_seq, ar_order=model.ar_order, save_prefix='figures/eval_teacher_baseline')
 
     print("\n" + "=" * 50)
     print("Evaluation complete!")
     print("=" * 50)
-    print("Generated files (11 total):")
+    print("Generated files in figures/ (11 total):")
     print("  Marginal distribution (3 files):")
-    print("    - eval_marginal_ccdf.png")
-    print("    - eval_marginal_qq.png")
-    print("    - eval_marginal_quantile_error.png")
+    print("    - figures/eval_marginal_ccdf.png")
+    print("    - figures/eval_marginal_qq.png")
+    print("    - figures/eval_marginal_quantile_error.png")
     print("  Temporal dependence (2 files):")
-    print("    - eval_temporal_acf.png")
-    print("    - eval_temporal_psd.png")
+    print("    - figures/eval_temporal_acf.png")
+    print("    - figures/eval_temporal_psd.png")
     print("  Innovation structure (2 files):")
-    print("    - eval_innovations_pit_hist.png")
-    print("    - eval_innovations_pit_acf.png")
+    print("    - figures/eval_innovations_pit_hist.png")
+    print("    - figures/eval_innovations_pit_acf.png")
     print("  Teacher baseline (4 files):")
-    print("    - eval_teacher_baseline_residuals.png")
-    print("    - eval_teacher_baseline_acf_zt.png")
-    print("    - eval_teacher_baseline_acf_zt2.png")
-    print("    - eval_teacher_baseline_pit_hist.png")
+    print("    - figures/eval_teacher_baseline_residuals.png")
+    print("    - figures/eval_teacher_baseline_acf_zt.png")
+    print("    - figures/eval_teacher_baseline_acf_zt2.png")
+    print("    - figures/eval_teacher_baseline_pit_hist.png")
     print("=" * 50)
 
     return {

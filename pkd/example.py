@@ -3,20 +3,30 @@
 This is the main entry point that delegates to the refactored example/ modules.
 
 Usage:
-    python example.py train [N] [--exclusion-config PATH]    # Train with real data
-    python example.py test [N] [--slice key:value ...]       # Evaluate on test set
-    python example.py eval [idx] [N]                         # Qualitative evaluation
+    python example.py train [N] [--exclusion-config PATH]          # Train with real data
+    python example.py test [N] [--slice key:value ...]             # Evaluate on test set
+    python example.py eval [idx] [N]                               # Qualitative evaluation (legacy)
+    python example.py eval --slice key:value ... [--idx N]         # Qualitative evaluation (slice-based)
 
 Examples:
     # Training
     python example.py train                                  # Train with all data
-    python example.py train --exclusion-config pkd/example/training_exclusions.yaml
+    python example.py train --exclusion-config example/training_exclusions.yaml
     python example.py train 10 --exclusion-config my_exclusions.yaml
 
     # Testing
     python example.py test                                   # Auto-select most common slice
     python example.py test --slice N_t:4 N_r:2               # Specify antenna config
     python example.py test --slice channel_model_id:2 N_t:4 N_r:2 BW:20.0 N_ss:2 MCS:7
+
+    # Qualitative Evaluation (slice-based)
+    python example.py eval --slice N_t:3 N_r:2 MCS:7                    # Random matching sequence
+    python example.py eval --slice N_t:3 N_r:2 MCS:7 --idx 5            # 6th matching sequence
+    python example.py eval --slice N_t:3 N_r:2 MCS:7 SNR_bar:29         # Include SNR filter
+
+    # Qualitative Evaluation (legacy direct indexing)
+    python example.py eval 50                                # 51st test sequence
+    python example.py eval 50 10                             # With 10-file subset
 """
 
 import sys
@@ -132,10 +142,29 @@ if __name__ == '__main__':
 
     elif mode == 'eval':
         # Qualitative evaluation with real data
-        test_idx = int(remaining_args[0]) if len(remaining_args) > 0 else 0
-        max_files = int(remaining_args[1]) if len(remaining_args) > 1 else None
-        data_dir = remaining_args[2] if len(remaining_args) > 2 else default_data_dir
-        example_evaluation(data_dir=data_dir, test_idx=test_idx, max_files=max_files)
+        # Parse --slice and --idx arguments
+        slice_spec, remaining = parse_slice_spec(remaining_args)
+
+        idx = None
+        if '--idx' in remaining:
+            idx_pos = remaining.index('--idx')
+            if idx_pos + 1 >= len(remaining):
+                raise ValueError("--idx requires an integer argument")
+            idx = int(remaining[idx_pos + 1])
+            remaining = remaining[:idx_pos] + remaining[idx_pos + 2:]
+
+        # Backward compatibility: if no slice/idx, use old positional syntax
+        if slice_spec is None and idx is None:
+            test_idx = int(remaining[0]) if len(remaining) > 0 else 0
+            max_files = int(remaining[1]) if len(remaining) > 1 else None
+            data_dir = remaining[2] if len(remaining) > 2 else default_data_dir
+            example_evaluation(data_dir=data_dir, test_idx=test_idx, max_files=max_files)
+        else:
+            # New slice-based syntax
+            max_files = int(remaining[0]) if len(remaining) > 0 else None
+            data_dir = remaining[1] if len(remaining) > 1 else default_data_dir
+            example_evaluation(data_dir=data_dir, max_files=max_files,
+                             slice_spec=slice_spec, slice_idx=idx)
 
     else:
         print(f"Unknown mode: {mode}")
