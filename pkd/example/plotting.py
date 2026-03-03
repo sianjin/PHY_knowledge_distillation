@@ -76,7 +76,7 @@ def evaluate_test_set(model, test_sequences, test_configs, device='cpu'):
 
 
 def generate_figure1_per_mcs_metrics(model, test_sequences, test_configs, device='cpu',
-                                      save_path='test_metrics', slice_label=None):
+                                      save_path='figures/test_metrics', slice_label=None):
     """Generate Figure 1: Per-MCS metrics vs SNR (6 separate files) - Gaussian innovation.
 
     PKD v1: All metrics assume Gaussian innovation N(0, σ²).
@@ -350,7 +350,7 @@ def generate_figure1_per_mcs_metrics(model, test_sequences, test_configs, device
 
 
 def generate_figure2_quantile_error(model, test_sequences, test_configs, device='cpu',
-                                     save_path='test_quantile_error.png', slice_label=None):
+                                     save_path='figures/test_quantile_error.png', slice_label=None):
     """Generate Figure 2: Aggregated quantile error curve (per MCS, pooled over SNR).
 
     PKD v1: Restricts to α ∈ [0.05, 0.95] to avoid over-penalizing extreme tail mismatch.
@@ -455,7 +455,7 @@ def generate_figure2_quantile_error(model, test_sequences, test_configs, device=
 
 
 def generate_figure3_ccdf_error(model, test_sequences, test_configs, device='cpu',
-                                 save_path='test_ccdf_error.png', slice_label=None):
+                                 save_path='figures/test_ccdf_error.png', slice_label=None):
     """Generate Figure 3: Aggregated CCDF error curve (per MCS, pooled over SNR).
 
     PKD v1: Restricts CCDF thresholds to [5%, 95%] quantiles to reduce amplification

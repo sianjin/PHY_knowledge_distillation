@@ -27,6 +27,7 @@ wheels/
 checkpoints/
 runs/
 logs/
+pkd/trained_models/
 
 # Jupyter
 .ipynb_checkpoints
@@ -59,6 +60,7 @@ results/
 outputs/
 figures/
 plots/
+pkd/figures/
 
 # Generated evaluation figures
 eval_*.png

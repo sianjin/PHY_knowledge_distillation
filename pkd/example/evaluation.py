@@ -7,7 +7,7 @@ from scipy import stats
 
 from .utils import compute_acf, compute_psd, ljung_box_test
 
-def evaluate_marginal_distribution(teacher_seq, student_seq, save_prefix='eval_marginal'):
+def evaluate_marginal_distribution(teacher_seq, student_seq, save_prefix='figures/eval_marginal'):
     """Evaluate marginal distribution fidelity (PKD v1: Gaussian innovation).
 
     PKD v1: Restricts quantile analysis to α ∈ [0.05, 0.95] to avoid
@@ -76,7 +76,7 @@ def evaluate_marginal_distribution(teacher_seq, student_seq, save_prefix='eval_m
     return {'ks_stat': ks_stat, 'ks_pval': ks_pval, 'quantile_error': quantile_error}
 
 
-def evaluate_temporal_dependence(teacher_seq, student_seq, save_prefix='eval_temporal'):
+def evaluate_temporal_dependence(teacher_seq, student_seq, save_prefix='figures/eval_temporal'):
     """Evaluate temporal correlation structure.
 
     Generates 2 separate files:
@@ -127,7 +127,7 @@ def evaluate_temporal_dependence(teacher_seq, student_seq, save_prefix='eval_tem
 
 
 def evaluate_innovation_structure(model, inference, teacher_seq, config, device='cpu',
-                                  save_prefix='eval_innovations'):
+                                  save_prefix='figures/eval_innovations'):
     """Evaluate innovation structure and PIT calibration (PKD v1: Gaussian innovation).
 
     PKD v1 uses Gaussian innovations only. This function:
@@ -248,7 +248,7 @@ def evaluate_innovation_structure(model, inference, teacher_seq, config, device=
     }
 
 
-def evaluate_teacher_baseline_ar(teacher_seq, ar_order=5, save_prefix='eval_teacher_baseline'):
+def evaluate_teacher_baseline_ar(teacher_seq, ar_order=5, save_prefix='figures/eval_teacher_baseline'):
     """
     Fit classical AR(p) + constant σ to teacher sequence as baseline diagnostic.
 

@@ -94,7 +94,7 @@ exclusions:
   # Example 5: Multiple MCS values, all SNRs
   # =========================================
   # Use this to exclude multiple high MCS values that may be unreliable
-  - name: "Exclude multiple high MCS for 1x1 SISO"
+  - name: "Exclude multiple high MCS for 2x1 MISO"
     description: "High MCS unreliable at low antenna diversity"
     config:
       channel_model_id: 2
