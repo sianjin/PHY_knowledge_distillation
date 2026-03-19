@@ -3,7 +3,7 @@
 This is the main entry point that delegates to the refactored example/ modules.
 
 Usage:
-    python example.py train [N] [--exclusion-config PATH]          # Train with real data
+    python example.py train [N] [--exclusion-config PATH] [--exclusion-mcs PCT] [--exclusion-seed SEED]
     python example.py test [N] [--slice key:value ...]             # Evaluate on test set
     python example.py eval [idx] [N]                               # Qualitative evaluation (legacy)
     python example.py eval --slice key:value ... [--idx N]         # Qualitative evaluation (slice-based)
@@ -12,6 +12,9 @@ Examples:
     # Training
     python example.py train                                  # Train with all data
     python example.py train --exclusion-config example/training_exclusions.yaml
+    python example.py train --exclusion-mcs 30%              # Random 30% MCS exclusion
+    python example.py train --exclusion-mcs 25% --exclusion-seed 12345
+    python example.py train --exclusion-mcs 30% --exclusion-config example/training_exclusions.yaml
     python example.py train 10 --exclusion-config my_exclusions.yaml
 
     # Testing
@@ -110,6 +113,82 @@ def parse_exclusion_config(args):
     return config_path, remaining
 
 
+def parse_exclusion_mcs(args):
+    """Parse --exclusion-mcs percentage argument from command-line arguments.
+
+    Args:
+        args: List of command-line arguments
+
+    Returns:
+        tuple: (percentage as float or None, remaining args)
+
+    Examples:
+        ['--exclusion-mcs', '30%'] -> (30.0, [])
+        ['--exclusion-mcs', '30'] -> (30.0, [])
+        ['--exclusion-mcs', '0.3'] -> (30.0, [])
+        ['10', '--exclusion-mcs', '25%'] -> (25.0, ['10'])
+    """
+    if '--exclusion-mcs' not in args:
+        return None, args
+
+    mcs_idx = args.index('--exclusion-mcs')
+
+    if mcs_idx + 1 >= len(args):
+        raise ValueError("--exclusion-mcs requires a percentage argument")
+
+    percentage_str = args[mcs_idx + 1]
+    remaining = args[:mcs_idx] + args[mcs_idx + 2:]
+
+    # Parse percentage (handle both "30%" and "0.3" formats)
+    if percentage_str.endswith('%'):
+        percentage = float(percentage_str[:-1])
+    else:
+        percentage = float(percentage_str)
+        if percentage < 1.0:  # Decimal format (0.3 = 30%)
+            percentage = percentage * 100
+
+    # Validate range
+    if not (0 < percentage < 100):
+        raise ValueError(
+            f"Percentage must be between 0 and 100, got {percentage}%. "
+            f"Use --exclusion-config for 100% exclusion of specific configurations."
+        )
+
+    return percentage, remaining
+
+
+def parse_exclusion_seed(args):
+    """Parse --exclusion-seed argument from command-line arguments.
+
+    Args:
+        args: List of command-line arguments
+
+    Returns:
+        tuple: (seed as int or 42 default, remaining args)
+
+    Examples:
+        ['--exclusion-seed', '12345'] -> (12345, [])
+        ['10', '--exclusion-seed', '99'] -> (99, ['10'])
+        [] -> (42, [])
+    """
+    if '--exclusion-seed' not in args:
+        return 42, args
+
+    seed_idx = args.index('--exclusion-seed')
+
+    if seed_idx + 1 >= len(args):
+        raise ValueError("--exclusion-seed requires an integer argument")
+
+    seed = int(args[seed_idx + 1])
+    remaining = args[:seed_idx] + args[seed_idx + 2:]
+
+    # Validate seed is non-negative
+    if seed < 0:
+        raise ValueError(f"Random seed must be non-negative, got {seed}")
+
+    return seed, remaining
+
+
 if __name__ == '__main__':
     import sys
 
@@ -129,9 +208,17 @@ if __name__ == '__main__':
     if mode == 'train':
         # Train with real data
         exclusion_config, remaining_args = parse_exclusion_config(remaining_args)
+        exclusion_mcs_pct, remaining_args = parse_exclusion_mcs(remaining_args)
+        exclusion_seed, remaining_args = parse_exclusion_seed(remaining_args)
         max_files = int(remaining_args[0]) if len(remaining_args) > 0 else None
         data_dir = remaining_args[1] if len(remaining_args) > 1 else default_data_dir
-        example_training(data_dir=data_dir, max_files=max_files, exclusion_config=exclusion_config)
+        example_training(
+            data_dir=data_dir,
+            max_files=max_files,
+            exclusion_config=exclusion_config,
+            exclusion_mcs_percentage=exclusion_mcs_pct,
+            exclusion_seed=exclusion_seed
+        )
 
     elif mode == 'test':
         # Comprehensive test set evaluation with optional slice specification

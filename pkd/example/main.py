@@ -54,13 +54,16 @@ INNOVATION_PARAMS = {
 }
 # ============================================================================
 
-def example_training(data_dir='data', max_files=None, exclusion_config=None):
+def example_training(data_dir='data', max_files=None, exclusion_config=None,
+                     exclusion_mcs_percentage=None, exclusion_seed=42):
     """Example training workflow with real PHY simulator data.
 
     Args:
         data_dir: Directory containing .mat files
         max_files: Maximum number of .mat files to load (None = load all)
         exclusion_config: Path to exclusion config file (None = no filtering)
+        exclusion_mcs_percentage: Percentage of MCS to randomly exclude (None = disabled)
+        exclusion_seed: Random seed for MCS exclusion (default: 42)
     """
 
     # Create model using configured innovation type
@@ -88,9 +91,62 @@ def example_training(data_dir='data', max_files=None, exclusion_config=None):
     )
     print(f"Loaded {len(train_sequences)} training, {len(val_sequences)} validation, {len(test_sequences)} test sequences")
 
+    # Handle exclusions
+    final_exclusion_config_path = None
+
+    if exclusion_mcs_percentage is not None:
+        # Generate random MCS exclusions
+        from .exclusion_filter import (
+            generate_random_mcs_exclusions,
+            save_exclusion_config,
+            save_exclusion_manifest,
+            merge_exclusion_configs,
+            load_exclusion_config
+        )
+        from datetime import datetime
+
+        random_config = generate_random_mcs_exclusions(
+            train_configs,
+            val_configs,
+            percentage=exclusion_mcs_percentage,
+            random_seed=exclusion_seed
+        )
+
+        # Save to YAML file
+        output_dir = os.path.join(os.path.dirname(__file__), 'exclusions')
+        os.makedirs(output_dir, exist_ok=True)
+
+        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+        yaml_filename = f"exclusions_random_{int(exclusion_mcs_percentage)}pct_seed{exclusion_seed}_{timestamp}.yaml"
+        yaml_path = os.path.join(output_dir, yaml_filename)
+
+        save_exclusion_config(random_config, yaml_path)
+
+        # Save JSON manifest
+        json_filename = f"exclusions_random_{int(exclusion_mcs_percentage)}pct_seed{exclusion_seed}_{timestamp}.json"
+        json_path = os.path.join(output_dir, json_filename)
+        save_exclusion_manifest(random_config, json_path, train_configs, val_configs)
+
+        # Merge with manual config if both provided
+        if exclusion_config is not None:
+            print(f"\nMerging with manual exclusion config: {exclusion_config}")
+
+            manual_config = load_exclusion_config(exclusion_config)
+            merged_config = merge_exclusion_configs(random_config, manual_config)
+
+            merged_filename = f"exclusions_merged_{timestamp}.yaml"
+            merged_path = os.path.join(output_dir, merged_filename)
+            save_exclusion_config(merged_config, merged_path)
+
+            final_exclusion_config_path = merged_path
+        else:
+            final_exclusion_config_path = yaml_path
+    else:
+        final_exclusion_config_path = exclusion_config
+
     # Apply exclusion filter if config provided
-    if exclusion_config is not None:
-        print(f"\nApplying exclusion filter from {exclusion_config}")
+    if final_exclusion_config_path is not None:
+        print(f"\nApplying exclusion filter from {final_exclusion_config_path}")
         from .exclusion_filter import filter_dataset_with_exclusions
 
         (train_sequences, train_configs,
@@ -100,7 +156,7 @@ def example_training(data_dir='data', max_files=None, exclusion_config=None):
             train_sequences, train_configs,
             val_sequences, val_configs,
             test_sequences, test_configs,
-            exclusion_config_path=exclusion_config
+            exclusion_config_path=final_exclusion_config_path
         )
 
     print(f"\nFinal counts: {len(train_sequences)} training, {len(val_sequences)} validation, {len(test_sequences)} test sequences")

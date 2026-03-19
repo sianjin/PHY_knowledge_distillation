@@ -498,3 +498,287 @@ def filter_dataset_with_exclusions(
             val_seq_f, val_cfg_f,
             test_seq_f, test_cfg_f,
             filter_stats)
+
+
+def _get_channel_name(channel_id: int) -> str:
+    """Get channel model letter name from ID.
+
+    Args:
+        channel_id: Channel model ID (1-6)
+
+    Returns:
+        Letter name (A-F) or string of ID if unknown
+    """
+    names = {1: 'A', 2: 'B', 3: 'C', 4: 'D', 5: 'E', 6: 'F'}
+    return names.get(channel_id, str(channel_id))
+
+
+def generate_random_mcs_exclusions(
+    train_configs: List[dict],
+    val_configs: List[dict],
+    percentage: float,
+    random_seed: int = 42
+) -> dict:
+    """Generate random MCS exclusions per configuration slice.
+
+    This function analyzes the training data distribution and randomly selects
+    X% of MCS values to exclude for each unique configuration slice. The random
+    selection is reproducible via the random_seed parameter.
+
+    Args:
+        train_configs: Training configuration dicts
+        val_configs: Validation configuration dicts
+        percentage: Percentage of MCS values to exclude per slice (0-100)
+        random_seed: Random seed for reproducibility (default: 42)
+
+    Returns:
+        Exclusion config dict in the same format as YAML configs, containing:
+        - version: Config schema version
+        - metadata: Generation details (percentage, seed, timestamp)
+        - settings: Which splits to apply exclusions to
+        - exclusions: List of exclusion rules
+
+    Algorithm:
+        1. Combine train+val configs to analyze full training distribution
+        2. Group by config slice (channel_model_id, N_t, N_r, BW, N_ss)
+        3. For each slice, collect unique MCS values
+        4. Randomly select X% of MCS values to exclude
+        5. Generate exclusion rules in YAML-compatible format
+
+    Example:
+        >>> random_config = generate_random_mcs_exclusions(
+        ...     train_configs, val_configs, percentage=30.0, random_seed=42
+        ... )
+        >>> print(len(random_config['exclusions']))
+        15  # 15 unique config slices found
+    """
+    import numpy as np
+    from datetime import datetime
+
+    np.random.seed(random_seed)
+
+    # Define slice keys (exclude MCS and SNR_bar which vary within slices)
+    slice_keys = ['channel_model_id', 'N_t', 'N_r', 'BW', 'N_ss']
+
+    # Group configs by slice and collect MCS values
+    slice_mcs_map = defaultdict(set)
+
+    for cfg in train_configs + val_configs:
+        # Create slice signature (tuple of key-value pairs)
+        slice_sig = tuple((k, cfg[k]) for k in slice_keys if k in cfg)
+        slice_mcs_map[slice_sig].add(cfg['MCS'])
+
+    # Print analysis header
+    print(f"\nGenerating random {percentage}% MCS exclusions (seed={random_seed})")
+    print(f"  Analyzing training configurations...")
+    print(f"  Found {len(slice_mcs_map)} unique configuration slices")
+
+    # Generate exclusion rules
+    exclusion_rules = []
+
+    for slice_idx, (slice_sig, mcs_set) in enumerate(sorted(slice_mcs_map.items()), 1):
+        mcs_list = sorted(list(mcs_set))
+
+        # Calculate how many MCS to exclude
+        num_to_exclude = max(1, round(len(mcs_list) * percentage / 100))
+
+        # Ensure we don't exclude all MCS values
+        if num_to_exclude >= len(mcs_list):
+            num_to_exclude = len(mcs_list) - 1 if len(mcs_list) > 1 else 0
+
+        # Skip if no MCS to exclude
+        if num_to_exclude == 0:
+            continue
+
+        # Randomly select MCS values to exclude
+        excluded_mcs = sorted(
+            np.random.choice(mcs_list, size=num_to_exclude, replace=False).tolist()
+        )
+
+        # Get training MCS (remaining)
+        training_mcs = sorted(list(set(mcs_list) - set(excluded_mcs)))
+
+        # Create config dict from slice signature
+        config_dict = dict(slice_sig)
+
+        # Print detailed per-slice info
+        print(f"\n  Slice {slice_idx}/{len(slice_mcs_map)}: " +
+              f"Model-{_get_channel_name(config_dict['channel_model_id'])} " +
+              f"{config_dict['N_t']}x{config_dict['N_r']}:{config_dict['N_ss']}, " +
+              f"BW={config_dict['BW']}MHz")
+        print(f"    Available MCS: {mcs_list} ({len(mcs_list)} total)")
+        print(f"    Excluding {len(excluded_mcs)} MCS ({percentage}%): {excluded_mcs}")
+        print(f"    Training on: {training_mcs}")
+
+        # Create exclusion rule
+        rule = {
+            'name': f"Random {percentage}% exclusion for " +
+                   f"Model-{_get_channel_name(config_dict['channel_model_id'])} " +
+                   f"{config_dict['N_t']}x{config_dict['N_r']}:{config_dict['N_ss']}",
+            'description': f"Auto-generated random exclusion (seed={random_seed})",
+            'config': config_dict,
+            'mcs_list': excluded_mcs
+        }
+        exclusion_rules.append(rule)
+
+    # Print summary
+    print(f"\nGenerated {len(exclusion_rules)} exclusion rules")
+
+    # Build full config structure
+    exclusion_config = {
+        'version': '1.0',
+        'metadata': {
+            'generated_by': 'random_mcs_exclusion',
+            'percentage': percentage,
+            'random_seed': random_seed,
+            'timestamp': datetime.now().isoformat(),
+            'total_slices': len(slice_mcs_map),
+            'total_rules': len(exclusion_rules)
+        },
+        'settings': {
+            'apply_to_train': True,
+            'apply_to_val': True,
+            'apply_to_test': False
+        },
+        'exclusions': exclusion_rules
+    }
+
+    return exclusion_config
+
+
+def save_exclusion_config(config: dict, output_path: str) -> None:
+    """Save exclusion config to YAML file.
+
+    Args:
+        config: Exclusion configuration dictionary
+        output_path: Path to save YAML file
+
+    Raises:
+        ImportError: If pyyaml not installed
+    """
+    if not YAML_AVAILABLE:
+        raise ImportError(
+            "pyyaml is required to save exclusion configs. "
+            "Install with: pip install pyyaml"
+        )
+
+    with open(output_path, 'w') as f:
+        yaml.dump(config, f, default_flow_style=False, sort_keys=False)
+
+    print(f"Saved random exclusion config to: {output_path}")
+
+
+def merge_exclusion_configs(config1: dict, config2: dict) -> dict:
+    """Merge two exclusion configurations.
+
+    This combines exclusion rules from two configs, typically a random-generated
+    config and a manual YAML config.
+
+    Args:
+        config1: First exclusion config (e.g., random-generated)
+        config2: Second exclusion config (e.g., manual YAML)
+
+    Returns:
+        Merged configuration with combined exclusion rules
+
+    Note:
+        - Settings from config1 take precedence
+        - Exclusion rules are concatenated (both sets applied)
+        - Duplicate detection warns but allows duplicates
+
+    Example:
+        >>> random_config = generate_random_mcs_exclusions(...)
+        >>> manual_config = load_exclusion_config('manual.yaml')
+        >>> merged = merge_exclusion_configs(random_config, manual_config)
+        >>> len(merged['exclusions']) == len(random_config['exclusions']) + len(manual_config['exclusions'])
+        True
+    """
+    from datetime import datetime
+
+    merged = {
+        'version': config1.get('version', '1.0'),
+        'metadata': {
+            'merged': True,
+            'merge_timestamp': datetime.now().isoformat(),
+            'config1_metadata': config1.get('metadata', {}),
+            'config2_metadata': config2.get('metadata', {})
+        },
+        'settings': config1.get('settings', {}),
+        'exclusions': config1.get('exclusions', []) + config2.get('exclusions', [])
+    }
+
+    print(f"Merged {len(config1.get('exclusions', []))} random rules + " +
+          f"{len(config2.get('exclusions', []))} manual rules = " +
+          f"{len(merged['exclusions'])} total rules")
+
+    return merged
+
+
+def save_exclusion_manifest(
+    config: dict,
+    output_path: str,
+    train_configs: List[dict],
+    val_configs: List[dict]
+) -> None:
+    """Generate JSON manifest summarizing held-out configurations.
+
+    This creates a machine-readable summary for easy testing and analysis
+    of which MCS values are held-out for each configuration slice.
+
+    Args:
+        config: Exclusion configuration dictionary
+        output_path: Path to save JSON file
+        train_configs: Training configurations (for context)
+        val_configs: Validation configurations (for context)
+
+    Example JSON output:
+        {
+          "metadata": {"percentage": 30.0, "random_seed": 42, ...},
+          "held_out_slices": [
+            {
+              "slice": {"channel_model_id": 2, "N_t": 3, ...},
+              "available_mcs": [0, 1, 2, 3, 4, 5, 6, 7, 8, 9],
+              "excluded_mcs": [2, 5, 7],
+              "training_mcs": [0, 1, 3, 4, 6, 8, 9]
+            },
+            ...
+          ]
+        }
+    """
+    import json
+
+    # Define slice keys
+    slice_keys = ['channel_model_id', 'N_t', 'N_r', 'BW', 'N_ss']
+
+    # Analyze each exclusion rule
+    held_out_slices = []
+
+    for rule in config.get('exclusions', []):
+        slice_config = rule['config']
+        excluded_mcs = rule['mcs_list']
+
+        # Determine available MCS for this slice from training data
+        available_mcs = set()
+        for cfg in train_configs + val_configs:
+            # Check if config matches this slice
+            if all(cfg.get(k) == v for k, v in slice_config.items()):
+                available_mcs.add(cfg['MCS'])
+
+        training_mcs = sorted(list(available_mcs - set(excluded_mcs)))
+
+        held_out_slices.append({
+            'slice': slice_config,
+            'available_mcs': sorted(list(available_mcs)),
+            'excluded_mcs': excluded_mcs,
+            'training_mcs': training_mcs
+        })
+
+    manifest = {
+        'metadata': config.get('metadata', {}),
+        'held_out_slices': held_out_slices
+    }
+
+    with open(output_path, 'w') as f:
+        json.dump(manifest, f, indent=2)
+
+    print(f"Saved exclusion manifest to: {output_path}")
