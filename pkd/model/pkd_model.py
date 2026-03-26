@@ -26,6 +26,7 @@ class PKDModel(nn.Module):
                  num_channel_models: int,
                  num_mcs: int,
                  num_nss: int,
+                 num_R: int = 8,
                  ar_order: int = 10,
                  hidden_dim: int = 128,
                  kappa_max: float = 0.95,
@@ -36,6 +37,8 @@ class PKDModel(nn.Module):
             num_channel_models: Number of channel models
             num_mcs: Number of MCS levels (0-indexed: 0 to num_mcs-1)
             num_nss: Number of spatial streams
+            num_R: Number of resource allocation categories (default: 8)
+                   Currently all data uses R_t=0 (full-band allocation)
             ar_order: AR order (p)
             hidden_dim: Hidden dimension for encoder
             kappa_max: Maximum PACF coefficient magnitude (0.90-0.98)
@@ -56,6 +59,7 @@ class PKDModel(nn.Module):
             num_channel_models=num_channel_models,
             num_mcs=num_mcs,
             num_nss=num_nss,
+            num_R=num_R,
             hidden_dim=hidden_dim
         )
 

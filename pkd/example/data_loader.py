@@ -80,6 +80,7 @@ def load_real_data(data_dir='data', train_ratio=0.7, val_ratio=0.1, max_files=No
                     'SNR_bar': SNR_bar,
                     'MCS': MCS,
                     'N_ss': N_ss,
+                    'R_t': 0,  # Resource allocation: 0 = full-band (all data uses this)
                     'packet_length': 1000  # Data packet length in bytes
                 }
 

@@ -23,11 +23,12 @@ class DynamicConfig:
     SNR_bar: float  # average SNR in dB
     MCS: int  # modulation and coding scheme ID
     N_ss: int  # number of spatial streams
+    R_t: int  # resource allocation index (0=full-band, 1-7=future extensions)
 
     def to_tuple(self, snr_quant: float = 0.1) -> Tuple:
         """Convert to hashable tuple with SNR quantization."""
         snr_key = np.round(self.SNR_bar / snr_quant) * snr_quant
-        return (snr_key, self.MCS, self.N_ss)
+        return (snr_key, self.MCS, self.N_ss, self.R_t)
 
 
 @dataclass

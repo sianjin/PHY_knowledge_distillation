@@ -71,6 +71,7 @@ def example_training(data_dir='data', max_files=None, exclusion_config=None,
         'num_channel_models': 5,
         'num_mcs': 10,
         'num_nss': 4,
+        'num_R': 8,  # Resource allocation categories (all data uses R_t=0)
         'ar_order': 10,
         'hidden_dim': 128,
         'kappa_max': 0.95,  # Keep PACF away from ±1 for stability
@@ -167,6 +168,7 @@ def example_training(data_dir='data', max_files=None, exclusion_config=None,
         'num_channel_models': 5,
         'num_mcs': 10,  # MCS 0-9
         'num_nss': 4,
+        'num_R': 8,  # Resource allocation categories
         'ar_order': 10,
         'hidden_dim': 128,
         'kappa_max': 0.95,
@@ -232,11 +234,16 @@ def example_test_evaluation(data_dir='data', max_files=None, slice_spec=None):
         if 'innovation_type' not in model_config:
             model_config['innovation_type'] = INNOVATION_TYPE
             model_config.update(INNOVATION_PARAMS[INNOVATION_TYPE])
+        # BACKWARD COMPATIBILITY: Add num_R for old checkpoints
+        if 'num_R' not in model_config:
+            print("  Note: num_R not in checkpoint, using default 8 (BREAKING CHANGE: outputs will differ)")
+            model_config['num_R'] = 8
     else:
         model_config = {
             'num_channel_models': 5,
             'num_mcs': 10,
             'num_nss': 4,
+            'num_R': 8,
             'ar_order': 10,
             'hidden_dim': 128,
             'kappa_max': 0.95,
@@ -411,12 +418,17 @@ def example_evaluation(data_dir='data', test_idx=None, max_files=None, slice_spe
             print(f"  Note: innovation_type not in checkpoint, using default '{INNOVATION_TYPE}'")
             model_config['innovation_type'] = INNOVATION_TYPE
             model_config.update(INNOVATION_PARAMS[INNOVATION_TYPE])
+        # BACKWARD COMPATIBILITY: Add num_R for old checkpoints
+        if 'num_R' not in model_config:
+            print("  Note: num_R not in checkpoint, using default 8 (BREAKING CHANGE: outputs will differ)")
+            model_config['num_R'] = 8
     else:
         print("  Warning: model_config not found in checkpoint, using defaults")
         model_config = {
             'num_channel_models': 5,
             'num_mcs': 10,  # MCS 0-9
             'num_nss': 4,
+            'num_R': 8,
             'ar_order': 10,
             'hidden_dim': 128,
             'kappa_max': 0.95,
@@ -441,6 +453,7 @@ def example_evaluation(data_dir='data', test_idx=None, max_files=None, slice_spe
             'SNR_bar': torch.tensor([15.0], device=device),
             'MCS': torch.tensor([5], device=device),
             'N_ss': torch.tensor([2], device=device),
+            'R_t': torch.tensor([0], device=device),  # Full-band allocation
             'packet_length': torch.tensor([1000], device=device)  # Data packet length in bytes
         }
         h = model.encode_config(sample_config)
@@ -557,6 +570,7 @@ def example_evaluation(data_dir='data', test_idx=None, max_files=None, slice_spe
         'SNR_bar': torch.tensor(config_dict['SNR_bar']),
         'MCS': torch.tensor(config_dict['MCS']),
         'N_ss': torch.tensor(config_dict['N_ss']),
+        'R_t': torch.tensor(config_dict.get('R_t', 0)),  # Default to 0 (full-band)
         'packet_length': torch.tensor(config_dict.get('packet_length', 1000))  # Default to 1000 bytes
     }
 

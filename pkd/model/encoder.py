@@ -75,29 +75,42 @@ class SNREncoder(nn.Module):
 
 
 class FiLMModulation(nn.Module):
-    """Feature-wise Linear Modulation for rate adaptation."""
+    """Feature-wise Linear Modulation for rate adaptation.
+
+    Implements Equation (21) from paper:
+        e = concat(e_mcs, e_ss, e_R)
+        ϖ_t = g^(ω)(e_mcs, e_ss, e_R)
+        β_t = g^(β)(e_mcs, e_ss, e_R)
+        h_t = ϖ_t ⊙ h_base,t + β_t
+    """
 
     def __init__(self,
                  num_mcs: int,
                  num_nss: int,
+                 num_R: int = 8,
                  mcs_emb_dim: int = 32,
                  nss_emb_dim: int = 16,
+                 r_emb_dim: int = 8,
                  hidden_dim: int = 128):
         super().__init__()
 
-        # Embeddings
+        # Embeddings (Equation 21: e_mcs, e_ss, e_R)
         self.mcs_embedding = nn.Embedding(num_mcs, mcs_emb_dim)
         self.nss_embedding = nn.Embedding(num_nss, nss_emb_dim)
+        self.r_embedding = nn.Embedding(num_R, r_emb_dim)
 
         # Alpha and beta generators (FiLM parameters)
-        emb_dim = mcs_emb_dim + nss_emb_dim
+        # Input: concat(e_mcs, e_ss, e_R)
+        emb_dim = mcs_emb_dim + nss_emb_dim + r_emb_dim
 
+        # g^(ω): generates ϖ_t (multiplicative modulation)
         self.alpha_net = nn.Sequential(
             nn.Linear(emb_dim, hidden_dim),
             nn.ReLU(),
             nn.Linear(hidden_dim, hidden_dim)
         )
 
+        # g^(β): generates β_t (additive modulation)
         self.beta_net = nn.Sequential(
             nn.Linear(emb_dim, hidden_dim),
             nn.ReLU(),
@@ -108,28 +121,34 @@ class FiLMModulation(nn.Module):
         nn.init.zeros_(self.alpha_net[-1].weight)
         nn.init.ones_(self.alpha_net[-1].bias)
 
-    def forward(self, mcs_id, nss_id, h_base):
+    def forward(self, mcs_id, nss_id, r_id, h_base):
         """
+        Apply FiLM modulation conditioned on rate adaptation variables.
+
         Args:
-            mcs_id: (batch,) MCS IDs
-            nss_id: (batch,) number of spatial streams
+            mcs_id: (batch,) MCS IDs (0-indexed: 0 to num_mcs-1)
+            nss_id: (batch,) number of spatial streams (0-indexed: 0 to num_nss-1)
+            r_id: (batch,) resource allocation IDs (0-indexed: 0 to num_R-1)
             h_base: (batch, hidden_dim) base representation
 
         Returns:
             h: (batch, hidden_dim) modulated representation
         """
-        # Embed rate adaptation variables
+        # Embed rate adaptation variables (Equation 21)
         emcs = self.mcs_embedding(mcs_id)
         ess = self.nss_embedding(nss_id)
+        er = self.r_embedding(r_id)
 
-        # Concatenate embeddings
-        e = torch.cat([emcs, ess], dim=-1)
+        # Concatenate embeddings: e = concat(e_mcs, e_ss, e_R)
+        e = torch.cat([emcs, ess, er], dim=-1)
 
-        # Generate modulation parameters (Equation 19 in paper)
+        # Generate modulation parameters (Equation 21)
+        # ϖ_t = g^(ω)(e)
         alpha = self.alpha_net(e)
+        # β_t = g^(β)(e)
         beta = self.beta_net(e)
 
-        # Apply FiLM: h_t = α_t ⊙ h_base,t + β_t
+        # Apply FiLM: h_t = ϖ_t ⊙ h_base,t + β_t
         h = alpha * h_base + beta
 
         return h
@@ -142,15 +161,19 @@ class CompositionalEncoder(nn.Module):
                  num_channel_models: int,
                  num_mcs: int,
                  num_nss: int,
+                 num_R: int = 8,
                  hidden_dim: int = 128,
                  channel_emb_dim: int = 32,
                  mcs_emb_dim: int = 32,
-                 nss_emb_dim: int = 16):
+                 nss_emb_dim: int = 16,
+                 r_emb_dim: int = 8):
         super().__init__()
 
         self.static_encoder = StaticEncoder(num_channel_models, channel_emb_dim, hidden_dim)
         self.snr_encoder = SNREncoder(hidden_dim)
-        self.film = FiLMModulation(num_mcs, num_nss, mcs_emb_dim, nss_emb_dim, hidden_dim)
+        self.film = FiLMModulation(num_mcs, num_nss, num_R,
+                                   mcs_emb_dim, nss_emb_dim, r_emb_dim,
+                                   hidden_dim)
 
     def forward(self, config_dict):
         """
@@ -161,6 +184,7 @@ class CompositionalEncoder(nn.Module):
                 - SNR_bar: (batch,)
                 - MCS: (batch,) MCS values (0-indexed: 0 to num_mcs-1)
                 - N_ss: (batch,) number of spatial streams (1-indexed: 1 to num_nss)
+                - R_t: (batch,) resource allocation (0-indexed: 0 to num_R-1)
 
         Returns:
             h_t: (batch, hidden_dim) conditioning representation
@@ -180,11 +204,13 @@ class CompositionalEncoder(nn.Module):
         h_base = h_static + h_snr
 
         # MCS is already 0-indexed (0-9), N_ss is 1-indexed (1-4) so convert N_ss to 0-indexed
+        # R_t is already 0-indexed (0 to num_R-1)
         # Create new tensors to avoid in-place modification issues
         mcs_idx = config_dict['MCS']
         nss_idx = config_dict['N_ss'] + (-1)
+        r_idx = config_dict['R_t']
 
-        # FiLM modulation with rate adaptation
-        h_t = self.film(mcs_idx, nss_idx, h_base)
+        # FiLM modulation with rate adaptation (Equation 21)
+        h_t = self.film(mcs_idx, nss_idx, r_idx, h_base)
 
         return h_t

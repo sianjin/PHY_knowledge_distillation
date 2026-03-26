@@ -123,6 +123,7 @@ class PKDInference:
             snr_key,
             config_dict['MCS'].item() if torch.is_tensor(config_dict['MCS']) else config_dict['MCS'],
             config_dict['N_ss'].item() if torch.is_tensor(config_dict['N_ss']) else config_dict['N_ss'],
+            config_dict['R_t'].item() if torch.is_tensor(config_dict['R_t']) else config_dict['R_t'],
         )
 
         return key
