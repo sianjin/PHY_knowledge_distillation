@@ -22,12 +22,12 @@ wheels/
 
 # PyTorch
 *.pt
+!pkd/trained_models/**/*.pt
 *.pth
 *.onnx
 checkpoints/
 runs/
 logs/
-pkd/trained_models/
 
 # Jupyter
 .ipynb_checkpoints
