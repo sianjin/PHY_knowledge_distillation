@@ -238,9 +238,19 @@ def main():
         snr_start_time = time.time()
 
         for i in range(args.num_sequences):
-            # Generate sequence
+            # Generate effective SINR sequence
             results = inference.run_sequence(config_trajectory)
             # Note: Each call to run_sequence() performs cold_start() internally
+
+            # Get effective SINR in dB scale
+            gamma_eff_db = results['gamma_eff']  # Already in dB scale from inference
+
+            # Map effective SINR to PER using lookup table
+            per_sequence = per_lut.lookup(gamma_eff_db, args.MCS, packet_length=1000)
+
+            # Generate packet error sequence (flip a coin for each packet)
+            # Similar to MATLAB: packetErrorAbs = rand(1)<=perAbs
+            packet_errors = np.random.rand(len(per_sequence)) <= per_sequence
 
             # Print progress every 10 sequences
             if (i + 1) % 10 == 0:
