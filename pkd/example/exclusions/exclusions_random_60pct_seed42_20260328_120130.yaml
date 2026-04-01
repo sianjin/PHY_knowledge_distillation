@@ -1,0 +1,613 @@
+version: '1.0'
+metadata:
+  generated_by: random_mcs_exclusion
+  percentage: 60.0
+  random_seed: 42
+  timestamp: '2026-03-28T12:01:30.353714'
+  total_slices: 40
+  total_rules: 40
+settings:
+  apply_to_train: true
+  apply_to_val: true
+  apply_to_test: false
+exclusions:
+- name: Random 60.0% exclusion for Model-B 1x1:1
+  description: Auto-generated random exclusion (seed=42)
+  config:
+    channel_model_id: 2
+    N_t: 1
+    N_r: 1
+    BW: 20.0
+    N_ss: 1
+  mcs_list:
+  - 0
+  - 1
+  - 2
+  - 5
+  - 7
+  - 8
+- name: Random 60.0% exclusion for Model-B 1x1:1
+  description: Auto-generated random exclusion (seed=42)
+  config:
+    channel_model_id: 2
+    N_t: 1
+    N_r: 1
+    BW: 40.0
+    N_ss: 1
+  mcs_list:
+  - 0
+  - 1
+  - 3
+  - 4
+  - 5
+  - 8
+- name: Random 60.0% exclusion for Model-B 2x1:1
+  description: Auto-generated random exclusion (seed=42)
+  config:
+    channel_model_id: 2
+    N_t: 2
+    N_r: 1
+    BW: 20.0
+    N_ss: 1
+  mcs_list:
+  - 0
+  - 2
+  - 5
+  - 6
+  - 8
+  - 9
+- name: Random 60.0% exclusion for Model-B 2x1:1
+  description: Auto-generated random exclusion (seed=42)
+  config:
+    channel_model_id: 2
+    N_t: 2
+    N_r: 1
+    BW: 40.0
+    N_ss: 1
+  mcs_list:
+  - 0
+  - 1
+  - 2
+  - 6
+  - 7
+  - 8
+- name: Random 60.0% exclusion for Model-B 2x2:1
+  description: Auto-generated random exclusion (seed=42)
+  config:
+    channel_model_id: 2
+    N_t: 2
+    N_r: 2
+    BW: 20.0
+    N_ss: 1
+  mcs_list:
+  - 0
+  - 1
+  - 4
+  - 5
+  - 7
+  - 8
+- name: Random 60.0% exclusion for Model-B 2x2:2
+  description: Auto-generated random exclusion (seed=42)
+  config:
+    channel_model_id: 2
+    N_t: 2
+    N_r: 2
+    BW: 20.0
+    N_ss: 2
+  mcs_list:
+  - 1
+  - 2
+  - 3
+  - 5
+  - 7
+  - 8
+- name: Random 60.0% exclusion for Model-B 2x2:1
+  description: Auto-generated random exclusion (seed=42)
+  config:
+    channel_model_id: 2
+    N_t: 2
+    N_r: 2
+    BW: 40.0
+    N_ss: 1
+  mcs_list:
+  - 0
+  - 2
+  - 3
+  - 5
+  - 6
+  - 7
+- name: Random 60.0% exclusion for Model-B 2x2:2
+  description: Auto-generated random exclusion (seed=42)
+  config:
+    channel_model_id: 2
+    N_t: 2
+    N_r: 2
+    BW: 40.0
+    N_ss: 2
+  mcs_list:
+  - 0
+  - 1
+  - 3
+  - 4
+  - 5
+  - 8
+- name: Random 60.0% exclusion for Model-B 3x1:1
+  description: Auto-generated random exclusion (seed=42)
+  config:
+    channel_model_id: 2
+    N_t: 3
+    N_r: 1
+    BW: 20.0
+    N_ss: 1
+  mcs_list:
+  - 0
+  - 2
+  - 4
+  - 6
+  - 8
+  - 9
+- name: Random 60.0% exclusion for Model-B 3x1:1
+  description: Auto-generated random exclusion (seed=42)
+  config:
+    channel_model_id: 2
+    N_t: 3
+    N_r: 1
+    BW: 40.0
+    N_ss: 1
+  mcs_list:
+  - 0
+  - 2
+  - 3
+  - 4
+  - 6
+  - 7
+- name: Random 60.0% exclusion for Model-B 3x2:1
+  description: Auto-generated random exclusion (seed=42)
+  config:
+    channel_model_id: 2
+    N_t: 3
+    N_r: 2
+    BW: 20.0
+    N_ss: 1
+  mcs_list:
+  - 0
+  - 2
+  - 3
+  - 5
+  - 7
+  - 8
+- name: Random 60.0% exclusion for Model-B 3x2:2
+  description: Auto-generated random exclusion (seed=42)
+  config:
+    channel_model_id: 2
+    N_t: 3
+    N_r: 2
+    BW: 20.0
+    N_ss: 2
+  mcs_list:
+  - 1
+  - 2
+  - 3
+  - 4
+  - 5
+  - 7
+- name: Random 60.0% exclusion for Model-B 3x2:1
+  description: Auto-generated random exclusion (seed=42)
+  config:
+    channel_model_id: 2
+    N_t: 3
+    N_r: 2
+    BW: 40.0
+    N_ss: 1
+  mcs_list:
+  - 1
+  - 3
+  - 4
+  - 5
+  - 6
+  - 8
+- name: Random 60.0% exclusion for Model-B 3x2:2
+  description: Auto-generated random exclusion (seed=42)
+  config:
+    channel_model_id: 2
+    N_t: 3
+    N_r: 2
+    BW: 40.0
+    N_ss: 2
+  mcs_list:
+  - 0
+  - 1
+  - 2
+  - 4
+  - 5
+  - 7
+- name: Random 60.0% exclusion for Model-B 4x1:1
+  description: Auto-generated random exclusion (seed=42)
+  config:
+    channel_model_id: 2
+    N_t: 4
+    N_r: 1
+    BW: 20.0
+    N_ss: 1
+  mcs_list:
+  - 0
+  - 1
+  - 2
+  - 3
+  - 7
+  - 8
+- name: Random 60.0% exclusion for Model-B 4x1:1
+  description: Auto-generated random exclusion (seed=42)
+  config:
+    channel_model_id: 2
+    N_t: 4
+    N_r: 1
+    BW: 40.0
+    N_ss: 1
+  mcs_list:
+  - 1
+  - 3
+  - 5
+  - 6
+  - 7
+  - 8
+- name: Random 60.0% exclusion for Model-B 4x2:1
+  description: Auto-generated random exclusion (seed=42)
+  config:
+    channel_model_id: 2
+    N_t: 4
+    N_r: 2
+    BW: 20.0
+    N_ss: 1
+  mcs_list:
+  - 1
+  - 3
+  - 4
+  - 5
+  - 7
+  - 8
+- name: Random 60.0% exclusion for Model-B 4x2:2
+  description: Auto-generated random exclusion (seed=42)
+  config:
+    channel_model_id: 2
+    N_t: 4
+    N_r: 2
+    BW: 20.0
+    N_ss: 2
+  mcs_list:
+  - 1
+  - 2
+  - 5
+  - 7
+  - 8
+  - 9
+- name: Random 60.0% exclusion for Model-B 4x2:1
+  description: Auto-generated random exclusion (seed=42)
+  config:
+    channel_model_id: 2
+    N_t: 4
+    N_r: 2
+    BW: 40.0
+    N_ss: 1
+  mcs_list:
+  - 0
+  - 1
+  - 4
+  - 5
+  - 8
+  - 9
+- name: Random 60.0% exclusion for Model-B 4x2:2
+  description: Auto-generated random exclusion (seed=42)
+  config:
+    channel_model_id: 2
+    N_t: 4
+    N_r: 2
+    BW: 40.0
+    N_ss: 2
+  mcs_list:
+  - 0
+  - 1
+  - 2
+  - 6
+  - 7
+  - 9
+- name: Random 60.0% exclusion for Model-D 1x1:1
+  description: Auto-generated random exclusion (seed=42)
+  config:
+    channel_model_id: 4
+    N_t: 1
+    N_r: 1
+    BW: 20.0
+    N_ss: 1
+  mcs_list:
+  - 1
+  - 2
+  - 4
+  - 5
+  - 7
+  - 8
+- name: Random 60.0% exclusion for Model-D 1x1:1
+  description: Auto-generated random exclusion (seed=42)
+  config:
+    channel_model_id: 4
+    N_t: 1
+    N_r: 1
+    BW: 40.0
+    N_ss: 1
+  mcs_list:
+  - 1
+  - 2
+  - 5
+  - 6
+  - 7
+  - 9
+- name: Random 60.0% exclusion for Model-D 2x1:1
+  description: Auto-generated random exclusion (seed=42)
+  config:
+    channel_model_id: 4
+    N_t: 2
+    N_r: 1
+    BW: 20.0
+    N_ss: 1
+  mcs_list:
+  - 4
+  - 5
+  - 6
+  - 7
+  - 8
+  - 9
+- name: Random 60.0% exclusion for Model-D 2x1:1
+  description: Auto-generated random exclusion (seed=42)
+  config:
+    channel_model_id: 4
+    N_t: 2
+    N_r: 1
+    BW: 40.0
+    N_ss: 1
+  mcs_list:
+  - 1
+  - 2
+  - 4
+  - 6
+  - 7
+  - 9
+- name: Random 60.0% exclusion for Model-D 2x2:1
+  description: Auto-generated random exclusion (seed=42)
+  config:
+    channel_model_id: 4
+    N_t: 2
+    N_r: 2
+    BW: 20.0
+    N_ss: 1
+  mcs_list:
+  - 1
+  - 3
+  - 4
+  - 5
+  - 6
+  - 9
+- name: Random 60.0% exclusion for Model-D 2x2:2
+  description: Auto-generated random exclusion (seed=42)
+  config:
+    channel_model_id: 4
+    N_t: 2
+    N_r: 2
+    BW: 20.0
+    N_ss: 2
+  mcs_list:
+  - 1
+  - 3
+  - 5
+  - 6
+  - 7
+  - 9
+- name: Random 60.0% exclusion for Model-D 2x2:1
+  description: Auto-generated random exclusion (seed=42)
+  config:
+    channel_model_id: 4
+    N_t: 2
+    N_r: 2
+    BW: 40.0
+    N_ss: 1
+  mcs_list:
+  - 0
+  - 1
+  - 2
+  - 4
+  - 7
+  - 9
+- name: Random 60.0% exclusion for Model-D 2x2:2
+  description: Auto-generated random exclusion (seed=42)
+  config:
+    channel_model_id: 4
+    N_t: 2
+    N_r: 2
+    BW: 40.0
+    N_ss: 2
+  mcs_list:
+  - 0
+  - 2
+  - 5
+  - 6
+  - 8
+  - 9
+- name: Random 60.0% exclusion for Model-D 3x1:1
+  description: Auto-generated random exclusion (seed=42)
+  config:
+    channel_model_id: 4
+    N_t: 3
+    N_r: 1
+    BW: 20.0
+    N_ss: 1
+  mcs_list:
+  - 0
+  - 1
+  - 4
+  - 6
+  - 8
+  - 9
+- name: Random 60.0% exclusion for Model-D 3x1:1
+  description: Auto-generated random exclusion (seed=42)
+  config:
+    channel_model_id: 4
+    N_t: 3
+    N_r: 1
+    BW: 40.0
+    N_ss: 1
+  mcs_list:
+  - 0
+  - 1
+  - 4
+  - 5
+  - 8
+  - 9
+- name: Random 60.0% exclusion for Model-D 3x2:1
+  description: Auto-generated random exclusion (seed=42)
+  config:
+    channel_model_id: 4
+    N_t: 3
+    N_r: 2
+    BW: 20.0
+    N_ss: 1
+  mcs_list:
+  - 1
+  - 4
+  - 5
+  - 6
+  - 8
+  - 9
+- name: Random 60.0% exclusion for Model-D 3x2:2
+  description: Auto-generated random exclusion (seed=42)
+  config:
+    channel_model_id: 4
+    N_t: 3
+    N_r: 2
+    BW: 20.0
+    N_ss: 2
+  mcs_list:
+  - 0
+  - 1
+  - 4
+  - 5
+  - 7
+  - 8
+- name: Random 60.0% exclusion for Model-D 3x2:1
+  description: Auto-generated random exclusion (seed=42)
+  config:
+    channel_model_id: 4
+    N_t: 3
+    N_r: 2
+    BW: 40.0
+    N_ss: 1
+  mcs_list:
+  - 1
+  - 3
+  - 5
+  - 6
+  - 7
+  - 9
+- name: Random 60.0% exclusion for Model-D 3x2:2
+  description: Auto-generated random exclusion (seed=42)
+  config:
+    channel_model_id: 4
+    N_t: 3
+    N_r: 2
+    BW: 40.0
+    N_ss: 2
+  mcs_list:
+  - 0
+  - 1
+  - 4
+  - 6
+  - 8
+  - 9
+- name: Random 60.0% exclusion for Model-D 4x1:1
+  description: Auto-generated random exclusion (seed=42)
+  config:
+    channel_model_id: 4
+    N_t: 4
+    N_r: 1
+    BW: 20.0
+    N_ss: 1
+  mcs_list:
+  - 0
+  - 1
+  - 2
+  - 4
+  - 6
+  - 8
+- name: Random 60.0% exclusion for Model-D 4x1:1
+  description: Auto-generated random exclusion (seed=42)
+  config:
+    channel_model_id: 4
+    N_t: 4
+    N_r: 1
+    BW: 40.0
+    N_ss: 1
+  mcs_list:
+  - 0
+  - 3
+  - 5
+  - 6
+  - 7
+  - 9
+- name: Random 60.0% exclusion for Model-D 4x2:1
+  description: Auto-generated random exclusion (seed=42)
+  config:
+    channel_model_id: 4
+    N_t: 4
+    N_r: 2
+    BW: 20.0
+    N_ss: 1
+  mcs_list:
+  - 1
+  - 2
+  - 4
+  - 5
+  - 6
+  - 7
+- name: Random 60.0% exclusion for Model-D 4x2:2
+  description: Auto-generated random exclusion (seed=42)
+  config:
+    channel_model_id: 4
+    N_t: 4
+    N_r: 2
+    BW: 20.0
+    N_ss: 2
+  mcs_list:
+  - 1
+  - 2
+  - 4
+  - 5
+  - 6
+  - 8
+- name: Random 60.0% exclusion for Model-D 4x2:1
+  description: Auto-generated random exclusion (seed=42)
+  config:
+    channel_model_id: 4
+    N_t: 4
+    N_r: 2
+    BW: 40.0
+    N_ss: 1
+  mcs_list:
+  - 0
+  - 1
+  - 3
+  - 6
+  - 7
+  - 8
+- name: Random 60.0% exclusion for Model-D 4x2:2
+  description: Auto-generated random exclusion (seed=42)
+  config:
+    channel_model_id: 4
+    N_t: 4
+    N_r: 2
+    BW: 40.0
+    N_ss: 2
+  mcs_list:
+  - 1
+  - 2
+  - 5
+  - 6
+  - 7
+  - 8

@@ -1,0 +1,1412 @@
+{
+  "metadata": {
+    "generated_by": "random_mcs_exclusion",
+    "percentage": 60.0,
+    "random_seed": 42,
+    "timestamp": "2026-03-28T12:01:30.353714",
+    "total_slices": 40,
+    "total_rules": 40
+  },
+  "held_out_slices": [
+    {
+      "slice": {
+        "channel_model_id": 2,
+        "N_t": 1,
+        "N_r": 1,
+        "BW": 20.0,
+        "N_ss": 1
+      },
+      "available_mcs": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9
+      ],
+      "excluded_mcs": [
+        0,
+        1,
+        2,
+        5,
+        7,
+        8
+      ],
+      "training_mcs": [
+        3,
+        4,
+        6,
+        9
+      ]
+    },
+    {
+      "slice": {
+        "channel_model_id": 2,
+        "N_t": 1,
+        "N_r": 1,
+        "BW": 40.0,
+        "N_ss": 1
+      },
+      "available_mcs": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9
+      ],
+      "excluded_mcs": [
+        0,
+        1,
+        3,
+        4,
+        5,
+        8
+      ],
+      "training_mcs": [
+        2,
+        6,
+        7,
+        9
+      ]
+    },
+    {
+      "slice": {
+        "channel_model_id": 2,
+        "N_t": 2,
+        "N_r": 1,
+        "BW": 20.0,
+        "N_ss": 1
+      },
+      "available_mcs": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9
+      ],
+      "excluded_mcs": [
+        0,
+        2,
+        5,
+        6,
+        8,
+        9
+      ],
+      "training_mcs": [
+        1,
+        3,
+        4,
+        7
+      ]
+    },
+    {
+      "slice": {
+        "channel_model_id": 2,
+        "N_t": 2,
+        "N_r": 1,
+        "BW": 40.0,
+        "N_ss": 1
+      },
+      "available_mcs": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9
+      ],
+      "excluded_mcs": [
+        0,
+        1,
+        2,
+        6,
+        7,
+        8
+      ],
+      "training_mcs": [
+        3,
+        4,
+        5,
+        9
+      ]
+    },
+    {
+      "slice": {
+        "channel_model_id": 2,
+        "N_t": 2,
+        "N_r": 2,
+        "BW": 20.0,
+        "N_ss": 1
+      },
+      "available_mcs": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9
+      ],
+      "excluded_mcs": [
+        0,
+        1,
+        4,
+        5,
+        7,
+        8
+      ],
+      "training_mcs": [
+        2,
+        3,
+        6,
+        9
+      ]
+    },
+    {
+      "slice": {
+        "channel_model_id": 2,
+        "N_t": 2,
+        "N_r": 2,
+        "BW": 20.0,
+        "N_ss": 2
+      },
+      "available_mcs": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9
+      ],
+      "excluded_mcs": [
+        1,
+        2,
+        3,
+        5,
+        7,
+        8
+      ],
+      "training_mcs": [
+        0,
+        4,
+        6,
+        9
+      ]
+    },
+    {
+      "slice": {
+        "channel_model_id": 2,
+        "N_t": 2,
+        "N_r": 2,
+        "BW": 40.0,
+        "N_ss": 1
+      },
+      "available_mcs": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9
+      ],
+      "excluded_mcs": [
+        0,
+        2,
+        3,
+        5,
+        6,
+        7
+      ],
+      "training_mcs": [
+        1,
+        4,
+        8,
+        9
+      ]
+    },
+    {
+      "slice": {
+        "channel_model_id": 2,
+        "N_t": 2,
+        "N_r": 2,
+        "BW": 40.0,
+        "N_ss": 2
+      },
+      "available_mcs": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9
+      ],
+      "excluded_mcs": [
+        0,
+        1,
+        3,
+        4,
+        5,
+        8
+      ],
+      "training_mcs": [
+        2,
+        6,
+        7,
+        9
+      ]
+    },
+    {
+      "slice": {
+        "channel_model_id": 2,
+        "N_t": 3,
+        "N_r": 1,
+        "BW": 20.0,
+        "N_ss": 1
+      },
+      "available_mcs": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9
+      ],
+      "excluded_mcs": [
+        0,
+        2,
+        4,
+        6,
+        8,
+        9
+      ],
+      "training_mcs": [
+        1,
+        3,
+        5,
+        7
+      ]
+    },
+    {
+      "slice": {
+        "channel_model_id": 2,
+        "N_t": 3,
+        "N_r": 1,
+        "BW": 40.0,
+        "N_ss": 1
+      },
+      "available_mcs": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9
+      ],
+      "excluded_mcs": [
+        0,
+        2,
+        3,
+        4,
+        6,
+        7
+      ],
+      "training_mcs": [
+        1,
+        5,
+        8,
+        9
+      ]
+    },
+    {
+      "slice": {
+        "channel_model_id": 2,
+        "N_t": 3,
+        "N_r": 2,
+        "BW": 20.0,
+        "N_ss": 1
+      },
+      "available_mcs": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9
+      ],
+      "excluded_mcs": [
+        0,
+        2,
+        3,
+        5,
+        7,
+        8
+      ],
+      "training_mcs": [
+        1,
+        4,
+        6,
+        9
+      ]
+    },
+    {
+      "slice": {
+        "channel_model_id": 2,
+        "N_t": 3,
+        "N_r": 2,
+        "BW": 20.0,
+        "N_ss": 2
+      },
+      "available_mcs": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9
+      ],
+      "excluded_mcs": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        7
+      ],
+      "training_mcs": [
+        0,
+        6,
+        8,
+        9
+      ]
+    },
+    {
+      "slice": {
+        "channel_model_id": 2,
+        "N_t": 3,
+        "N_r": 2,
+        "BW": 40.0,
+        "N_ss": 1
+      },
+      "available_mcs": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9
+      ],
+      "excluded_mcs": [
+        1,
+        3,
+        4,
+        5,
+        6,
+        8
+      ],
+      "training_mcs": [
+        0,
+        2,
+        7,
+        9
+      ]
+    },
+    {
+      "slice": {
+        "channel_model_id": 2,
+        "N_t": 3,
+        "N_r": 2,
+        "BW": 40.0,
+        "N_ss": 2
+      },
+      "available_mcs": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9
+      ],
+      "excluded_mcs": [
+        0,
+        1,
+        2,
+        4,
+        5,
+        7
+      ],
+      "training_mcs": [
+        3,
+        6,
+        8,
+        9
+      ]
+    },
+    {
+      "slice": {
+        "channel_model_id": 2,
+        "N_t": 4,
+        "N_r": 1,
+        "BW": 20.0,
+        "N_ss": 1
+      },
+      "available_mcs": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9
+      ],
+      "excluded_mcs": [
+        0,
+        1,
+        2,
+        3,
+        7,
+        8
+      ],
+      "training_mcs": [
+        4,
+        5,
+        6,
+        9
+      ]
+    },
+    {
+      "slice": {
+        "channel_model_id": 2,
+        "N_t": 4,
+        "N_r": 1,
+        "BW": 40.0,
+        "N_ss": 1
+      },
+      "available_mcs": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9
+      ],
+      "excluded_mcs": [
+        1,
+        3,
+        5,
+        6,
+        7,
+        8
+      ],
+      "training_mcs": [
+        0,
+        2,
+        4,
+        9
+      ]
+    },
+    {
+      "slice": {
+        "channel_model_id": 2,
+        "N_t": 4,
+        "N_r": 2,
+        "BW": 20.0,
+        "N_ss": 1
+      },
+      "available_mcs": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9
+      ],
+      "excluded_mcs": [
+        1,
+        3,
+        4,
+        5,
+        7,
+        8
+      ],
+      "training_mcs": [
+        0,
+        2,
+        6,
+        9
+      ]
+    },
+    {
+      "slice": {
+        "channel_model_id": 2,
+        "N_t": 4,
+        "N_r": 2,
+        "BW": 20.0,
+        "N_ss": 2
+      },
+      "available_mcs": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9
+      ],
+      "excluded_mcs": [
+        1,
+        2,
+        5,
+        7,
+        8,
+        9
+      ],
+      "training_mcs": [
+        0,
+        3,
+        4,
+        6
+      ]
+    },
+    {
+      "slice": {
+        "channel_model_id": 2,
+        "N_t": 4,
+        "N_r": 2,
+        "BW": 40.0,
+        "N_ss": 1
+      },
+      "available_mcs": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9
+      ],
+      "excluded_mcs": [
+        0,
+        1,
+        4,
+        5,
+        8,
+        9
+      ],
+      "training_mcs": [
+        2,
+        3,
+        6,
+        7
+      ]
+    },
+    {
+      "slice": {
+        "channel_model_id": 2,
+        "N_t": 4,
+        "N_r": 2,
+        "BW": 40.0,
+        "N_ss": 2
+      },
+      "available_mcs": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9
+      ],
+      "excluded_mcs": [
+        0,
+        1,
+        2,
+        6,
+        7,
+        9
+      ],
+      "training_mcs": [
+        3,
+        4,
+        5,
+        8
+      ]
+    },
+    {
+      "slice": {
+        "channel_model_id": 4,
+        "N_t": 1,
+        "N_r": 1,
+        "BW": 20.0,
+        "N_ss": 1
+      },
+      "available_mcs": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9
+      ],
+      "excluded_mcs": [
+        1,
+        2,
+        4,
+        5,
+        7,
+        8
+      ],
+      "training_mcs": [
+        0,
+        3,
+        6,
+        9
+      ]
+    },
+    {
+      "slice": {
+        "channel_model_id": 4,
+        "N_t": 1,
+        "N_r": 1,
+        "BW": 40.0,
+        "N_ss": 1
+      },
+      "available_mcs": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9
+      ],
+      "excluded_mcs": [
+        1,
+        2,
+        5,
+        6,
+        7,
+        9
+      ],
+      "training_mcs": [
+        0,
+        3,
+        4,
+        8
+      ]
+    },
+    {
+      "slice": {
+        "channel_model_id": 4,
+        "N_t": 2,
+        "N_r": 1,
+        "BW": 20.0,
+        "N_ss": 1
+      },
+      "available_mcs": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9
+      ],
+      "excluded_mcs": [
+        4,
+        5,
+        6,
+        7,
+        8,
+        9
+      ],
+      "training_mcs": [
+        0,
+        1,
+        2,
+        3
+      ]
+    },
+    {
+      "slice": {
+        "channel_model_id": 4,
+        "N_t": 2,
+        "N_r": 1,
+        "BW": 40.0,
+        "N_ss": 1
+      },
+      "available_mcs": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9
+      ],
+      "excluded_mcs": [
+        1,
+        2,
+        4,
+        6,
+        7,
+        9
+      ],
+      "training_mcs": [
+        0,
+        3,
+        5,
+        8
+      ]
+    },
+    {
+      "slice": {
+        "channel_model_id": 4,
+        "N_t": 2,
+        "N_r": 2,
+        "BW": 20.0,
+        "N_ss": 1
+      },
+      "available_mcs": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9
+      ],
+      "excluded_mcs": [
+        1,
+        3,
+        4,
+        5,
+        6,
+        9
+      ],
+      "training_mcs": [
+        0,
+        2,
+        7,
+        8
+      ]
+    },
+    {
+      "slice": {
+        "channel_model_id": 4,
+        "N_t": 2,
+        "N_r": 2,
+        "BW": 20.0,
+        "N_ss": 2
+      },
+      "available_mcs": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9
+      ],
+      "excluded_mcs": [
+        1,
+        3,
+        5,
+        6,
+        7,
+        9
+      ],
+      "training_mcs": [
+        0,
+        2,
+        4,
+        8
+      ]
+    },
+    {
+      "slice": {
+        "channel_model_id": 4,
+        "N_t": 2,
+        "N_r": 2,
+        "BW": 40.0,
+        "N_ss": 1
+      },
+      "available_mcs": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9
+      ],
+      "excluded_mcs": [
+        0,
+        1,
+        2,
+        4,
+        7,
+        9
+      ],
+      "training_mcs": [
+        3,
+        5,
+        6,
+        8
+      ]
+    },
+    {
+      "slice": {
+        "channel_model_id": 4,
+        "N_t": 2,
+        "N_r": 2,
+        "BW": 40.0,
+        "N_ss": 2
+      },
+      "available_mcs": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9
+      ],
+      "excluded_mcs": [
+        0,
+        2,
+        5,
+        6,
+        8,
+        9
+      ],
+      "training_mcs": [
+        1,
+        3,
+        4,
+        7
+      ]
+    },
+    {
+      "slice": {
+        "channel_model_id": 4,
+        "N_t": 3,
+        "N_r": 1,
+        "BW": 20.0,
+        "N_ss": 1
+      },
+      "available_mcs": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9
+      ],
+      "excluded_mcs": [
+        0,
+        1,
+        4,
+        6,
+        8,
+        9
+      ],
+      "training_mcs": [
+        2,
+        3,
+        5,
+        7
+      ]
+    },
+    {
+      "slice": {
+        "channel_model_id": 4,
+        "N_t": 3,
+        "N_r": 1,
+        "BW": 40.0,
+        "N_ss": 1
+      },
+      "available_mcs": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9
+      ],
+      "excluded_mcs": [
+        0,
+        1,
+        4,
+        5,
+        8,
+        9
+      ],
+      "training_mcs": [
+        2,
+        3,
+        6,
+        7
+      ]
+    },
+    {
+      "slice": {
+        "channel_model_id": 4,
+        "N_t": 3,
+        "N_r": 2,
+        "BW": 20.0,
+        "N_ss": 1
+      },
+      "available_mcs": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9
+      ],
+      "excluded_mcs": [
+        1,
+        4,
+        5,
+        6,
+        8,
+        9
+      ],
+      "training_mcs": [
+        0,
+        2,
+        3,
+        7
+      ]
+    },
+    {
+      "slice": {
+        "channel_model_id": 4,
+        "N_t": 3,
+        "N_r": 2,
+        "BW": 20.0,
+        "N_ss": 2
+      },
+      "available_mcs": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9
+      ],
+      "excluded_mcs": [
+        0,
+        1,
+        4,
+        5,
+        7,
+        8
+      ],
+      "training_mcs": [
+        2,
+        3,
+        6,
+        9
+      ]
+    },
+    {
+      "slice": {
+        "channel_model_id": 4,
+        "N_t": 3,
+        "N_r": 2,
+        "BW": 40.0,
+        "N_ss": 1
+      },
+      "available_mcs": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9
+      ],
+      "excluded_mcs": [
+        1,
+        3,
+        5,
+        6,
+        7,
+        9
+      ],
+      "training_mcs": [
+        0,
+        2,
+        4,
+        8
+      ]
+    },
+    {
+      "slice": {
+        "channel_model_id": 4,
+        "N_t": 3,
+        "N_r": 2,
+        "BW": 40.0,
+        "N_ss": 2
+      },
+      "available_mcs": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9
+      ],
+      "excluded_mcs": [
+        0,
+        1,
+        4,
+        6,
+        8,
+        9
+      ],
+      "training_mcs": [
+        2,
+        3,
+        5,
+        7
+      ]
+    },
+    {
+      "slice": {
+        "channel_model_id": 4,
+        "N_t": 4,
+        "N_r": 1,
+        "BW": 20.0,
+        "N_ss": 1
+      },
+      "available_mcs": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9
+      ],
+      "excluded_mcs": [
+        0,
+        1,
+        2,
+        4,
+        6,
+        8
+      ],
+      "training_mcs": [
+        3,
+        5,
+        7,
+        9
+      ]
+    },
+    {
+      "slice": {
+        "channel_model_id": 4,
+        "N_t": 4,
+        "N_r": 1,
+        "BW": 40.0,
+        "N_ss": 1
+      },
+      "available_mcs": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9
+      ],
+      "excluded_mcs": [
+        0,
+        3,
+        5,
+        6,
+        7,
+        9
+      ],
+      "training_mcs": [
+        1,
+        2,
+        4,
+        8
+      ]
+    },
+    {
+      "slice": {
+        "channel_model_id": 4,
+        "N_t": 4,
+        "N_r": 2,
+        "BW": 20.0,
+        "N_ss": 1
+      },
+      "available_mcs": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9
+      ],
+      "excluded_mcs": [
+        1,
+        2,
+        4,
+        5,
+        6,
+        7
+      ],
+      "training_mcs": [
+        0,
+        3,
+        8,
+        9
+      ]
+    },
+    {
+      "slice": {
+        "channel_model_id": 4,
+        "N_t": 4,
+        "N_r": 2,
+        "BW": 20.0,
+        "N_ss": 2
+      },
+      "available_mcs": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9
+      ],
+      "excluded_mcs": [
+        1,
+        2,
+        4,
+        5,
+        6,
+        8
+      ],
+      "training_mcs": [
+        0,
+        3,
+        7,
+        9
+      ]
+    },
+    {
+      "slice": {
+        "channel_model_id": 4,
+        "N_t": 4,
+        "N_r": 2,
+        "BW": 40.0,
+        "N_ss": 1
+      },
+      "available_mcs": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9
+      ],
+      "excluded_mcs": [
+        0,
+        1,
+        3,
+        6,
+        7,
+        8
+      ],
+      "training_mcs": [
+        2,
+        4,
+        5,
+        9
+      ]
+    },
+    {
+      "slice": {
+        "channel_model_id": 4,
+        "N_t": 4,
+        "N_r": 2,
+        "BW": 40.0,
+        "N_ss": 2
+      },
+      "available_mcs": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9
+      ],
+      "excluded_mcs": [
+        1,
+        2,
+        5,
+        6,
+        7,
+        8
+      ],
+      "training_mcs": [
+        0,
+        3,
+        4,
+        9
+      ]
+    }
+  ]
+}
