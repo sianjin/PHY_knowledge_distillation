@@ -268,6 +268,13 @@ for slice_info in manifest['held_out_slices']:
 | `python -m pkd.example.evaluate_exclusion` | Analyze all exclusion percentages |
 | `python -m pkd.example.evaluate_exclusion --help` | Show all command-line options |
 
+### Runtime Evaluation Commands
+
+| Command | Description |
+|---------|-------------|
+| `python -m pkd.example.evaluate_runtime --channel-model 2 --N-t 3 --N-r 2 --BW 20.0 --N-ss 1 --MCS 7` | Measure runtime (random SNR) |
+| `python -m pkd.example.evaluate_runtime --channel-model 2 --N-t 3 --N-r 2 --BW 20.0 --N-ss 1 --MCS 7 --snr 20.0` | Measure runtime (specific SNR) |
+
 **What it does:**
 - Evaluates models from `pkd/trained_models/exclude {0,30,60,70,80,90}/`
 - Computes 4 key metrics across exclusion percentages
@@ -306,6 +313,78 @@ python -m pkd.example.evaluate_exclusion --data-dir path/to/data --device cuda
 - `--BW`: Bandwidth in MHz (e.g., 20.0, 40.0)
 
 **Note:** All slice arguments must be provided together. If omitted, the script automatically selects the most common configuration slice from test data.
+
+### Runtime Evaluation Commands
+
+| Command | Description |
+|---------|-------------|
+| `python -m pkd.example.evaluate_runtime --channel-model 2 --N-t 3 --N-r 2 --BW 20.0 --N-ss 1 --MCS 7` | Runtime averaged over 10 SNRs |
+| `python -m pkd.example.evaluate_runtime --channel-model 2 --N-t 3 --N-r 2 --BW 20.0 --N-ss 1 --MCS 7 --snr 20.0` | Runtime at specific SNR |
+| `python -m pkd.example.evaluate_runtime --channel-model 2 --N-t 3 --N-r 2 --BW 20.0 --N-ss 1 --MCS 7 --num-sequences 100` | Custom sequence count |
+
+**What it does:**
+- Measures PKD model inference runtime performance
+- By default: Generates 50 sequences of length 1000 at each of 10 SNR values (10-55 dB)
+- Reports **average total runtime** across SNRs for fair comparison (runtime varies with SNR)
+- With `--snr`: Generates sequences at single specified SNR value
+- Uses a single fixed configuration (no variation except SNR)
+
+**Command-line Arguments:**
+
+Required:
+- `--channel-model`: Channel model ID (e.g., 2 for Model B, matches data format)
+- `--N-t`: Number of transmit antennas
+- `--N-r`: Number of receive antennas
+- `--BW`: Bandwidth in MHz
+- `--N-ss`: Number of spatial streams (1-4)
+- `--MCS`: Modulation & Coding Scheme (0-9)
+
+Optional:
+- `--snr`: Average SNR in dB (default: average over 10 SNRs from 10 to 55 dB)
+- `--num-sequences`: Number of sequences to generate per SNR (default: 50)
+- `--sequence-length`: Length of each sequence (default: 1000)
+- `--model-path`: Path to trained model (default: pkd_model.pt)
+
+**Note on Runtime Measurement:**
+- Default mode (no `--snr`): Runs at 10 different SNR values (10, 15, 20, ..., 55 dB) and reports **average total runtime**
+- This provides fair comparison since runtime can vary significantly with SNR
+- Single SNR mode (`--snr X`): Runs only at specified SNR for targeted testing
+
+**Example Output (Default - Average over SNRs):**
+```
+========================================
+PKD Model Runtime Evaluation
+========================================
+
+Configuration:
+  Channel Model: B (id=2)
+  Antennas: N_t=3, N_r=2
+  Bandwidth: 20.0 MHz
+  MCS: 7, N_ss: 1
+  SNR values: [10. 15. 20. 25. 30. 35. 40. 45. 50. 55.] dB
+  SNR mode: average over 10 SNRs (10-55 dB)
+
+Runtime Settings:
+  Sequences per SNR: 50
+  Length per sequence: 1000
+  Number of SNR values: 10
+  Total sequences: 500
+  Device: cpu
+
+========================================
+Results (Averaged over SNRs):
+========================================
+  Average total runtime: 2.3456 seconds
+  Std dev runtime: 0.0234 seconds
+  Min runtime: 2.3001 seconds
+  Max runtime: 2.4012 seconds
+  Total wall-clock time: 23.5678 seconds
+
+  Average time per sequence: 0.0469 seconds
+  Average time per sample: 0.000047 seconds
+  Average throughput: 21321.23 samples/second
+========================================
+```
 
 **Requirements:**
 - All trained models must exist in `pkd/trained_models/exclude X/pkd_model.pt`
