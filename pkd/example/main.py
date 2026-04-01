@@ -4,10 +4,10 @@ import torch
 import numpy as np
 import os
 
-from model.pkd_model import PKDModel
-from per_lut import AWGNPERLookup
-from infer import PKDInference
-from train import train_pkd
+from pkd.model import PKDModel
+from pkd.per_lut import AWGNPERLookup
+from pkd.infer import PKDInference
+from pkd.train import train_pkd
 
 from .data_loader import load_real_data
 from .evaluation import (

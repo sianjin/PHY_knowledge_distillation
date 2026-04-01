@@ -25,7 +25,7 @@ def evaluate_test_set(model, test_sequences, test_configs, device='cpu'):
     print(f"Evaluating on {len(test_sequences)} test sequences")
     print(f"{'='*60}")
 
-    from train import PKDDataset, collate_fn
+    from pkd.train import PKDDataset, collate_fn
     from torch.utils.data import DataLoader
 
     # Create test dataset (DataLoader handles batching automatically)
@@ -121,8 +121,8 @@ def generate_figure1_per_mcs_metrics(model, test_sequences, test_configs, device
     ar_order = model.ar_order
 
     # Create inference engine for free-running
-    from per_lut import AWGNPERLookup
-    from infer import PKDInference
+    from pkd.per_lut import AWGNPERLookup
+    from pkd.infer import PKDInference
     # Load LDPC PER LUT (embedded data)
     per_lut = AWGNPERLookup.load_ldpc_lut()
     inference = PKDInference(model, per_lut, ar_order=ar_order, device=device)
@@ -376,8 +376,8 @@ def generate_figure2_quantile_error(model, test_sequences, test_configs, device=
         grouped_by_mcs[mcs].append(i)
 
     # Create inference engine
-    from per_lut import AWGNPERLookup
-    from infer import PKDInference
+    from pkd.per_lut import AWGNPERLookup
+    from pkd.infer import PKDInference
     # Load LDPC PER LUT (embedded data)
     per_lut = AWGNPERLookup.load_ldpc_lut()
     inference = PKDInference(model, per_lut, ar_order=model.ar_order, device=device)
@@ -482,8 +482,8 @@ def generate_figure3_ccdf_error(model, test_sequences, test_configs, device='cpu
         grouped_by_mcs[mcs].append(i)
 
     # Create inference engine
-    from per_lut import AWGNPERLookup
-    from infer import PKDInference
+    from pkd.per_lut import AWGNPERLookup
+    from pkd.infer import PKDInference
     # Load LDPC PER LUT (embedded data)
     per_lut = AWGNPERLookup.load_ldpc_lut()
     inference = PKDInference(model, per_lut, ar_order=model.ar_order, device=device)

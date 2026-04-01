@@ -261,6 +261,59 @@ for slice_info in manifest['held_out_slices']:
 | `python example.py eval --slice N_t:4 N_r:2 MCS:7` | Random matching sequence |
 | `python example.py eval --slice N_t:4 N_r:2 MCS:7 --idx 3` | 4th matching sequence |
 
+### Exclusion Analysis Commands
+
+| Command | Description |
+|---------|-------------|
+| `python -m pkd.example.evaluate_exclusion` | Analyze all exclusion percentages |
+| `python -m pkd.example.evaluate_exclusion --help` | Show all command-line options |
+
+**What it does:**
+- Evaluates models from `pkd/trained_models/exclude {0,30,60,70,80,90}/`
+- Computes 4 key metrics across exclusion percentages
+- Generates 4 plots in `pkd/figures/`:
+  - `exclusion_overall_ks.png` - Overall accuracy degradation
+  - `exclusion_generalization_gap.png` - Seen vs unseen MCS performance
+  - `exclusion_acf_rmse.png` - Temporal correlation accuracy
+  - `exclusion_pit_passrate.png` - Calibration quality
+
+**Command-line Options:**
+
+```bash
+# Auto-select most common slice (default)
+python -m pkd.example.evaluate_exclusion
+
+# Specify custom configuration slice
+python -m pkd.example.evaluate_exclusion \
+  --channel-model 2 \
+  --N-t 3 \
+  --N-r 2 \
+  --N-ss 1 \
+  --BW 20.0
+
+# Evaluate only specific percentages
+python -m pkd.example.evaluate_exclusion --percentages 0 30 60
+
+# Custom data directory and device
+python -m pkd.example.evaluate_exclusion --data-dir path/to/data --device cuda
+```
+
+**Slice Specification Arguments:**
+- `--channel-model`: Channel model ID (0-4)
+- `--N-t`: Number of transmit antennas
+- `--N-r`: Number of receive antennas
+- `--N-ss`: Number of spatial streams
+- `--BW`: Bandwidth in MHz (e.g., 20.0, 40.0)
+
+**Note:** All slice arguments must be provided together. If omitted, the script automatically selects the most common configuration slice from test data.
+
+**Requirements:**
+- All trained models must exist in `pkd/trained_models/exclude X/pkd_model.pt`
+- Exclusion manifests in `pkd/example/exclusions/exclusions_random_X%_seed42_*.json`
+- Test data in `../data/` directory
+
+**Note:** This may take several minutes to complete as it evaluates all 7 models across the full test set.
+
 ---
 
 ## Data Format
