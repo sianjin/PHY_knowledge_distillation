@@ -219,7 +219,7 @@ def example_test_evaluation(data_dir='data', max_files=None, slice_spec=None):
 
     # Load model
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
-    checkpoint = torch.load('pkd_model.pt', map_location=device)
+    checkpoint = torch.load(os.path.join(os.path.dirname(__file__), '..', 'pkd_model.pt'), map_location=device)
 
     print(f"\nLoaded checkpoint from pkd_model.pt")
     if 'epoch' in checkpoint:
@@ -396,7 +396,7 @@ def example_evaluation(data_dir='data', test_idx=None, max_files=None, slice_spe
 
     # Load model
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
-    checkpoint = torch.load('pkd_model.pt', map_location=device)
+    checkpoint = torch.load(os.path.join(os.path.dirname(__file__), '..', 'pkd_model.pt'), map_location=device)
 
     print(f"\nLoaded checkpoint from pkd_model.pt")
     print(f"  Checkpoint keys: {list(checkpoint.keys())}")
