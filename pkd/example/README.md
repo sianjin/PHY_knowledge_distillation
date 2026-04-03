@@ -4,22 +4,24 @@ Refactored modules for training and evaluating the PKD (Physical Layer Knowledge
 
 ## Quick Start
 
+Run all commands from the **project root** (`PHY_knowledge_distillation/`):
+
 ```bash
-cd pkd
+cd PHY_knowledge_distillation
 
 # Basic training
-python example.py train
+python pkd/example.py train
 
 # Training with exclusions
-python example.py train --exclusion-mcs 30%                    # Random 30% MCS exclusion
-python example.py train --exclusion-config example/training_exclusions.yaml  # Manual exclusions
+python pkd/example.py train --exclusion-mcs 30%                    # Random 30% MCS exclusion
+python pkd/example.py train --exclusion-config pkd/example/training_exclusions.yaml  # Manual exclusions
 
 # Testing
-python example.py test                                         # Auto-select slice
-python example.py test --slice N_t:4 N_r:2 MCS:7              # Specific config
+python pkd/example.py test                                         # Auto-select slice
+python pkd/example.py test --slice N_t:4 N_r:2 MCS:7              # Specific config
 
 # Evaluation
-python example.py eval --slice N_t:3 N_r:2 MCS:7              # Slice-based selection
+python pkd/example.py eval --slice N_t:3 N_r:2 MCS:7              # Slice-based selection
 ```
 
 ## Module Structure
