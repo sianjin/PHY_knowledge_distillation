@@ -4,27 +4,25 @@ Refactored modules for training and evaluating the PKD (Physical Layer Knowledge
 
 ## Quick Start
 
-Run all commands from the **project root** (`PHY_knowledge_distillation/`) with `PYTHONPATH=.`:
+Run all commands from the **project root** (`PHY_knowledge_distillation/`) using `-m` syntax:
 
 ```bash
 cd PHY_knowledge_distillation
 
 # Basic training
-PYTHONPATH=. python pkd/example.py train
+python -m pkd.example train
 
 # Training with exclusions
-PYTHONPATH=. python pkd/example.py train --exclusion-mcs 30%                    # Random 30% MCS exclusion
-PYTHONPATH=. python pkd/example.py train --exclusion-config pkd/example/training_exclusions.yaml  # Manual exclusions
+python -m pkd.example train --exclusion-mcs 30%                    # Random 30% MCS exclusion
+python -m pkd.example train --exclusion-config pkd/example/training_exclusions.yaml  # Manual exclusions
 
 # Testing
-PYTHONPATH=. python pkd/example.py test                                         # Auto-select slice
-PYTHONPATH=. python pkd/example.py test --slice N_t:4 N_r:2 MCS:7              # Specific config
+python -m pkd.example test                                         # Auto-select slice
+python -m pkd.example test --slice N_t:4 N_r:2 MCS:7              # Specific config
 
 # Evaluation
-PYTHONPATH=. python pkd/example.py eval --slice N_t:3 N_r:2 MCS:7              # Slice-based selection
+python -m pkd.example eval --slice N_t:3 N_r:2 MCS:7              # Slice-based selection
 ```
-
-> **Why `PYTHONPATH=.`?** The script's internal imports require both the project root (for `pkd.*` imports) and the `pkd/` directory (for `example.*` imports) to be on the Python path simultaneously.
 
 ## Module Structure
 
@@ -47,10 +45,10 @@ example/
 
 ```bash
 # Train with all data
-PYTHONPATH=. python pkd/example.py train
+python -m pkd.example train
 
 # Train with subset (first N files)
-PYTHONPATH=. python pkd/example.py train 10
+python -m pkd.example train 10
 ```
 
 **What happens:**
@@ -69,13 +67,13 @@ Randomly exclude X% of MCS values per configuration slice:
 
 ```bash
 # Basic: exclude 30% of MCS randomly
-PYTHONPATH=. python pkd/example.py train --exclusion-mcs 30%
+python -m pkd.example train --exclusion-mcs 30%
 
 # Custom seed for reproducibility
-PYTHONPATH=. python pkd/example.py train --exclusion-mcs 25% --exclusion-seed 12345
+python -m pkd.example train --exclusion-mcs 25% --exclusion-seed 12345
 
 # Combine random + manual exclusions
-PYTHONPATH=. python pkd/example.py train --exclusion-mcs 30% --exclusion-config pkd/example/training_exclusions.yaml
+python -m pkd.example train --exclusion-mcs 30% --exclusion-config pkd/example/training_exclusions.yaml
 ```
 
 **How it works:**
@@ -104,7 +102,7 @@ Saved to: pkd/example/exclusions/exclusions_random_30pct_seed42_20240315_103045.
 **Reproducibility:**
 ```bash
 # Later, reuse exact same exclusions
-PYTHONPATH=. python pkd/example.py train --exclusion-config pkd/example/exclusions/exclusions_random_30pct_seed42_20240315_103045.yaml
+python -m pkd.example train --exclusion-config pkd/example/exclusions/exclusions_random_30pct_seed42_20240315_103045.yaml
 ```
 
 #### Method 2: Manual YAML Exclusions
@@ -112,7 +110,7 @@ PYTHONPATH=. python pkd/example.py train --exclusion-config pkd/example/exclusio
 Define specific exclusion rules in YAML format:
 
 ```bash
-PYTHONPATH=. python pkd/example.py train --exclusion-config pkd/example/training_exclusions.yaml
+python -m pkd.example train --exclusion-config pkd/example/training_exclusions.yaml
 ```
 
 **YAML format:**
@@ -157,13 +155,13 @@ Evaluate on the held-out test set (20% of data):
 
 ```bash
 # Auto-select most common config slice
-PYTHONPATH=. python pkd/example.py test
+python -m pkd.example test
 
 # Specify config slice manually
-PYTHONPATH=. python pkd/example.py test --slice N_t:4 N_r:2
+python -m pkd.example test --slice N_t:4 N_r:2
 
 # Test on held-out MCS (from random exclusion)
-PYTHONPATH=. python pkd/example.py test --slice channel_model_id:2 N_t:3 N_r:2 BW:20.0 N_ss:1 MCS:7
+python -m pkd.example test --slice channel_model_id:2 N_t:3 N_r:2 BW:20.0 N_ss:1 MCS:7
 ```
 
 **Generates 3 comprehensive figures:**
@@ -184,11 +182,11 @@ Detailed evaluation on a single test sequence:
 
 ```bash
 # Slice-based selection (recommended)
-PYTHONPATH=. python pkd/example.py eval --slice N_t:3 N_r:2 MCS:7           # Random selection
-PYTHONPATH=. python pkd/example.py eval --slice N_t:3 N_r:2 MCS:7 --idx 5   # Deterministic (6th match)
+python -m pkd.example eval --slice N_t:3 N_r:2 MCS:7           # Random selection
+python -m pkd.example eval --slice N_t:3 N_r:2 MCS:7 --idx 5   # Deterministic (6th match)
 
 # Direct indexing (legacy)
-PYTHONPATH=. python pkd/example.py eval 50                                   # 51st test sequence
+python -m pkd.example eval 50                                   # 51st test sequence
 ```
 
 **Generates detailed plots:**
@@ -208,10 +206,10 @@ After training with exclusions, test on the held-out configs:
 cat pkd/example/exclusions/exclusions_random_30pct_seed42_*.yaml
 
 # Test on specific held-out MCS (from YAML or console output)
-PYTHONPATH=. python pkd/example.py test --slice channel_model_id:2 N_t:3 N_r:2 BW:20.0 N_ss:1 MCS:7
+python -m pkd.example test --slice channel_model_id:2 N_t:3 N_r:2 BW:20.0 N_ss:1 MCS:7
 
 # Qualitative evaluation
-PYTHONPATH=. python pkd/example.py eval --slice channel_model_id:2 N_t:3 N_r:2 MCS:7
+python -m pkd.example eval --slice channel_model_id:2 N_t:3 N_r:2 MCS:7
 ```
 
 ### Programmatic Testing
@@ -227,7 +225,7 @@ with open('pkd/example/exclusions/exclusions_random_30pct_seed42_*.json') as f:
 for slice_info in manifest['held_out_slices']:
     for mcs in slice_info['excluded_mcs']:
         slice_cfg = slice_info['slice']
-        cmd = f"PYTHONPATH=. python pkd/example.py test --slice " + \
+        cmd = f"python -m pkd.example test --slice " + \
               " ".join(f"{k}:{v}" for k, v in slice_cfg.items()) + f" MCS:{mcs}"
         print(cmd)
 ```
@@ -240,30 +238,30 @@ for slice_info in manifest['held_out_slices']:
 
 | Command | Description |
 |---------|-------------|
-| `PYTHONPATH=. python pkd/example.py train` | Train with all data |
-| `PYTHONPATH=. python pkd/example.py train 10` | Train with first 10 files |
-| `PYTHONPATH=. python pkd/example.py train --exclusion-mcs 30%` | Random 30% MCS exclusion |
-| `PYTHONPATH=. python pkd/example.py train --exclusion-mcs 25% --exclusion-seed 123` | Custom seed |
-| `PYTHONPATH=. python pkd/example.py train --exclusion-config FILE.yaml` | Manual YAML exclusions |
-| `PYTHONPATH=. python pkd/example.py train --exclusion-mcs 30% --exclusion-config FILE.yaml` | Hybrid (random + manual) |
+| `python -m pkd.example train` | Train with all data |
+| `python -m pkd.example train 10` | Train with first 10 files |
+| `python -m pkd.example train --exclusion-mcs 30%` | Random 30% MCS exclusion |
+| `python -m pkd.example train --exclusion-mcs 25% --exclusion-seed 123` | Custom seed |
+| `python -m pkd.example train --exclusion-config FILE.yaml` | Manual YAML exclusions |
+| `python -m pkd.example train --exclusion-mcs 30% --exclusion-config FILE.yaml` | Hybrid (random + manual) |
 
 ### Testing Commands
 
 | Command | Description |
 |---------|-------------|
-| `PYTHONPATH=. python pkd/example.py test` | Test with auto-selected slice |
-| `PYTHONPATH=. python pkd/example.py test --slice N_t:4 N_r:2` | Test specific antenna config |
-| `PYTHONPATH=. python pkd/example.py test --slice N_t:3 N_r:2 MCS:7` | Test held-out MCS |
-| `PYTHONPATH=. python pkd/example.py test 10` | Test with 10-file subset |
+| `python -m pkd.example test` | Test with auto-selected slice |
+| `python -m pkd.example test --slice N_t:4 N_r:2` | Test specific antenna config |
+| `python -m pkd.example test --slice N_t:3 N_r:2 MCS:7` | Test held-out MCS |
+| `python -m pkd.example test 10` | Test with 10-file subset |
 
 ### Evaluation Commands
 
 | Command | Description |
 |---------|-------------|
-| `PYTHONPATH=. python pkd/example.py eval` | Evaluate first test sequence |
-| `PYTHONPATH=. python pkd/example.py eval 50` | Evaluate 51st test sequence |
-| `PYTHONPATH=. python pkd/example.py eval --slice N_t:4 N_r:2 MCS:7` | Random matching sequence |
-| `PYTHONPATH=. python pkd/example.py eval --slice N_t:4 N_r:2 MCS:7 --idx 3` | 4th matching sequence |
+| `python -m pkd.example eval` | Evaluate first test sequence |
+| `python -m pkd.example eval 50` | Evaluate 51st test sequence |
+| `python -m pkd.example eval --slice N_t:4 N_r:2 MCS:7` | Random matching sequence |
+| `python -m pkd.example eval --slice N_t:4 N_r:2 MCS:7 --idx 3` | 4th matching sequence |
 
 ### Exclusion Analysis Commands
 
@@ -547,23 +545,23 @@ PHY_knowledge_distillation/
 Use valid range for `--exclusion-mcs`:
 ```bash
 # Valid
-PYTHONPATH=. python pkd/example.py train --exclusion-mcs 30%
+python -m pkd.example train --exclusion-mcs 30%
 
 # Invalid
-PYTHONPATH=. python pkd/example.py train --exclusion-mcs 150%
+python -m pkd.example train --exclusion-mcs 150%
 ```
 
 ### "All training data was excluded"
 
 Reduce exclusion percentage:
 ```bash
-PYTHONPATH=. python pkd/example.py train --exclusion-mcs 20%  # Lower percentage
+python -m pkd.example train --exclusion-mcs 20%  # Lower percentage
 ```
 
 ### Memory Issues
 
 1. Reduce batch size in training
-2. Load fewer files: `PYTHONPATH=. python pkd/example.py train 10`
+2. Load fewer files: `python -m pkd.example train 10`
 3. Reduce `hidden_dim` in model config
 
 ---
@@ -573,7 +571,7 @@ PYTHONPATH=. python pkd/example.py train --exclusion-mcs 20%  # Lower percentage
 ### Example 1: Train with Random Exclusion
 
 ```bash
-PYTHONPATH=. python pkd/example.py train --exclusion-mcs 30%
+python -m pkd.example train --exclusion-mcs 30%
 ```
 
 Output: `pkd/example/exclusions/exclusions_random_30pct_seed42_*.yaml`
@@ -581,9 +579,9 @@ Output: `pkd/example/exclusions/exclusions_random_30pct_seed42_*.yaml`
 ### Example 2: Different Seeds for Multiple Experiments
 
 ```bash
-PYTHONPATH=. python pkd/example.py train --exclusion-mcs 30% --exclusion-seed 1
-PYTHONPATH=. python pkd/example.py train --exclusion-mcs 30% --exclusion-seed 2
-PYTHONPATH=. python pkd/example.py train --exclusion-mcs 30% --exclusion-seed 3
+python -m pkd.example train --exclusion-mcs 30% --exclusion-seed 1
+python -m pkd.example train --exclusion-mcs 30% --exclusion-seed 2
+python -m pkd.example train --exclusion-mcs 30% --exclusion-seed 3
 ```
 
 Each produces different held-out configurations.
@@ -591,7 +589,7 @@ Each produces different held-out configurations.
 ### Example 3: Combine Random + Manual
 
 ```bash
-PYTHONPATH=. python pkd/example.py train \
+python -m pkd.example train \
   --exclusion-mcs 30% \
   --exclusion-config pkd/example/training_exclusions.yaml
 ```
@@ -602,11 +600,11 @@ Merges both exclusion sets.
 
 ```bash
 # Train with exclusion
-PYTHONPATH=. python pkd/example.py train --exclusion-mcs 30%
+python -m pkd.example train --exclusion-mcs 30%
 # Output shows: Excluding MCS [2, 5, 7] for Model-B 3x2:1
 
 # Test on that held-out MCS
-PYTHONPATH=. python pkd/example.py test --slice channel_model_id:2 N_t:3 N_r:2 BW:20.0 N_ss:1 MCS:7
+python -m pkd.example test --slice channel_model_id:2 N_t:3 N_r:2 BW:20.0 N_ss:1 MCS:7
 ```
 
 ---
