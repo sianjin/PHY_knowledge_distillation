@@ -205,7 +205,7 @@ def generate_plots(results_by_pct, slice_spec):
     overall_pit = [results_by_pct[p]['overall_pit'] for p in percentages]
 
     # Create output directory
-    os.makedirs('pkd/figures', exist_ok=True)
+    os.makedirs('figures', exist_ok=True)
 
     # Plot style
     plt.style.use('seaborn-v0_8-darkgrid')
@@ -218,7 +218,7 @@ def generate_plots(results_by_pct, slice_spec):
     plt.ylabel('Median KS Statistic', fontsize=12)
     plt.grid(True, alpha=0.3)
     plt.tight_layout()
-    plt.savefig('pkd/figures/exclusion_overall_ks.png', dpi=300, bbox_inches='tight')
+    plt.savefig('figures/exclusion_overall_ks.png', dpi=300, bbox_inches='tight')
     plt.close()
 
     # Plot 2: Generalization Gap (Seen vs Unseen MCS)
@@ -234,7 +234,7 @@ def generate_plots(results_by_pct, slice_spec):
     plt.legend(fontsize=11, framealpha=0.9)
     plt.grid(True, alpha=0.3)
     plt.tight_layout()
-    plt.savefig('pkd/figures/exclusion_generalization_gap.png', dpi=300, bbox_inches='tight')
+    plt.savefig('figures/exclusion_generalization_gap.png', dpi=300, bbox_inches='tight')
     plt.close()
 
     # Plot 3: ACF RMSE vs Exclusion %
@@ -245,7 +245,7 @@ def generate_plots(results_by_pct, slice_spec):
     plt.ylabel('Median ACF RMSE', fontsize=12)
     plt.grid(True, alpha=0.3)
     plt.tight_layout()
-    plt.savefig('pkd/figures/exclusion_acf_rmse.png', dpi=300, bbox_inches='tight')
+    plt.savefig('figures/exclusion_acf_rmse.png', dpi=300, bbox_inches='tight')
     plt.close()
 
     # Plot 4: PIT Pass Rate vs Exclusion %
@@ -258,7 +258,7 @@ def generate_plots(results_by_pct, slice_spec):
     plt.legend(fontsize=11, framealpha=0.9)
     plt.grid(True, alpha=0.3)
     plt.tight_layout()
-    plt.savefig('pkd/figures/exclusion_pit_passrate.png', dpi=300, bbox_inches='tight')
+    plt.savefig('figures/exclusion_pit_passrate.png', dpi=300, bbox_inches='tight')
     plt.close()
 
 
@@ -335,11 +335,11 @@ def run_exclusion_analysis(data_dir='data', slice_spec=None, exclusion_percentag
     print(f"\n{'='*70}")
     print("DONE!")
     print(f"{'='*70}")
-    print("\nPlots saved to pkd/figures/:")
-    print("  - exclusion_overall_ks.png")
-    print("  - exclusion_generalization_gap.png")
-    print("  - exclusion_acf_rmse.png")
-    print("  - exclusion_pit_passrate.png")
+    print("\nPlots saved to figures/:")
+    print("  - figures/exclusion_overall_ks.png")
+    print("  - figures/exclusion_generalization_gap.png")
+    print("  - figures/exclusion_acf_rmse.png")
+    print("  - figures/exclusion_pit_passrate.png")
 
     return results_by_pct
 

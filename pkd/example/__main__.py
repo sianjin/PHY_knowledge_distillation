@@ -5,6 +5,7 @@ Usage:
     python -m pkd.example test [N] [--slice key:value ...]
     python -m pkd.example eval [idx] [N]
     python -m pkd.example eval --slice key:value ... [--idx N]
+    python -m pkd.example exclusion [--slice key:value ...] [--percentages P1 P2 ...]
 
 Examples:
     # Training
@@ -23,6 +24,13 @@ Examples:
     python -m pkd.example eval --slice channel_model_id:2 N_t:3 N_r:2 BW:40 N_ss:2 MCS:7
     python -m pkd.example eval --slice N_t:3 N_r:2 MCS:7 --idx 5
     python -m pkd.example eval 50
+
+    # Exclusion analysis
+    python -m pkd.example exclusion
+    python -m pkd.example exclusion --slice channel_model_id:2 N_t:3 N_r:2 N_ss:1 BW:20.0
+    python -m pkd.example exclusion --slice channel_model_id:2 N_t:3 N_r:2 N_ss:1 BW:20.0 --percentages 0 30 60
+    python -m pkd.example exclusion --slice channel_model_id:2 N_t:3 N_r:2 N_ss:1 BW:20.0 --device cuda
+    python -m pkd.example exclusion --data-dir path/to/data
 """
 
 import sys
@@ -33,6 +41,7 @@ from .main import (
     example_test_evaluation,
     example_evaluation
 )
+from .evaluate_exclusion import run_exclusion_analysis
 
 
 def parse_slice_spec(args):
@@ -96,6 +105,51 @@ def parse_exclusion_mcs(args):
         raise ValueError(f"Percentage must be between 0 and 100, got {percentage}%.")
 
     return percentage, remaining
+
+
+def parse_percentages(args):
+    if '--percentages' not in args:
+        return None, args
+
+    pct_idx = args.index('--percentages')
+    remaining_before = args[:pct_idx]
+    after = args[pct_idx + 1:]
+
+    percentages = []
+    rest = []
+    for arg in after:
+        try:
+            percentages.append(int(arg))
+        except ValueError:
+            rest.append(arg)
+
+    return percentages if percentages else None, remaining_before + rest
+
+
+def parse_device(args):
+    if '--device' not in args:
+        return None, args
+
+    dev_idx = args.index('--device')
+    if dev_idx + 1 >= len(args):
+        raise ValueError("--device requires an argument (cuda/cpu)")
+
+    device = args[dev_idx + 1]
+    remaining = args[:dev_idx] + args[dev_idx + 2:]
+    return device, remaining
+
+
+def parse_data_dir(args):
+    if '--data-dir' not in args:
+        return None, args
+
+    dir_idx = args.index('--data-dir')
+    if dir_idx + 1 >= len(args):
+        raise ValueError("--data-dir requires a path argument")
+
+    data_dir = args[dir_idx + 1]
+    remaining = args[:dir_idx] + args[dir_idx + 2:]
+    return data_dir, remaining
 
 
 def parse_exclusion_seed(args):
@@ -170,6 +224,22 @@ if __name__ == '__main__':
             data_dir = remaining[1] if len(remaining) > 1 else default_data_dir
             example_evaluation(data_dir=data_dir, max_files=max_files,
                                slice_spec=slice_spec, slice_idx=idx)
+
+    elif mode == 'exclusion':
+        slice_spec, remaining = parse_slice_spec(remaining_args)
+        percentages, remaining = parse_percentages(remaining)
+        device, remaining = parse_device(remaining)
+        data_dir_arg, remaining = parse_data_dir(remaining)
+        if remaining:
+            print(f"Warning: unrecognized arguments ignored: {remaining}")
+            print("  (Did you forget a value? e.g. N_ss:1 not just N_ss)")
+        data_dir = data_dir_arg if data_dir_arg else default_data_dir
+        run_exclusion_analysis(
+            data_dir=data_dir,
+            slice_spec=slice_spec,
+            exclusion_percentages=percentages,
+            device=device
+        )
 
     else:
         print(f"Unknown mode: {mode}")

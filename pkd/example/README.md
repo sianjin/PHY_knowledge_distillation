@@ -267,8 +267,9 @@ for slice_info in manifest['held_out_slices']:
 
 | Command | Description |
 |---------|-------------|
-| `python -m pkd.example.evaluate_exclusion` | Analyze all exclusion percentages |
-| `python -m pkd.example.evaluate_exclusion --help` | Show all command-line options |
+| `python -m pkd.example exclusion` | Analyze all exclusion percentages (auto-select slice) |
+| `python -m pkd.example exclusion --slice channel_model_id:2 N_t:3 N_r:2 N_ss:1 BW:20.0` | Specify config slice |
+| `python -m pkd.example exclusion --slice channel_model_id:2 N_t:3 N_r:2 N_ss:1 BW:20.0 --percentages 0 30 60` | Subset of percentages |
 
 ### Runtime Evaluation Commands
 
@@ -280,7 +281,7 @@ for slice_info in manifest['held_out_slices']:
 **What it does:**
 - Evaluates models from `pkd/trained_models/exclude {0,30,60,70,80,90}/`
 - Computes 4 key metrics across exclusion percentages
-- Generates 4 plots in `pkd/figures/`:
+- Generates 4 plots in `figures/`:
   - `exclusion_overall_ks.png` - Overall accuracy degradation
   - `exclusion_generalization_gap.png` - Seen vs unseen MCS performance
   - `exclusion_acf_rmse.png` - Temporal correlation accuracy
@@ -290,31 +291,29 @@ for slice_info in manifest['held_out_slices']:
 
 ```bash
 # Auto-select most common slice (default)
-python -m pkd.example.evaluate_exclusion
+python -m pkd.example exclusion
 
 # Specify custom configuration slice
-python -m pkd.example.evaluate_exclusion \
-  --channel-model 2 \
-  --N-t 3 \
-  --N-r 2 \
-  --N-ss 1 \
-  --BW 20.0
+python -m pkd.example exclusion --slice channel_model_id:2 N_t:3 N_r:2 N_ss:1 BW:20.0
 
 # Evaluate only specific percentages
-python -m pkd.example.evaluate_exclusion --percentages 0 30 60
+python -m pkd.example exclusion --slice channel_model_id:2 N_t:3 N_r:2 N_ss:1 BW:20.0 --percentages 0 30 60
 
-# Custom data directory and device
-python -m pkd.example.evaluate_exclusion --data-dir path/to/data --device cuda
+# Custom device
+python -m pkd.example exclusion --slice channel_model_id:2 N_t:3 N_r:2 N_ss:1 BW:20.0 --device cuda
+
+# Custom data directory
+python -m pkd.example exclusion --data-dir path/to/data
 ```
 
-**Slice Specification Arguments:**
-- `--channel-model`: Channel model ID (0-4)
-- `--N-t`: Number of transmit antennas
-- `--N-r`: Number of receive antennas
-- `--N-ss`: Number of spatial streams
-- `--BW`: Bandwidth in MHz (e.g., 20.0, 40.0)
+**Slice Specification (key:value pairs after `--slice`):**
+- `channel_model_id`: Channel model ID (int, 0-4)
+- `N_t`: Number of transmit antennas (int)
+- `N_r`: Number of receive antennas (int)
+- `N_ss`: Number of spatial streams (int)
+- `BW`: Bandwidth in MHz (float, e.g., 20.0, 40.0)
 
-**Note:** All slice arguments must be provided together. If omitted, the script automatically selects the most common configuration slice from test data.
+**Note:** All slice keys must be provided together. If `--slice` is omitted, the script automatically selects the most common configuration slice from test data.
 
 ### Runtime Evaluation Commands
 
