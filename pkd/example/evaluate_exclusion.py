@@ -461,7 +461,7 @@ def run_exclusion_analysis(data_dir='data', slice_spec=None, exclusion_percentag
         print(f"  Excluded MCS: {excluded_mcs}")
 
         # Load checkpoint
-        checkpoint_path = f'pkd/trained_models/exclude {pct}/pkd_model.pt'
+        checkpoint_path = f'pkd/trained_models/exclude_mcs_{pct}/pkd_model.pt'
 
         if not os.path.exists(checkpoint_path):
             print(f"  Warning: Checkpoint not found: {checkpoint_path}")

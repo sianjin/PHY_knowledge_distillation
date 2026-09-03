@@ -240,7 +240,7 @@ def run_per_waterfall_comparison(
     results = {'ground_truth': gt}
 
     # ---- PKD ----
-    checkpoint_path = f'pkd/trained_models/exclude {exclusion_pct}/pkd_model.pt'
+    checkpoint_path = f'pkd/trained_models/exclude_mcs_{exclusion_pct}/pkd_model.pt'
     if os.path.exists(checkpoint_path):
         print(f"\nGenerating PKD PER waterfall (checkpoint: {checkpoint_path})...")
         pkd_per = model_per_waterfall(checkpoint_path, slice_spec, target_mcs, snr_grid, device=device)

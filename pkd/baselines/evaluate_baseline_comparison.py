@@ -92,7 +92,7 @@ def run_baseline_comparison(
         print(f"  Training MCS: {training_mcs}")
         print(f"  Excluded MCS: {excluded_mcs}")
 
-        checkpoint_path = f'pkd/trained_models/exclude {pct}/pkd_model.pt'
+        checkpoint_path = f'pkd/trained_models/exclude_mcs_{pct}/pkd_model.pt'
         if os.path.exists(checkpoint_path):
             pkd_metrics = evaluate_model_on_slice(
                 checkpoint_path, test_sequences, test_configs,
