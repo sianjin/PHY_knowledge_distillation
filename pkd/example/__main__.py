@@ -1,7 +1,7 @@
 """PKD Example Script - Entry Point
 
 Usage:
-    python -m pkd.example train [N] [--exclusion-config PATH] [--exclusion-mcs PCT] [--exclusion-seed SEED]
+    python -m pkd.example train [N] [--exclusion-config PATH] [--exclusion-mcs PCT] [--exclusion-config-pct PCT] [--exclusion-seed SEED]
     python -m pkd.example test [N] [--slice key:value ...]
     python -m pkd.example eval [idx] [N]
     python -m pkd.example eval --slice key:value ... [--idx N]
@@ -13,6 +13,10 @@ Examples:
     python -m pkd.example train --exclusion-mcs 30%
     python -m pkd.example train --exclusion-config pkd/example/training_exclusions.yaml
     python -m pkd.example train --exclusion-mcs 25% --exclusion-seed 12345
+
+    # Full-tuple (CH, MCS, N_t, N_r, N_ss, BW) exclusion, generalizing
+    # beyond MCS-only exclusion to the whole joint configuration space
+    python -m pkd.example train --exclusion-config-pct 30%
 
     # Testing
     python -m pkd.example test
@@ -107,6 +111,30 @@ def parse_exclusion_mcs(args):
     return percentage, remaining
 
 
+def parse_exclusion_config_pct(args):
+    if '--exclusion-config-pct' not in args:
+        return None, args
+
+    pct_idx = args.index('--exclusion-config-pct')
+    if pct_idx + 1 >= len(args):
+        raise ValueError("--exclusion-config-pct requires a percentage argument")
+
+    percentage_str = args[pct_idx + 1]
+    remaining = args[:pct_idx] + args[pct_idx + 2:]
+
+    if percentage_str.endswith('%'):
+        percentage = float(percentage_str[:-1])
+    else:
+        percentage = float(percentage_str)
+        if percentage < 1.0:
+            percentage = percentage * 100
+
+    if not (0 < percentage < 100):
+        raise ValueError(f"Percentage must be between 0 and 100, got {percentage}%.")
+
+    return percentage, remaining
+
+
 def parse_percentages(args):
     if '--percentages' not in args:
         return None, args
@@ -186,6 +214,7 @@ if __name__ == '__main__':
     if mode == 'train':
         exclusion_config, remaining_args = parse_exclusion_config(remaining_args)
         exclusion_mcs_pct, remaining_args = parse_exclusion_mcs(remaining_args)
+        exclusion_config_pct, remaining_args = parse_exclusion_config_pct(remaining_args)
         exclusion_seed, remaining_args = parse_exclusion_seed(remaining_args)
         max_files = int(remaining_args[0]) if len(remaining_args) > 0 else None
         data_dir = remaining_args[1] if len(remaining_args) > 1 else default_data_dir
@@ -194,6 +223,7 @@ if __name__ == '__main__':
             max_files=max_files,
             exclusion_config=exclusion_config,
             exclusion_mcs_percentage=exclusion_mcs_pct,
+            exclusion_config_percentage=exclusion_config_pct,
             exclusion_seed=exclusion_seed
         )
 

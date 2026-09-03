@@ -646,6 +646,130 @@ def generate_random_mcs_exclusions(
     return exclusion_config
 
 
+def generate_random_config_exclusions(
+    train_configs: List[dict],
+    val_configs: List[dict],
+    percentage: float,
+    random_seed: int = 42
+) -> dict:
+    """Generate random full-tuple exclusions over the joint configuration
+    space (channel_model_id, MCS, N_t, N_r, N_ss, BW).
+
+    Unlike generate_random_mcs_exclusions, which fixes a (CH, N_t, N_r, BW,
+    N_ss) slice and randomly drops a fraction of that slice's MCS values,
+    this function draws its random sample directly from the full set of
+    unique (CH, MCS, N_t, N_r, N_ss, BW) tuples present in the data. Each
+    selected tuple is withheld from training/validation in its entirety
+    (all SNR points for that exact tuple), simulating a completely unseen
+    PHY configuration rather than an unseen MCS within an otherwise-seen
+    configuration. This directly tests generalization across the joint
+    configuration space (Section V-D reviewer concern), rather than along
+    the MCS axis alone.
+
+    This function leaves generate_random_mcs_exclusions untouched so the
+    original MCS-only exclusion experiments remain reproducible.
+
+    Args:
+        train_configs: Training configuration dicts
+        val_configs: Validation configuration dicts
+        percentage: Percentage of full tuples to exclude (0-100)
+        random_seed: Random seed for reproducibility (default: 42)
+
+    Returns:
+        Exclusion config dict in the same format as YAML configs (see
+        generate_random_mcs_exclusions), with one exclusion rule per
+        excluded tuple. Each rule's 'config' field pins all of
+        (channel_model_id, N_t, N_r, BW, N_ss) and 'mcs_list' contains
+        exactly that tuple's single MCS value, so the existing
+        matches_exclusion_rule/apply_exclusion_filter machinery applies
+        unchanged.
+
+    Algorithm:
+        1. Combine train+val configs to enumerate the full set of unique
+           (channel_model_id, MCS, N_t, N_r, N_ss, BW) tuples.
+        2. Randomly select X% of these tuples to exclude (flat draw over
+           the whole tuple pool, no per-slice stratification).
+        3. Generate one exclusion rule per excluded tuple.
+
+    Example:
+        >>> random_config = generate_random_config_exclusions(
+        ...     train_configs, val_configs, percentage=30.0, random_seed=42
+        ... )
+        >>> print(len(random_config['exclusions']))
+        120  # 30% of 400 unique tuples
+    """
+    import numpy as np
+    from datetime import datetime
+
+    np.random.seed(random_seed)
+
+    # Full tuple keys: static slice keys plus MCS.
+    tuple_keys = ['channel_model_id', 'N_t', 'N_r', 'BW', 'N_ss', 'MCS']
+
+    # Enumerate unique tuples present in the data.
+    all_tuples = sorted({
+        tuple((k, cfg[k]) for k in tuple_keys)
+        for cfg in train_configs + val_configs
+        if all(k in cfg for k in tuple_keys)
+    })
+
+    print(f"\nGenerating random {percentage}% full-tuple exclusions (seed={random_seed})")
+    print(f"  Found {len(all_tuples)} unique (CH, N_t, N_r, BW, N_ss, MCS) tuples")
+
+    num_to_exclude = round(len(all_tuples) * percentage / 100)
+
+    if num_to_exclude == 0:
+        print("  Excluding 0 tuples (percentage rounds down to 0)")
+        excluded_indices = []
+    else:
+        excluded_indices = np.random.choice(
+            len(all_tuples), size=num_to_exclude, replace=False
+        )
+
+    excluded_tuples = [all_tuples[i] for i in sorted(excluded_indices)]
+
+    print(f"  Excluding {len(excluded_tuples)} of {len(all_tuples)} tuples")
+
+    # Generate one exclusion rule per excluded tuple.
+    exclusion_rules = []
+    for tuple_sig in excluded_tuples:
+        tuple_dict = dict(tuple_sig)
+        mcs = tuple_dict.pop('MCS')
+
+        rule = {
+            'name': f"Random {percentage}% tuple exclusion: " +
+                   f"Model-{_get_channel_name(tuple_dict['channel_model_id'])} " +
+                   f"{tuple_dict['N_t']}x{tuple_dict['N_r']}:{tuple_dict['N_ss']}, " +
+                   f"BW={tuple_dict['BW']}MHz, MCS={mcs}",
+            'description': f"Auto-generated random tuple exclusion (seed={random_seed})",
+            'config': tuple_dict,
+            'mcs_list': [mcs]
+        }
+        exclusion_rules.append(rule)
+
+    print(f"\nGenerated {len(exclusion_rules)} exclusion rules")
+
+    exclusion_config = {
+        'version': '1.0',
+        'metadata': {
+            'generated_by': 'random_config_exclusion',
+            'percentage': percentage,
+            'random_seed': random_seed,
+            'timestamp': datetime.now().isoformat(),
+            'total_tuples': len(all_tuples),
+            'total_rules': len(exclusion_rules)
+        },
+        'settings': {
+            'apply_to_train': True,
+            'apply_to_val': True,
+            'apply_to_test': False
+        },
+        'exclusions': exclusion_rules
+    }
+
+    return exclusion_config
+
+
 def save_exclusion_config(config: dict, output_path: str) -> None:
     """Save exclusion config to YAML file.
 
@@ -782,3 +906,46 @@ def save_exclusion_manifest(
         json.dump(manifest, f, indent=2)
 
     print(f"Saved exclusion manifest to: {output_path}")
+
+
+def save_config_exclusion_manifest(config: dict, output_path: str) -> None:
+    """Generate JSON manifest summarizing held-out full tuples, for
+    exclusion configs produced by generate_random_config_exclusions.
+
+    Unlike save_exclusion_manifest (which frames each rule as a
+    slice-with-some-MCS-excluded), this manifest lists excluded tuples
+    directly, since a tuple-exclusion rule always pins one full
+    (channel_model_id, N_t, N_r, BW, N_ss, MCS) tuple rather than
+    partially excluding MCS from an otherwise-observed slice.
+
+    Args:
+        config: Exclusion configuration dictionary from
+            generate_random_config_exclusions
+        output_path: Path to save JSON file
+
+    Example JSON output:
+        {
+          "metadata": {"percentage": 30.0, "random_seed": 42, ...},
+          "excluded_tuples": [
+            {"channel_model_id": 2, "N_t": 3, "N_r": 2, "BW": 40.0, "N_ss": 2, "MCS": 7},
+            ...
+          ]
+        }
+    """
+    import json
+
+    excluded_tuples = []
+    for rule in config.get('exclusions', []):
+        tuple_dict = dict(rule['config'])
+        for mcs in rule['mcs_list']:
+            excluded_tuples.append({**tuple_dict, 'MCS': mcs})
+
+    manifest = {
+        'metadata': config.get('metadata', {}),
+        'excluded_tuples': excluded_tuples
+    }
+
+    with open(output_path, 'w') as f:
+        json.dump(manifest, f, indent=2)
+
+    print(f"Saved config-exclusion manifest to: {output_path}")

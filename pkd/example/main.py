@@ -55,16 +55,34 @@ INNOVATION_PARAMS = {
 # ============================================================================
 
 def example_training(data_dir='data', max_files=None, exclusion_config=None,
-                     exclusion_mcs_percentage=None, exclusion_seed=42):
+                     exclusion_mcs_percentage=None, exclusion_config_percentage=None,
+                     exclusion_seed=42):
     """Example training workflow with real PHY simulator data.
 
     Args:
         data_dir: Directory containing .mat files
         max_files: Maximum number of .mat files to load (None = load all)
         exclusion_config: Path to exclusion config file (None = no filtering)
-        exclusion_mcs_percentage: Percentage of MCS to randomly exclude (None = disabled)
-        exclusion_seed: Random seed for MCS exclusion (default: 42)
+        exclusion_mcs_percentage: Percentage of MCS to randomly exclude PER
+            SLICE (None = disabled). See generate_random_mcs_exclusions --
+            this is the original Section V-D exclusion mode: MCS is
+            excluded within an otherwise fully-observed (CH, N_t, N_r, BW,
+            N_ss) slice.
+        exclusion_config_percentage: Percentage of full (CH, MCS, N_t, N_r,
+            N_ss, BW) tuples to randomly exclude from the WHOLE
+            configuration grid (None = disabled). See
+            generate_random_config_exclusions -- this is the generalized
+            exclusion mode that withholds entire PHY configurations, not
+            just an MCS value within an otherwise-seen configuration.
+            Mutually exclusive with exclusion_mcs_percentage.
+        exclusion_seed: Random seed for exclusion generation (default: 42)
     """
+    if exclusion_mcs_percentage is not None and exclusion_config_percentage is not None:
+        raise ValueError(
+            "exclusion_mcs_percentage and exclusion_config_percentage are "
+            "mutually exclusive -- choose MCS-only exclusion (original "
+            "Section V-D) or full-tuple exclusion (generalized), not both."
+        )
 
     # Create model using configured innovation type
     model_params = {
@@ -136,6 +154,57 @@ def example_training(data_dir='data', max_files=None, exclusion_config=None,
             merged_config = merge_exclusion_configs(random_config, manual_config)
 
             merged_filename = f"exclusions_merged_{timestamp}.yaml"
+            merged_path = os.path.join(output_dir, merged_filename)
+            save_exclusion_config(merged_config, merged_path)
+
+            final_exclusion_config_path = merged_path
+        else:
+            final_exclusion_config_path = yaml_path
+    elif exclusion_config_percentage is not None:
+        # Generate random full-tuple (CH, MCS, N_t, N_r, N_ss, BW) exclusions
+        from .exclusion_filter import (
+            generate_random_config_exclusions,
+            save_exclusion_config,
+            save_config_exclusion_manifest,
+            merge_exclusion_configs,
+            load_exclusion_config
+        )
+        from datetime import datetime
+
+        random_config = generate_random_config_exclusions(
+            train_configs,
+            val_configs,
+            percentage=exclusion_config_percentage,
+            random_seed=exclusion_seed
+        )
+
+        # Save to YAML file. Filename uses the 'exclusions_config_random_*'
+        # prefix (distinct from MCS-only's 'exclusions_random_*') so both
+        # exclusion modes' saved runs can coexist in pkd/example/exclusions/
+        # without colliding, and so evaluate_baselines.py's
+        # _load_config_exclusion_yaml_for_pct can find the right ones.
+        output_dir = os.path.join(os.path.dirname(__file__), 'exclusions')
+        os.makedirs(output_dir, exist_ok=True)
+
+        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+        yaml_filename = f"exclusions_config_random_{int(exclusion_config_percentage)}pct_seed{exclusion_seed}_{timestamp}.yaml"
+        yaml_path = os.path.join(output_dir, yaml_filename)
+
+        save_exclusion_config(random_config, yaml_path)
+
+        # Save JSON manifest (excluded-tuples list, not per-slice MCS lists)
+        json_filename = f"exclusions_config_random_{int(exclusion_config_percentage)}pct_seed{exclusion_seed}_{timestamp}.json"
+        json_path = os.path.join(output_dir, json_filename)
+        save_config_exclusion_manifest(random_config, json_path)
+
+        # Merge with manual config if both provided
+        if exclusion_config is not None:
+            print(f"\nMerging with manual exclusion config: {exclusion_config}")
+
+            manual_config = load_exclusion_config(exclusion_config)
+            merged_config = merge_exclusion_configs(random_config, manual_config)
+
+            merged_filename = f"exclusions_config_merged_{timestamp}.yaml"
             merged_path = os.path.join(output_dir, merged_filename)
             save_exclusion_config(merged_config, merged_path)
 

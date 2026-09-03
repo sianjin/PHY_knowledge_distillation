@@ -349,6 +349,341 @@ def generate_figure1_per_mcs_metrics(model, test_sequences, test_configs, device
     return results
 
 
+TUPLE_KEYS = ['channel_model_id', 'N_t', 'N_r', 'BW', 'N_ss', 'MCS']
+
+
+def _tuple_key(config):
+    """Hashable (CH, N_t, N_r, BW, N_ss, MCS) signature for a config dict,
+    used to group sequences by full excluded tuple rather than by MCS
+    alone (Section V-D's generalization from MCS-only exclusion to joint
+    configuration-space exclusion)."""
+    return tuple(config[k] for k in TUPLE_KEYS)
+
+
+def generate_figure12_temporal_metrics_by_tuple(
+    model, test_sequences, test_configs, device='cpu',
+    ks_save_path='figures/test_metrics_acf_rmse_tuple_exclusion.png',
+    psd_save_path='figures/test_metrics_psd_rmse_tuple_exclusion.png',
+):
+    """Tuple-exclusion counterpart to generate_figure1_per_mcs_metrics's
+    free-running metrics (Fig. 12/13): instead of one curve per MCS vs.
+    SNR within an already-fixed slice, this computes KS statistic, ACF
+    RMSE, and (normalized) PSD RMSE per excluded (CH, N_t, N_r, BW, N_ss,
+    MCS) tuple (median across that tuple's own test sequences), then
+    aggregates across all excluded tuples into a single median + 10-90
+    percentile band, matching the treatment in generate_figure2/3_*_by_tuple.
+    KS statistic is included (despite the function's ACF/PSD-oriented
+    name) so Fig. 13's PKD curve can reuse this single inference pass
+    rather than re-running free-running generation a second time just for
+    KS -- PKDInference.run_sequence is the expensive step here.
+
+    Does not modify or replace generate_figure1_per_mcs_metrics, which
+    remains the MCS-only-exclusion figure generator (also still used for
+    PIT/Ljung-Box pass-rate panels, which are unaffected by this change).
+
+    Args:
+        model: Trained PKD model
+        test_sequences: Test sequences for the excluded tuples ONLY
+        test_configs: Corresponding test configs
+        device: Computation device
+        ks_save_path: Output path for the ACF RMSE summary bar/point
+        psd_save_path: Output path for the normalized PSD RMSE summary
+
+    Returns:
+        dict with 'ks_stat', 'acf_rmse', 'psd_rmse', each
+        {'median', 'p10', 'p90', 'per_tuple'}.
+    """
+    print("\n" + "="*60)
+    print("Generating Fig. 12/13 (tuple exclusion): KS/ACF/PSD, aggregated across excluded tuples")
+    print("="*60)
+
+    grouped_by_tuple = defaultdict(list)
+    for i, config in enumerate(test_configs):
+        grouped_by_tuple[_tuple_key(config)].append(i)
+
+    from pkd.per_lut import AWGNPERLookup
+    from pkd.infer import PKDInference
+    per_lut = AWGNPERLookup.load_ldpc_lut()
+    ar_order = model.ar_order
+    inference = PKDInference(model, per_lut, ar_order=ar_order, device=device)
+
+    per_tuple_ks = {}
+    per_tuple_acf = {}
+    per_tuple_psd = {}
+
+    print(f"\nProcessing {len(grouped_by_tuple)} excluded tuples...")
+    for tuple_key, seq_indices in tqdm(sorted(grouped_by_tuple.items()), desc="Excluded tuples"):
+        ks_vals, acf_vals, psd_vals = [], [], []
+
+        for seq_idx in seq_indices:
+            teacher_seq = test_sequences[seq_idx]
+            config = test_configs[seq_idx]
+            X_teacher = teacher_seq
+
+            config_traj = [config] * len(teacher_seq)
+            student_results = inference.run_sequence(config_traj)
+            student_seq_db = np.array(student_results['gamma_eff'])
+            student_seq = student_seq_db * np.log(10) / 10
+
+            if np.all(np.isfinite(student_seq)):
+                X_student = student_seq
+
+                ks_stat, _ = stats.ks_2samp(X_teacher, X_student)
+                ks_vals.append(ks_stat)
+
+                teacher_acf = compute_acf(X_teacher, max_lag=50)
+                student_acf = compute_acf(X_student, max_lag=50)
+                acf_vals.append(np.sqrt(np.mean((teacher_acf[1:] - student_acf[1:]) ** 2)))
+
+                teacher_freqs, teacher_psd = compute_psd(X_teacher)
+                student_freqs, student_psd = compute_psd(X_student)
+                psd_vals.append(
+                    np.sqrt(np.mean((teacher_psd - student_psd) ** 2)) / np.mean(teacher_psd)
+                )
+
+        if ks_vals:
+            per_tuple_ks[tuple_key] = np.nanmedian(ks_vals)
+            per_tuple_acf[tuple_key] = np.nanmedian(acf_vals)
+            per_tuple_psd[tuple_key] = np.nanmedian(psd_vals)
+
+    def _summarize(per_tuple_dict):
+        vals = np.array(list(per_tuple_dict.values()))
+        return {
+            'median': np.nanmedian(vals),
+            'p10': np.nanpercentile(vals, 10),
+            'p90': np.nanpercentile(vals, 90),
+            'per_tuple': per_tuple_dict,
+        }
+
+    ks_summary = _summarize(per_tuple_ks)
+    acf_summary = _summarize(per_tuple_acf)
+    psd_summary = _summarize(per_tuple_psd)
+
+    print(f"  Median KS statistic across excluded tuples: {ks_summary['median']:.4f} "
+          f"[{ks_summary['p10']:.4f}, {ks_summary['p90']:.4f}]")
+    print(f"  Median ACF RMSE across excluded tuples: {acf_summary['median']:.4f} "
+          f"[{acf_summary['p10']:.4f}, {acf_summary['p90']:.4f}]")
+    print(f"  Median normalized PSD RMSE across excluded tuples: {psd_summary['median']:.4f} "
+          f"[{psd_summary['p10']:.4f}, {psd_summary['p90']:.4f}]")
+
+    return {'ks_stat': ks_summary, 'acf_rmse': acf_summary, 'psd_rmse': psd_summary}
+
+
+def generate_figure2_quantile_error_by_tuple(
+    model, test_sequences, test_configs, device='cpu',
+    save_path='figures/test_quantile_error_tuple_exclusion.png',
+):
+    """Tuple-exclusion counterpart to generate_figure2_quantile_error
+    (Fig. 10b): instead of one curve per MCS pooled over SNR within an
+    already-fixed (CH, N_t, N_r, BW, N_ss) slice, this pools each excluded
+    (CH, N_t, N_r, BW, N_ss, MCS) tuple's own sequences into one quantile
+    error vector, then aggregates (median + 10-90 percentile band) ACROSS
+    tuples -- so the resulting single curve summarizes generalization over
+    the whole excluded configuration set at once, matching how Fig. 13
+    already aggregates across percentage. Does not modify or replace
+    generate_figure2_quantile_error, which remains the MCS-only-exclusion
+    figure generator.
+
+    Args:
+        model: Trained PKD model
+        test_sequences: Test sequences for the excluded tuples ONLY
+            (caller filters to the excluded set before calling)
+        test_configs: Corresponding test configs
+        device: Computation device
+        save_path: Output file path
+
+    Returns:
+        dict with 'quantile_levels', 'median', 'p10', 'p90' (one summary
+        curve, no per-tuple breakdown) and 'per_tuple' (the un-aggregated
+        {tuple_key: quantile_error_array} for inspection).
+    """
+    print("\n" + "="*60)
+    print("Generating Figure 10b (tuple exclusion): Quantile Error, aggregated across excluded tuples")
+    print("="*60)
+
+    grouped_by_tuple = defaultdict(list)
+    for i, config in enumerate(test_configs):
+        grouped_by_tuple[_tuple_key(config)].append(i)
+
+    from pkd.per_lut import AWGNPERLookup
+    from pkd.infer import PKDInference
+    per_lut = AWGNPERLookup.load_ldpc_lut()
+    inference = PKDInference(model, per_lut, ar_order=model.ar_order, device=device)
+
+    quantile_levels = np.array([0.05, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 0.95])
+
+    per_tuple_median = {}
+
+    print(f"\nProcessing {len(grouped_by_tuple)} excluded tuples...")
+    for tuple_key, seq_indices in tqdm(sorted(grouped_by_tuple.items()), desc="Excluded tuples"):
+        quantile_errors = []
+
+        for seq_idx in seq_indices:
+            teacher_seq = test_sequences[seq_idx]
+            config = test_configs[seq_idx]
+            X_teacher = teacher_seq
+
+            config_traj = [config] * len(teacher_seq)
+            student_results = inference.run_sequence(config_traj)
+            student_seq_db = np.array(student_results['gamma_eff'])
+            student_seq = student_seq_db * np.log(10) / 10
+
+            if np.all(np.isfinite(student_seq)):
+                X_student = student_seq
+                q_teacher = np.quantile(X_teacher, quantile_levels)
+                q_student = np.quantile(X_student, quantile_levels)
+                quantile_errors.append(q_student - q_teacher)
+
+        if quantile_errors:
+            # Per-tuple aggregation: median across that tuple's own test sequences.
+            per_tuple_median[tuple_key] = np.median(np.array(quantile_errors), axis=0)
+
+    # Cross-tuple aggregation: median + 10-90 percentile band across excluded tuples.
+    all_tuple_medians = np.array(list(per_tuple_median.values()))
+    overall_median = np.median(all_tuple_medians, axis=0)
+    overall_p10 = np.percentile(all_tuple_medians, 10, axis=0)
+    overall_p90 = np.percentile(all_tuple_medians, 90, axis=0)
+
+    # Plot: single median line + percentile band, no per-tuple legend
+    # (with ~100+ excluded tuples a per-tuple legend would be unreadable).
+    fig, ax = plt.subplots(1, 1, figsize=(8, 6))
+    ax.plot(quantile_levels, overall_median, 'o-', color='#2E86AB', linewidth=2, markersize=6)
+    ax.fill_between(quantile_levels, overall_p10, overall_p90, alpha=0.2, color='#2E86AB')
+    ax.axhline(y=0, color='k', linestyle='--', alpha=0.5)
+    ax.set_xlabel('Quantile Level α')
+    ax.set_ylabel('Quantile Error (log domain)')
+    ax.grid(True, alpha=0.3)
+
+    plt.tight_layout()
+    plt.savefig(save_path, dpi=150, bbox_inches='tight')
+    print(f"Saved {save_path}")
+    plt.close()
+
+    return {
+        'quantile_levels': quantile_levels,
+        'median': overall_median,
+        'p10': overall_p10,
+        'p90': overall_p90,
+        'per_tuple': per_tuple_median,
+    }
+
+
+def generate_figure3_ccdf_error_by_tuple(
+    model, test_sequences, test_configs, device='cpu',
+    save_path='figures/test_ccdf_error_tuple_exclusion.png',
+):
+    """Tuple-exclusion counterpart to generate_figure3_ccdf_error
+    (Fig. 10a): same cross-tuple aggregation as
+    generate_figure2_quantile_error_by_tuple, but for the CCDF absolute
+    error curve.
+
+    The exceedance threshold tau is redefined as a QUANTILE LEVEL of each
+    tuple's own teacher distribution (rather than a raw log-SINR value),
+    since different excluded tuples (different MCS/MIMO/BW/CH) have very
+    different SINR dynamic ranges -- a fixed log-SINR grid would not be
+    comparable across tuples, whereas a shared quantile-level grid is.
+    Concretely, for quantile level q, tau(q) = teacher's own q-th
+    quantile, and the plotted error is
+        |P_student(X_t > tau(q)) - (1 - q)|,
+    i.e. how far the student's exceedance probability at the teacher's own
+    q-quantile deviates from its nominal value (1 - q). This puts panel
+    (a) on the same x-axis convention (quantile level) as panel (b)
+    (generate_figure2_quantile_error_by_tuple), which was not the case in
+    the original per-MCS Fig. 10/Eq. (35) (raw log-SINR tau).
+
+    Does not modify or replace generate_figure3_ccdf_error, which remains
+    the MCS-only-exclusion figure generator.
+
+    Args:
+        model: Trained PKD model
+        test_sequences: Test sequences for the excluded tuples ONLY
+        test_configs: Corresponding test configs
+        device: Computation device
+        save_path: Output file path
+
+    Returns:
+        dict with 'quantile_levels', 'median', 'p10', 'p90', 'per_tuple'.
+    """
+    print("\n" + "="*60)
+    print("Generating Figure 10a (tuple exclusion): CCDF Absolute Error, aggregated across excluded tuples")
+    print("="*60)
+
+    grouped_by_tuple = defaultdict(list)
+    for i, config in enumerate(test_configs):
+        grouped_by_tuple[_tuple_key(config)].append(i)
+
+    from pkd.per_lut import AWGNPERLookup
+    from pkd.infer import PKDInference
+    per_lut = AWGNPERLookup.load_ldpc_lut()
+    inference = PKDInference(model, per_lut, ar_order=model.ar_order, device=device)
+
+    # Shared quantile-level grid, restricted to [0.05, 0.95] as in the
+    # original CCDF/quantile figures (avoids extreme-tail over-penalization).
+    quantile_levels = np.linspace(0.05, 0.95, 100)
+
+    per_tuple_median = {}
+
+    print(f"\nProcessing {len(grouped_by_tuple)} excluded tuples...")
+    for tuple_key, seq_indices in tqdm(sorted(grouped_by_tuple.items()), desc="Excluded tuples"):
+        # Per-tuple teacher quantile grid: tau(q) computed once per tuple,
+        # pooling all of that tuple's own test sequences (mirrors the
+        # original figure's per-MCS threshold grid derivation).
+        all_teacher_values = []
+        for seq_idx in seq_indices:
+            all_teacher_values.extend(test_sequences[seq_idx])
+        all_teacher_values = np.array(all_teacher_values)
+        tau_grid = np.quantile(all_teacher_values, quantile_levels)
+
+        ccdf_errors = []
+
+        for seq_idx in seq_indices:
+            teacher_seq = test_sequences[seq_idx]
+            config = test_configs[seq_idx]
+            X_teacher = teacher_seq
+
+            config_traj = [config] * len(teacher_seq)
+            student_results = inference.run_sequence(config_traj)
+            student_seq_db = np.array(student_results['gamma_eff'])
+            student_seq = student_seq_db * np.log(10) / 10
+
+            if np.all(np.isfinite(student_seq)):
+                X_student = student_seq
+                ccdf_error = []
+                for q, tau in zip(quantile_levels, tau_grid):
+                    nominal_exceedance = 1.0 - q
+                    ccdf_student = np.mean(X_student > tau)
+                    ccdf_error.append(np.abs(ccdf_student - nominal_exceedance))
+                ccdf_errors.append(ccdf_error)
+
+        if ccdf_errors:
+            per_tuple_median[tuple_key] = np.median(np.array(ccdf_errors), axis=0)
+
+    all_tuple_medians = np.array(list(per_tuple_median.values()))
+    overall_median = np.median(all_tuple_medians, axis=0)
+    overall_p10 = np.percentile(all_tuple_medians, 10, axis=0)
+    overall_p90 = np.percentile(all_tuple_medians, 90, axis=0)
+
+    fig, ax = plt.subplots(1, 1, figsize=(8, 6))
+    ax.plot(quantile_levels, overall_median, '-', color='#2E86AB', linewidth=2)
+    ax.fill_between(quantile_levels, overall_p10, overall_p90, alpha=0.2, color='#2E86AB')
+    ax.set_xlabel('Quantile Level of Teacher Distribution')
+    ax.set_ylabel('CCDF Absolute Error')
+    ax.grid(True, alpha=0.3)
+
+    plt.tight_layout()
+    plt.savefig(save_path, dpi=150, bbox_inches='tight')
+    print(f"Saved {save_path}")
+    plt.close()
+
+    return {
+        'quantile_levels': quantile_levels,
+        'median': overall_median,
+        'p10': overall_p10,
+        'p90': overall_p90,
+        'per_tuple': per_tuple_median,
+    }
+
+
 def generate_figure2_quantile_error(model, test_sequences, test_configs, device='cpu',
                                      save_path='figures/test_quantile_error.png', slice_label=None):
     """Generate Figure 2: Aggregated quantile error curve (per MCS, pooled over SNR).

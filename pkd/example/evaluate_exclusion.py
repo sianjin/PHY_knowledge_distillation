@@ -27,7 +27,12 @@ from pkd.per_lut import AWGNPERLookup
 from pkd.infer import PKDInference
 from .data_loader import load_real_data
 from .utils import filter_by_slice, infer_most_common_slice
-from .plotting import generate_figure1_per_mcs_metrics
+from .plotting import (
+    generate_figure1_per_mcs_metrics,
+    generate_figure2_quantile_error_by_tuple,
+    generate_figure3_ccdf_error_by_tuple,
+    generate_figure12_temporal_metrics_by_tuple,
+)
 
 
 def load_exclusion_manifest(exclusion_pct):
@@ -191,6 +196,151 @@ def evaluate_model_on_slice(checkpoint_path, test_sequences, test_configs,
         'overall_acf': overall_acf,
         'overall_pit': overall_pit
     }
+
+
+TUPLE_KEYS = ['channel_model_id', 'N_t', 'N_r', 'BW', 'N_ss', 'MCS']
+
+
+def load_config_exclusion_manifest(exclusion_pct):
+    """Load the full-tuple-exclusion manifest JSON (from
+    save_config_exclusion_manifest) for a given percentage.
+
+    This is the full-tuple-exclusion counterpart to
+    load_exclusion_manifest: instead of {"held_out_slices": [...]}
+    (slice + partial MCS list), the manifest here is a flat
+    {"excluded_tuples": [...]} list, since every tuple-exclusion rule
+    withholds one full (CH, N_t, N_r, BW, N_ss, MCS) tuple.
+
+    Args:
+        exclusion_pct: Exclusion percentage (e.g., 30 for 30%)
+
+    Returns:
+        dict: Manifest data, or None if not found
+    """
+    pattern = f'pkd/example/exclusions/exclusions_config_random_{exclusion_pct}pct_seed42_*.json'
+    files = glob.glob(pattern)
+
+    if not files:
+        print(f"  Warning: No config-exclusion manifest found for {exclusion_pct}%")
+        return None
+
+    manifest_path = sorted(files)[-1]
+    with open(manifest_path, 'r') as f:
+        manifest = json.load(f)
+
+    print(f"  Loaded manifest: {os.path.basename(manifest_path)}")
+    return manifest
+
+
+def get_excluded_tuples(manifest):
+    """Extract the list of excluded (CH, N_t, N_r, BW, N_ss, MCS) tuple
+    dicts from a config-exclusion manifest.
+
+    Returns:
+        List[dict], empty list if manifest is None.
+    """
+    if manifest is None:
+        return []
+    return manifest['excluded_tuples']
+
+
+def evaluate_model_on_excluded_tuples(checkpoint_path, test_sequences, test_configs,
+                                       excluded_tuples, device='cpu'):
+    """Evaluate a single tuple-exclusion-trained PKD model on the excluded
+    tuples only, using the *_by_tuple figure functions (aggregated median
+    + 10-90 percentile band across all excluded tuples), the full-tuple
+    counterpart to evaluate_model_on_slice.
+
+    Args:
+        checkpoint_path: Path to model checkpoint (trained with
+            exclusion_config_percentage, i.e. full-tuple exclusion)
+        test_sequences: Full test sequences (all configs, not pre-filtered)
+        test_configs: Full test configs
+        excluded_tuples: List of {channel_model_id, N_t, N_r, BW, N_ss,
+            MCS} dicts identifying which tuples to evaluate against
+        device: Device for evaluation
+
+    Returns:
+        dict: {'overall_ks_median'/'p10'/'p90', 'overall_acf_median'/
+        'p10'/'p90', 'overall_psd_median'/'p10'/'p90'}
+    """
+    print(f"\nEvaluating (tuple exclusion): {checkpoint_path}")
+
+    checkpoint = torch.load(checkpoint_path, map_location=device)
+
+    if 'model_config' in checkpoint:
+        model_config = checkpoint['model_config']
+        if 'num_R' not in model_config:
+            model_config['num_R'] = 8
+    else:
+        print("  Warning: No model_config in checkpoint, using defaults")
+        model_config = {
+            'num_channel_models': 5,
+            'num_mcs': 10,
+            'num_nss': 4,
+            'num_R': 8,
+            'ar_order': 10,
+            'hidden_dim': 128,
+            'kappa_max': 0.95,
+            'innovation_type': 'sgn',
+            'min_sigma': 0.1,
+            'min_beta': 0.5,
+            'max_beta': 4.0
+        }
+
+    model = PKDModel(**model_config)
+    model.load_state_dict(checkpoint['model_state_dict'])
+    model.to(device)
+    model.eval()
+
+    excluded_keys = {tuple(sorted(t.items())) for t in excluded_tuples}
+    filtered_sequences, filtered_configs = [], []
+    for seq, cfg in zip(test_sequences, test_configs):
+        key = tuple(sorted({k: cfg[k] for k in TUPLE_KEYS}.items()))
+        if key in excluded_keys:
+            filtered_sequences.append(seq)
+            filtered_configs.append(cfg)
+
+    print(f"  Filtered to {len(excluded_tuples)} excluded tuples: {len(filtered_sequences)} sequences")
+
+    os.makedirs('figures', exist_ok=True)
+
+    quantile_results = generate_figure2_quantile_error_by_tuple(
+        model, filtered_sequences, filtered_configs, device=device
+    )
+    ccdf_results = generate_figure3_ccdf_error_by_tuple(
+        model, filtered_sequences, filtered_configs, device=device
+    )
+    temporal_results = generate_figure12_temporal_metrics_by_tuple(
+        model, filtered_sequences, filtered_configs, device=device
+    )
+
+    metrics = {
+        'quantile_error_median': quantile_results['median'],
+        'quantile_error_p10': quantile_results['p10'],
+        'quantile_error_p90': quantile_results['p90'],
+        'ccdf_error_median': ccdf_results['median'],
+        'ccdf_error_p10': ccdf_results['p10'],
+        'ccdf_error_p90': ccdf_results['p90'],
+        'overall_ks_median': temporal_results['ks_stat']['median'],
+        'overall_ks_p10': temporal_results['ks_stat']['p10'],
+        'overall_ks_p90': temporal_results['ks_stat']['p90'],
+        'overall_acf_median': temporal_results['acf_rmse']['median'],
+        'overall_acf_p10': temporal_results['acf_rmse']['p10'],
+        'overall_acf_p90': temporal_results['acf_rmse']['p90'],
+        'overall_psd_median': temporal_results['psd_rmse']['median'],
+        'overall_psd_p10': temporal_results['psd_rmse']['p10'],
+        'overall_psd_p90': temporal_results['psd_rmse']['p90'],
+    }
+
+    print(f"  Median KS statistic: {metrics['overall_ks_median']:.4f} "
+          f"[{metrics['overall_ks_p10']:.4f}, {metrics['overall_ks_p90']:.4f}]")
+    print(f"  Median ACF RMSE: {metrics['overall_acf_median']:.4f} "
+          f"[{metrics['overall_acf_p10']:.4f}, {metrics['overall_acf_p90']:.4f}]")
+    print(f"  Median normalized PSD RMSE: {metrics['overall_psd_median']:.4f} "
+          f"[{metrics['overall_psd_p10']:.4f}, {metrics['overall_psd_p90']:.4f}]")
+
+    return metrics
 
 
 def generate_plots(results_by_pct, slice_spec):
