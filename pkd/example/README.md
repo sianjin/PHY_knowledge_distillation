@@ -33,7 +33,7 @@ example/
 ├── evaluation.py        # Marginal, temporal, innovation metrics
 ├── plotting.py          # Test set figures generation
 ├── utils.py             # ACF, PSD, Ljung-Box test
-├── sgn_cdf.py          # SGN CDF for PIT computation
+├── sgn_cdf.py          # Legacy experimental SGN utility (not used by PKD)
 └── main.py             # Training & evaluation entry points
 ```
 

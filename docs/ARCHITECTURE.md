@@ -360,15 +360,9 @@ loss = -log_likelihood.mean()  # Negative log-likelihood
 3. Update all example configs in `example.py`, `test_components.py`
 4. Retrain model with expanded embedding dimension
 
-**To change innovation distribution:**
-
-1. Implement new `InnovationModel` in `pkd/model/innovation.py`
-2. Add to `PKDModel.__init__` switch statement:
-   ```python
-   if innovation_type == 'your_new_type':
-       self.innovation = YourInnovationModel(...)
-   ```
-3. Update `CHANGELOG.md` with rationale
+PKD uses configuration-dependent Gaussian innovations. Experimental
+alternative distributions should not be used for production training or
+evaluation because they do not match the validated model.
 
 ---
 

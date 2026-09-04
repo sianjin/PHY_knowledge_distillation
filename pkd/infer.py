@@ -1,27 +1,23 @@
 """Inference engine with time-skipping via configuration caching.
 
-Inference with SGN Innovation:
--------------------------------
+Inference with Gaussian innovations:
+-------------------------------------
 The PKD inference engine generates effective SINR samples using the learned
 stochastic process model. At each time step:
 
 1. Encode configuration to get conditioning representation h_t
-2. Predict SGN parameters: (sigma_t, beta_t, lambda_t) = g_theta(h_t)
-3. Sample innovation: eps_t ~ SGN(0, sigma_t, beta_t, lambda_t)
+2. Predict the Gaussian scale: sigma_t = g_theta(h_t)
+3. Sample innovation: eps_t ~ N(0, sigma_t^2)
 4. Compute AR mean: mu_t = c_t + sum(phi_i * X_{t-i})
 5. Generate log-SINR: X_t = mu_t + eps_t
 6. Convert to dB scale: gamma_eff_t = X_t * 10 / ln(10)
-
-The SGN distribution provides:
-  - Adaptive variance through sigma_t
-  - Adaptive skewness through lambda_t (lambda=0 is symmetric)
-  - Adaptive tail behavior through beta_t (beta=2 is Gaussian-like)
 
 Time-skipping is supported through configuration caching: when the configuration
 remains constant, parameters are computed once and innovations are sampled
 independently at each step without repeated neural network evaluation.
 
-For backward compatibility, Gaussian and Flow innovations are still supported.
+Legacy innovation parameter shapes are still accepted when loading older
+experimental checkpoints.
 """
 import torch
 import numpy as np
@@ -36,30 +32,28 @@ class CachedParams:
     m: float
     phi: np.ndarray  # (p,)
     c: float
-    innov_params: object  # Dict for SGN, scalar for Gaussian, array for Flow
+    innov_params: object  # Scalar for Gaussian; other shapes are legacy.
 
     @staticmethod
     def from_torch(params_dict):
         """Convert torch tensors to numpy for caching.
 
-        Handles three innovation types:
-        - SGN: dict with 'sigma', 'beta', 'lambda' (all scalars)
-        - Gaussian: scalar sigma
-        - Flow: vector psi
+        The supported Gaussian model stores a scalar sigma. Dict and vector
+        forms are retained only for loading legacy experimental checkpoints.
         """
         innov = params_dict['innov_params']
 
-        # Check if it's a dict (SGN parameters)
+        # Legacy structured innovation parameters.
         if isinstance(innov, dict):
             innov_np = {
                 'sigma': innov['sigma'].item(),
                 'beta': innov['beta'].item(),
                 'lambda': innov['lambda'].item()
             }
-        # Scalar (Gaussian)
+        # Supported Gaussian scale.
         elif innov.ndim == 0:
             innov_np = innov.item()
-        # Vector (Flow)
+        # Legacy vector innovation parameters.
         else:
             innov_np = innov.cpu().numpy()
 
@@ -144,11 +138,11 @@ class PKDInference:
             params = self.model(config_batch, X_hist=None)
 
         # Extract single-sample parameters
-        # Handle innov_params specially if it's a dict (SGN)
+        # Preserve compatibility with legacy structured innovation parameters.
         params_single = {}
         for k, v in params.items():
             if k == 'innov_params' and isinstance(v, dict):
-                # SGN: extract first element from each dict value
+                # Extract the first batch element from each legacy parameter.
                 params_single[k] = {dk: dv[0] for dk, dv in v.items()}
             else:
                 # Regular tensor: extract first element

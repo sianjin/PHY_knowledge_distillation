@@ -24,32 +24,18 @@ from .plotting import (
 )
 
 # ============================================================================
-# CONFIGURATION: Innovation Type
+# CONFIGURATION: Innovation Model
 # ============================================================================
-# To switch between innovation types, simply change INNOVATION_TYPE below.
-# All training and evaluation functions will automatically use the specified type.
-#
-# Available options:
-#   - 'gaussian': Simple Gaussian innovation (fastest, fewer parameters)
-#   - 'sgn': Skew Generalized Normal (more flexible, models heavy tails)
-#   - 'flow': Normalizing flow (most flexible, slow)
+# PKD uses configuration-dependent Gaussian innovations. Legacy experimental
+# innovation classes remain loadable for old checkpoints but are not used by
+# the supported training pipeline.
 # ============================================================================
 
-INNOVATION_TYPE = 'gaussian'  # <-- CHANGE THIS TO SWITCH INNOVATION TYPE
+INNOVATION_TYPE = 'gaussian'
 
-# Innovation-specific parameters (automatically selected based on INNOVATION_TYPE)
 INNOVATION_PARAMS = {
     'gaussian': {
         'min_sigma': 0.1
-    },
-    'sgn': {
-        'min_sigma': 0.1,
-        'min_beta': 0.5,
-        'max_beta': 4.0
-    },
-    'flow': {
-        'min_sigma': 0.1,
-        'num_flow_layers': 4
     }
 }
 # ============================================================================
@@ -253,7 +239,7 @@ def example_training(data_dir='data', max_files=None, exclusion_config=None,
         val_sequences,
         val_configs,
         num_epochs=10,
-        batch_size=1024,
+        batch_size=8192,
         lr=1e-3,
         device=device,
         early_stopping_patience=3,

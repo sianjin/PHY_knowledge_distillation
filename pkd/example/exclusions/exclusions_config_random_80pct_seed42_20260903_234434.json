@@ -1,0 +1,2572 @@
+{
+  "metadata": {
+    "generated_by": "random_config_exclusion",
+    "percentage": 80.0,
+    "random_seed": 42,
+    "timestamp": "2026-09-03T23:44:34.828668",
+    "total_tuples": 400,
+    "total_rules": 320
+  },
+  "excluded_tuples": [
+    {
+      "channel_model_id": 2,
+      "N_t": 1,
+      "N_r": 1,
+      "BW": 20.0,
+      "N_ss": 1,
+      "MCS": 0
+    },
+    {
+      "channel_model_id": 2,
+      "N_t": 1,
+      "N_r": 1,
+      "BW": 20.0,
+      "N_ss": 1,
+      "MCS": 2
+    },
+    {
+      "channel_model_id": 2,
+      "N_t": 1,
+      "N_r": 1,
+      "BW": 20.0,
+      "N_ss": 1,
+      "MCS": 3
+    },
+    {
+      "channel_model_id": 2,
+      "N_t": 1,
+      "N_r": 1,
+      "BW": 20.0,
+      "N_ss": 1,
+      "MCS": 4
+    },
+    {
+      "channel_model_id": 2,
+      "N_t": 1,
+      "N_r": 1,
+      "BW": 20.0,
+      "N_ss": 1,
+      "MCS": 5
+    },
+    {
+      "channel_model_id": 2,
+      "N_t": 1,
+      "N_r": 1,
+      "BW": 20.0,
+      "N_ss": 1,
+      "MCS": 6
+    },
+    {
+      "channel_model_id": 2,
+      "N_t": 1,
+      "N_r": 1,
+      "BW": 20.0,
+      "N_ss": 1,
+      "MCS": 7
+    },
+    {
+      "channel_model_id": 2,
+      "N_t": 1,
+      "N_r": 1,
+      "BW": 20.0,
+      "N_ss": 1,
+      "MCS": 8
+    },
+    {
+      "channel_model_id": 2,
+      "N_t": 1,
+      "N_r": 1,
+      "BW": 20.0,
+      "N_ss": 1,
+      "MCS": 9
+    },
+    {
+      "channel_model_id": 2,
+      "N_t": 1,
+      "N_r": 1,
+      "BW": 40.0,
+      "N_ss": 1,
+      "MCS": 0
+    },
+    {
+      "channel_model_id": 2,
+      "N_t": 1,
+      "N_r": 1,
+      "BW": 40.0,
+      "N_ss": 1,
+      "MCS": 1
+    },
+    {
+      "channel_model_id": 2,
+      "N_t": 1,
+      "N_r": 1,
+      "BW": 40.0,
+      "N_ss": 1,
+      "MCS": 2
+    },
+    {
+      "channel_model_id": 2,
+      "N_t": 1,
+      "N_r": 1,
+      "BW": 40.0,
+      "N_ss": 1,
+      "MCS": 4
+    },
+    {
+      "channel_model_id": 2,
+      "N_t": 1,
+      "N_r": 1,
+      "BW": 40.0,
+      "N_ss": 1,
+      "MCS": 5
+    },
+    {
+      "channel_model_id": 2,
+      "N_t": 1,
+      "N_r": 1,
+      "BW": 40.0,
+      "N_ss": 1,
+      "MCS": 6
+    },
+    {
+      "channel_model_id": 2,
+      "N_t": 1,
+      "N_r": 1,
+      "BW": 40.0,
+      "N_ss": 1,
+      "MCS": 7
+    },
+    {
+      "channel_model_id": 2,
+      "N_t": 1,
+      "N_r": 1,
+      "BW": 40.0,
+      "N_ss": 1,
+      "MCS": 8
+    },
+    {
+      "channel_model_id": 2,
+      "N_t": 1,
+      "N_r": 1,
+      "BW": 40.0,
+      "N_ss": 1,
+      "MCS": 9
+    },
+    {
+      "channel_model_id": 2,
+      "N_t": 2,
+      "N_r": 1,
+      "BW": 20.0,
+      "N_ss": 1,
+      "MCS": 2
+    },
+    {
+      "channel_model_id": 2,
+      "N_t": 2,
+      "N_r": 1,
+      "BW": 20.0,
+      "N_ss": 1,
+      "MCS": 3
+    },
+    {
+      "channel_model_id": 2,
+      "N_t": 2,
+      "N_r": 1,
+      "BW": 20.0,
+      "N_ss": 1,
+      "MCS": 4
+    },
+    {
+      "channel_model_id": 2,
+      "N_t": 2,
+      "N_r": 1,
+      "BW": 20.0,
+      "N_ss": 1,
+      "MCS": 5
+    },
+    {
+      "channel_model_id": 2,
+      "N_t": 2,
+      "N_r": 1,
+      "BW": 20.0,
+      "N_ss": 1,
+      "MCS": 6
+    },
+    {
+      "channel_model_id": 2,
+      "N_t": 2,
+      "N_r": 1,
+      "BW": 20.0,
+      "N_ss": 1,
+      "MCS": 7
+    },
+    {
+      "channel_model_id": 2,
+      "N_t": 2,
+      "N_r": 1,
+      "BW": 20.0,
+      "N_ss": 1,
+      "MCS": 8
+    },
+    {
+      "channel_model_id": 2,
+      "N_t": 2,
+      "N_r": 1,
+      "BW": 20.0,
+      "N_ss": 1,
+      "MCS": 9
+    },
+    {
+      "channel_model_id": 2,
+      "N_t": 2,
+      "N_r": 1,
+      "BW": 40.0,
+      "N_ss": 1,
+      "MCS": 0
+    },
+    {
+      "channel_model_id": 2,
+      "N_t": 2,
+      "N_r": 1,
+      "BW": 40.0,
+      "N_ss": 1,
+      "MCS": 1
+    },
+    {
+      "channel_model_id": 2,
+      "N_t": 2,
+      "N_r": 1,
+      "BW": 40.0,
+      "N_ss": 1,
+      "MCS": 2
+    },
+    {
+      "channel_model_id": 2,
+      "N_t": 2,
+      "N_r": 1,
+      "BW": 40.0,
+      "N_ss": 1,
+      "MCS": 3
+    },
+    {
+      "channel_model_id": 2,
+      "N_t": 2,
+      "N_r": 1,
+      "BW": 40.0,
+      "N_ss": 1,
+      "MCS": 5
+    },
+    {
+      "channel_model_id": 2,
+      "N_t": 2,
+      "N_r": 1,
+      "BW": 40.0,
+      "N_ss": 1,
+      "MCS": 6
+    },
+    {
+      "channel_model_id": 2,
+      "N_t": 2,
+      "N_r": 1,
+      "BW": 40.0,
+      "N_ss": 1,
+      "MCS": 7
+    },
+    {
+      "channel_model_id": 2,
+      "N_t": 2,
+      "N_r": 1,
+      "BW": 40.0,
+      "N_ss": 1,
+      "MCS": 8
+    },
+    {
+      "channel_model_id": 2,
+      "N_t": 2,
+      "N_r": 1,
+      "BW": 40.0,
+      "N_ss": 1,
+      "MCS": 9
+    },
+    {
+      "channel_model_id": 2,
+      "N_t": 2,
+      "N_r": 2,
+      "BW": 20.0,
+      "N_ss": 1,
+      "MCS": 0
+    },
+    {
+      "channel_model_id": 2,
+      "N_t": 2,
+      "N_r": 2,
+      "BW": 20.0,
+      "N_ss": 1,
+      "MCS": 1
+    },
+    {
+      "channel_model_id": 2,
+      "N_t": 2,
+      "N_r": 2,
+      "BW": 20.0,
+      "N_ss": 1,
+      "MCS": 2
+    },
+    {
+      "channel_model_id": 2,
+      "N_t": 2,
+      "N_r": 2,
+      "BW": 20.0,
+      "N_ss": 1,
+      "MCS": 4
+    },
+    {
+      "channel_model_id": 2,
+      "N_t": 2,
+      "N_r": 2,
+      "BW": 20.0,
+      "N_ss": 1,
+      "MCS": 5
+    },
+    {
+      "channel_model_id": 2,
+      "N_t": 2,
+      "N_r": 2,
+      "BW": 20.0,
+      "N_ss": 1,
+      "MCS": 6
+    },
+    {
+      "channel_model_id": 2,
+      "N_t": 2,
+      "N_r": 2,
+      "BW": 20.0,
+      "N_ss": 1,
+      "MCS": 7
+    },
+    {
+      "channel_model_id": 2,
+      "N_t": 2,
+      "N_r": 2,
+      "BW": 20.0,
+      "N_ss": 2,
+      "MCS": 1
+    },
+    {
+      "channel_model_id": 2,
+      "N_t": 2,
+      "N_r": 2,
+      "BW": 20.0,
+      "N_ss": 2,
+      "MCS": 5
+    },
+    {
+      "channel_model_id": 2,
+      "N_t": 2,
+      "N_r": 2,
+      "BW": 20.0,
+      "N_ss": 2,
+      "MCS": 6
+    },
+    {
+      "channel_model_id": 2,
+      "N_t": 2,
+      "N_r": 2,
+      "BW": 20.0,
+      "N_ss": 2,
+      "MCS": 7
+    },
+    {
+      "channel_model_id": 2,
+      "N_t": 2,
+      "N_r": 2,
+      "BW": 20.0,
+      "N_ss": 2,
+      "MCS": 9
+    },
+    {
+      "channel_model_id": 2,
+      "N_t": 2,
+      "N_r": 2,
+      "BW": 40.0,
+      "N_ss": 1,
+      "MCS": 0
+    },
+    {
+      "channel_model_id": 2,
+      "N_t": 2,
+      "N_r": 2,
+      "BW": 40.0,
+      "N_ss": 1,
+      "MCS": 1
+    },
+    {
+      "channel_model_id": 2,
+      "N_t": 2,
+      "N_r": 2,
+      "BW": 40.0,
+      "N_ss": 1,
+      "MCS": 2
+    },
+    {
+      "channel_model_id": 2,
+      "N_t": 2,
+      "N_r": 2,
+      "BW": 40.0,
+      "N_ss": 1,
+      "MCS": 3
+    },
+    {
+      "channel_model_id": 2,
+      "N_t": 2,
+      "N_r": 2,
+      "BW": 40.0,
+      "N_ss": 1,
+      "MCS": 4
+    },
+    {
+      "channel_model_id": 2,
+      "N_t": 2,
+      "N_r": 2,
+      "BW": 40.0,
+      "N_ss": 1,
+      "MCS": 5
+    },
+    {
+      "channel_model_id": 2,
+      "N_t": 2,
+      "N_r": 2,
+      "BW": 40.0,
+      "N_ss": 1,
+      "MCS": 6
+    },
+    {
+      "channel_model_id": 2,
+      "N_t": 2,
+      "N_r": 2,
+      "BW": 40.0,
+      "N_ss": 1,
+      "MCS": 7
+    },
+    {
+      "channel_model_id": 2,
+      "N_t": 2,
+      "N_r": 2,
+      "BW": 40.0,
+      "N_ss": 1,
+      "MCS": 8
+    },
+    {
+      "channel_model_id": 2,
+      "N_t": 2,
+      "N_r": 2,
+      "BW": 40.0,
+      "N_ss": 1,
+      "MCS": 9
+    },
+    {
+      "channel_model_id": 2,
+      "N_t": 2,
+      "N_r": 2,
+      "BW": 40.0,
+      "N_ss": 2,
+      "MCS": 0
+    },
+    {
+      "channel_model_id": 2,
+      "N_t": 2,
+      "N_r": 2,
+      "BW": 40.0,
+      "N_ss": 2,
+      "MCS": 2
+    },
+    {
+      "channel_model_id": 2,
+      "N_t": 2,
+      "N_r": 2,
+      "BW": 40.0,
+      "N_ss": 2,
+      "MCS": 3
+    },
+    {
+      "channel_model_id": 2,
+      "N_t": 2,
+      "N_r": 2,
+      "BW": 40.0,
+      "N_ss": 2,
+      "MCS": 4
+    },
+    {
+      "channel_model_id": 2,
+      "N_t": 2,
+      "N_r": 2,
+      "BW": 40.0,
+      "N_ss": 2,
+      "MCS": 5
+    },
+    {
+      "channel_model_id": 2,
+      "N_t": 2,
+      "N_r": 2,
+      "BW": 40.0,
+      "N_ss": 2,
+      "MCS": 6
+    },
+    {
+      "channel_model_id": 2,
+      "N_t": 2,
+      "N_r": 2,
+      "BW": 40.0,
+      "N_ss": 2,
+      "MCS": 7
+    },
+    {
+      "channel_model_id": 2,
+      "N_t": 2,
+      "N_r": 2,
+      "BW": 40.0,
+      "N_ss": 2,
+      "MCS": 8
+    },
+    {
+      "channel_model_id": 2,
+      "N_t": 2,
+      "N_r": 2,
+      "BW": 40.0,
+      "N_ss": 2,
+      "MCS": 9
+    },
+    {
+      "channel_model_id": 2,
+      "N_t": 3,
+      "N_r": 1,
+      "BW": 20.0,
+      "N_ss": 1,
+      "MCS": 1
+    },
+    {
+      "channel_model_id": 2,
+      "N_t": 3,
+      "N_r": 1,
+      "BW": 20.0,
+      "N_ss": 1,
+      "MCS": 2
+    },
+    {
+      "channel_model_id": 2,
+      "N_t": 3,
+      "N_r": 1,
+      "BW": 20.0,
+      "N_ss": 1,
+      "MCS": 3
+    },
+    {
+      "channel_model_id": 2,
+      "N_t": 3,
+      "N_r": 1,
+      "BW": 20.0,
+      "N_ss": 1,
+      "MCS": 4
+    },
+    {
+      "channel_model_id": 2,
+      "N_t": 3,
+      "N_r": 1,
+      "BW": 20.0,
+      "N_ss": 1,
+      "MCS": 5
+    },
+    {
+      "channel_model_id": 2,
+      "N_t": 3,
+      "N_r": 1,
+      "BW": 20.0,
+      "N_ss": 1,
+      "MCS": 6
+    },
+    {
+      "channel_model_id": 2,
+      "N_t": 3,
+      "N_r": 1,
+      "BW": 20.0,
+      "N_ss": 1,
+      "MCS": 9
+    },
+    {
+      "channel_model_id": 2,
+      "N_t": 3,
+      "N_r": 1,
+      "BW": 40.0,
+      "N_ss": 1,
+      "MCS": 0
+    },
+    {
+      "channel_model_id": 2,
+      "N_t": 3,
+      "N_r": 1,
+      "BW": 40.0,
+      "N_ss": 1,
+      "MCS": 2
+    },
+    {
+      "channel_model_id": 2,
+      "N_t": 3,
+      "N_r": 1,
+      "BW": 40.0,
+      "N_ss": 1,
+      "MCS": 3
+    },
+    {
+      "channel_model_id": 2,
+      "N_t": 3,
+      "N_r": 1,
+      "BW": 40.0,
+      "N_ss": 1,
+      "MCS": 4
+    },
+    {
+      "channel_model_id": 2,
+      "N_t": 3,
+      "N_r": 1,
+      "BW": 40.0,
+      "N_ss": 1,
+      "MCS": 5
+    },
+    {
+      "channel_model_id": 2,
+      "N_t": 3,
+      "N_r": 1,
+      "BW": 40.0,
+      "N_ss": 1,
+      "MCS": 6
+    },
+    {
+      "channel_model_id": 2,
+      "N_t": 3,
+      "N_r": 1,
+      "BW": 40.0,
+      "N_ss": 1,
+      "MCS": 7
+    },
+    {
+      "channel_model_id": 2,
+      "N_t": 3,
+      "N_r": 1,
+      "BW": 40.0,
+      "N_ss": 1,
+      "MCS": 8
+    },
+    {
+      "channel_model_id": 2,
+      "N_t": 3,
+      "N_r": 2,
+      "BW": 20.0,
+      "N_ss": 1,
+      "MCS": 0
+    },
+    {
+      "channel_model_id": 2,
+      "N_t": 3,
+      "N_r": 2,
+      "BW": 20.0,
+      "N_ss": 1,
+      "MCS": 1
+    },
+    {
+      "channel_model_id": 2,
+      "N_t": 3,
+      "N_r": 2,
+      "BW": 20.0,
+      "N_ss": 1,
+      "MCS": 3
+    },
+    {
+      "channel_model_id": 2,
+      "N_t": 3,
+      "N_r": 2,
+      "BW": 20.0,
+      "N_ss": 1,
+      "MCS": 4
+    },
+    {
+      "channel_model_id": 2,
+      "N_t": 3,
+      "N_r": 2,
+      "BW": 20.0,
+      "N_ss": 1,
+      "MCS": 7
+    },
+    {
+      "channel_model_id": 2,
+      "N_t": 3,
+      "N_r": 2,
+      "BW": 20.0,
+      "N_ss": 1,
+      "MCS": 8
+    },
+    {
+      "channel_model_id": 2,
+      "N_t": 3,
+      "N_r": 2,
+      "BW": 20.0,
+      "N_ss": 1,
+      "MCS": 9
+    },
+    {
+      "channel_model_id": 2,
+      "N_t": 3,
+      "N_r": 2,
+      "BW": 20.0,
+      "N_ss": 2,
+      "MCS": 0
+    },
+    {
+      "channel_model_id": 2,
+      "N_t": 3,
+      "N_r": 2,
+      "BW": 20.0,
+      "N_ss": 2,
+      "MCS": 1
+    },
+    {
+      "channel_model_id": 2,
+      "N_t": 3,
+      "N_r": 2,
+      "BW": 20.0,
+      "N_ss": 2,
+      "MCS": 2
+    },
+    {
+      "channel_model_id": 2,
+      "N_t": 3,
+      "N_r": 2,
+      "BW": 20.0,
+      "N_ss": 2,
+      "MCS": 3
+    },
+    {
+      "channel_model_id": 2,
+      "N_t": 3,
+      "N_r": 2,
+      "BW": 20.0,
+      "N_ss": 2,
+      "MCS": 4
+    },
+    {
+      "channel_model_id": 2,
+      "N_t": 3,
+      "N_r": 2,
+      "BW": 20.0,
+      "N_ss": 2,
+      "MCS": 5
+    },
+    {
+      "channel_model_id": 2,
+      "N_t": 3,
+      "N_r": 2,
+      "BW": 20.0,
+      "N_ss": 2,
+      "MCS": 6
+    },
+    {
+      "channel_model_id": 2,
+      "N_t": 3,
+      "N_r": 2,
+      "BW": 20.0,
+      "N_ss": 2,
+      "MCS": 7
+    },
+    {
+      "channel_model_id": 2,
+      "N_t": 3,
+      "N_r": 2,
+      "BW": 20.0,
+      "N_ss": 2,
+      "MCS": 8
+    },
+    {
+      "channel_model_id": 2,
+      "N_t": 3,
+      "N_r": 2,
+      "BW": 20.0,
+      "N_ss": 2,
+      "MCS": 9
+    },
+    {
+      "channel_model_id": 2,
+      "N_t": 3,
+      "N_r": 2,
+      "BW": 40.0,
+      "N_ss": 1,
+      "MCS": 0
+    },
+    {
+      "channel_model_id": 2,
+      "N_t": 3,
+      "N_r": 2,
+      "BW": 40.0,
+      "N_ss": 1,
+      "MCS": 2
+    },
+    {
+      "channel_model_id": 2,
+      "N_t": 3,
+      "N_r": 2,
+      "BW": 40.0,
+      "N_ss": 1,
+      "MCS": 3
+    },
+    {
+      "channel_model_id": 2,
+      "N_t": 3,
+      "N_r": 2,
+      "BW": 40.0,
+      "N_ss": 1,
+      "MCS": 4
+    },
+    {
+      "channel_model_id": 2,
+      "N_t": 3,
+      "N_r": 2,
+      "BW": 40.0,
+      "N_ss": 1,
+      "MCS": 5
+    },
+    {
+      "channel_model_id": 2,
+      "N_t": 3,
+      "N_r": 2,
+      "BW": 40.0,
+      "N_ss": 1,
+      "MCS": 6
+    },
+    {
+      "channel_model_id": 2,
+      "N_t": 3,
+      "N_r": 2,
+      "BW": 40.0,
+      "N_ss": 1,
+      "MCS": 7
+    },
+    {
+      "channel_model_id": 2,
+      "N_t": 3,
+      "N_r": 2,
+      "BW": 40.0,
+      "N_ss": 1,
+      "MCS": 8
+    },
+    {
+      "channel_model_id": 2,
+      "N_t": 3,
+      "N_r": 2,
+      "BW": 40.0,
+      "N_ss": 1,
+      "MCS": 9
+    },
+    {
+      "channel_model_id": 2,
+      "N_t": 3,
+      "N_r": 2,
+      "BW": 40.0,
+      "N_ss": 2,
+      "MCS": 1
+    },
+    {
+      "channel_model_id": 2,
+      "N_t": 3,
+      "N_r": 2,
+      "BW": 40.0,
+      "N_ss": 2,
+      "MCS": 2
+    },
+    {
+      "channel_model_id": 2,
+      "N_t": 3,
+      "N_r": 2,
+      "BW": 40.0,
+      "N_ss": 2,
+      "MCS": 3
+    },
+    {
+      "channel_model_id": 2,
+      "N_t": 3,
+      "N_r": 2,
+      "BW": 40.0,
+      "N_ss": 2,
+      "MCS": 5
+    },
+    {
+      "channel_model_id": 2,
+      "N_t": 3,
+      "N_r": 2,
+      "BW": 40.0,
+      "N_ss": 2,
+      "MCS": 6
+    },
+    {
+      "channel_model_id": 2,
+      "N_t": 3,
+      "N_r": 2,
+      "BW": 40.0,
+      "N_ss": 2,
+      "MCS": 7
+    },
+    {
+      "channel_model_id": 2,
+      "N_t": 3,
+      "N_r": 2,
+      "BW": 40.0,
+      "N_ss": 2,
+      "MCS": 8
+    },
+    {
+      "channel_model_id": 2,
+      "N_t": 3,
+      "N_r": 2,
+      "BW": 40.0,
+      "N_ss": 2,
+      "MCS": 9
+    },
+    {
+      "channel_model_id": 2,
+      "N_t": 4,
+      "N_r": 1,
+      "BW": 20.0,
+      "N_ss": 1,
+      "MCS": 0
+    },
+    {
+      "channel_model_id": 2,
+      "N_t": 4,
+      "N_r": 1,
+      "BW": 20.0,
+      "N_ss": 1,
+      "MCS": 1
+    },
+    {
+      "channel_model_id": 2,
+      "N_t": 4,
+      "N_r": 1,
+      "BW": 20.0,
+      "N_ss": 1,
+      "MCS": 2
+    },
+    {
+      "channel_model_id": 2,
+      "N_t": 4,
+      "N_r": 1,
+      "BW": 20.0,
+      "N_ss": 1,
+      "MCS": 3
+    },
+    {
+      "channel_model_id": 2,
+      "N_t": 4,
+      "N_r": 1,
+      "BW": 20.0,
+      "N_ss": 1,
+      "MCS": 4
+    },
+    {
+      "channel_model_id": 2,
+      "N_t": 4,
+      "N_r": 1,
+      "BW": 20.0,
+      "N_ss": 1,
+      "MCS": 5
+    },
+    {
+      "channel_model_id": 2,
+      "N_t": 4,
+      "N_r": 1,
+      "BW": 20.0,
+      "N_ss": 1,
+      "MCS": 6
+    },
+    {
+      "channel_model_id": 2,
+      "N_t": 4,
+      "N_r": 1,
+      "BW": 20.0,
+      "N_ss": 1,
+      "MCS": 7
+    },
+    {
+      "channel_model_id": 2,
+      "N_t": 4,
+      "N_r": 1,
+      "BW": 20.0,
+      "N_ss": 1,
+      "MCS": 8
+    },
+    {
+      "channel_model_id": 2,
+      "N_t": 4,
+      "N_r": 1,
+      "BW": 40.0,
+      "N_ss": 1,
+      "MCS": 0
+    },
+    {
+      "channel_model_id": 2,
+      "N_t": 4,
+      "N_r": 1,
+      "BW": 40.0,
+      "N_ss": 1,
+      "MCS": 2
+    },
+    {
+      "channel_model_id": 2,
+      "N_t": 4,
+      "N_r": 1,
+      "BW": 40.0,
+      "N_ss": 1,
+      "MCS": 3
+    },
+    {
+      "channel_model_id": 2,
+      "N_t": 4,
+      "N_r": 1,
+      "BW": 40.0,
+      "N_ss": 1,
+      "MCS": 4
+    },
+    {
+      "channel_model_id": 2,
+      "N_t": 4,
+      "N_r": 1,
+      "BW": 40.0,
+      "N_ss": 1,
+      "MCS": 5
+    },
+    {
+      "channel_model_id": 2,
+      "N_t": 4,
+      "N_r": 1,
+      "BW": 40.0,
+      "N_ss": 1,
+      "MCS": 6
+    },
+    {
+      "channel_model_id": 2,
+      "N_t": 4,
+      "N_r": 1,
+      "BW": 40.0,
+      "N_ss": 1,
+      "MCS": 7
+    },
+    {
+      "channel_model_id": 2,
+      "N_t": 4,
+      "N_r": 1,
+      "BW": 40.0,
+      "N_ss": 1,
+      "MCS": 8
+    },
+    {
+      "channel_model_id": 2,
+      "N_t": 4,
+      "N_r": 1,
+      "BW": 40.0,
+      "N_ss": 1,
+      "MCS": 9
+    },
+    {
+      "channel_model_id": 2,
+      "N_t": 4,
+      "N_r": 2,
+      "BW": 20.0,
+      "N_ss": 1,
+      "MCS": 2
+    },
+    {
+      "channel_model_id": 2,
+      "N_t": 4,
+      "N_r": 2,
+      "BW": 20.0,
+      "N_ss": 1,
+      "MCS": 3
+    },
+    {
+      "channel_model_id": 2,
+      "N_t": 4,
+      "N_r": 2,
+      "BW": 20.0,
+      "N_ss": 1,
+      "MCS": 4
+    },
+    {
+      "channel_model_id": 2,
+      "N_t": 4,
+      "N_r": 2,
+      "BW": 20.0,
+      "N_ss": 1,
+      "MCS": 5
+    },
+    {
+      "channel_model_id": 2,
+      "N_t": 4,
+      "N_r": 2,
+      "BW": 20.0,
+      "N_ss": 1,
+      "MCS": 7
+    },
+    {
+      "channel_model_id": 2,
+      "N_t": 4,
+      "N_r": 2,
+      "BW": 20.0,
+      "N_ss": 1,
+      "MCS": 8
+    },
+    {
+      "channel_model_id": 2,
+      "N_t": 4,
+      "N_r": 2,
+      "BW": 20.0,
+      "N_ss": 2,
+      "MCS": 0
+    },
+    {
+      "channel_model_id": 2,
+      "N_t": 4,
+      "N_r": 2,
+      "BW": 20.0,
+      "N_ss": 2,
+      "MCS": 1
+    },
+    {
+      "channel_model_id": 2,
+      "N_t": 4,
+      "N_r": 2,
+      "BW": 20.0,
+      "N_ss": 2,
+      "MCS": 2
+    },
+    {
+      "channel_model_id": 2,
+      "N_t": 4,
+      "N_r": 2,
+      "BW": 20.0,
+      "N_ss": 2,
+      "MCS": 3
+    },
+    {
+      "channel_model_id": 2,
+      "N_t": 4,
+      "N_r": 2,
+      "BW": 20.0,
+      "N_ss": 2,
+      "MCS": 5
+    },
+    {
+      "channel_model_id": 2,
+      "N_t": 4,
+      "N_r": 2,
+      "BW": 20.0,
+      "N_ss": 2,
+      "MCS": 6
+    },
+    {
+      "channel_model_id": 2,
+      "N_t": 4,
+      "N_r": 2,
+      "BW": 20.0,
+      "N_ss": 2,
+      "MCS": 7
+    },
+    {
+      "channel_model_id": 2,
+      "N_t": 4,
+      "N_r": 2,
+      "BW": 20.0,
+      "N_ss": 2,
+      "MCS": 8
+    },
+    {
+      "channel_model_id": 2,
+      "N_t": 4,
+      "N_r": 2,
+      "BW": 20.0,
+      "N_ss": 2,
+      "MCS": 9
+    },
+    {
+      "channel_model_id": 2,
+      "N_t": 4,
+      "N_r": 2,
+      "BW": 40.0,
+      "N_ss": 1,
+      "MCS": 0
+    },
+    {
+      "channel_model_id": 2,
+      "N_t": 4,
+      "N_r": 2,
+      "BW": 40.0,
+      "N_ss": 1,
+      "MCS": 1
+    },
+    {
+      "channel_model_id": 2,
+      "N_t": 4,
+      "N_r": 2,
+      "BW": 40.0,
+      "N_ss": 1,
+      "MCS": 2
+    },
+    {
+      "channel_model_id": 2,
+      "N_t": 4,
+      "N_r": 2,
+      "BW": 40.0,
+      "N_ss": 1,
+      "MCS": 3
+    },
+    {
+      "channel_model_id": 2,
+      "N_t": 4,
+      "N_r": 2,
+      "BW": 40.0,
+      "N_ss": 1,
+      "MCS": 4
+    },
+    {
+      "channel_model_id": 2,
+      "N_t": 4,
+      "N_r": 2,
+      "BW": 40.0,
+      "N_ss": 1,
+      "MCS": 5
+    },
+    {
+      "channel_model_id": 2,
+      "N_t": 4,
+      "N_r": 2,
+      "BW": 40.0,
+      "N_ss": 1,
+      "MCS": 6
+    },
+    {
+      "channel_model_id": 2,
+      "N_t": 4,
+      "N_r": 2,
+      "BW": 40.0,
+      "N_ss": 2,
+      "MCS": 2
+    },
+    {
+      "channel_model_id": 2,
+      "N_t": 4,
+      "N_r": 2,
+      "BW": 40.0,
+      "N_ss": 2,
+      "MCS": 3
+    },
+    {
+      "channel_model_id": 2,
+      "N_t": 4,
+      "N_r": 2,
+      "BW": 40.0,
+      "N_ss": 2,
+      "MCS": 4
+    },
+    {
+      "channel_model_id": 2,
+      "N_t": 4,
+      "N_r": 2,
+      "BW": 40.0,
+      "N_ss": 2,
+      "MCS": 5
+    },
+    {
+      "channel_model_id": 2,
+      "N_t": 4,
+      "N_r": 2,
+      "BW": 40.0,
+      "N_ss": 2,
+      "MCS": 6
+    },
+    {
+      "channel_model_id": 2,
+      "N_t": 4,
+      "N_r": 2,
+      "BW": 40.0,
+      "N_ss": 2,
+      "MCS": 7
+    },
+    {
+      "channel_model_id": 2,
+      "N_t": 4,
+      "N_r": 2,
+      "BW": 40.0,
+      "N_ss": 2,
+      "MCS": 8
+    },
+    {
+      "channel_model_id": 2,
+      "N_t": 4,
+      "N_r": 2,
+      "BW": 40.0,
+      "N_ss": 2,
+      "MCS": 9
+    },
+    {
+      "channel_model_id": 4,
+      "N_t": 1,
+      "N_r": 1,
+      "BW": 20.0,
+      "N_ss": 1,
+      "MCS": 0
+    },
+    {
+      "channel_model_id": 4,
+      "N_t": 1,
+      "N_r": 1,
+      "BW": 20.0,
+      "N_ss": 1,
+      "MCS": 2
+    },
+    {
+      "channel_model_id": 4,
+      "N_t": 1,
+      "N_r": 1,
+      "BW": 20.0,
+      "N_ss": 1,
+      "MCS": 3
+    },
+    {
+      "channel_model_id": 4,
+      "N_t": 1,
+      "N_r": 1,
+      "BW": 20.0,
+      "N_ss": 1,
+      "MCS": 4
+    },
+    {
+      "channel_model_id": 4,
+      "N_t": 1,
+      "N_r": 1,
+      "BW": 20.0,
+      "N_ss": 1,
+      "MCS": 6
+    },
+    {
+      "channel_model_id": 4,
+      "N_t": 1,
+      "N_r": 1,
+      "BW": 20.0,
+      "N_ss": 1,
+      "MCS": 7
+    },
+    {
+      "channel_model_id": 4,
+      "N_t": 1,
+      "N_r": 1,
+      "BW": 20.0,
+      "N_ss": 1,
+      "MCS": 8
+    },
+    {
+      "channel_model_id": 4,
+      "N_t": 1,
+      "N_r": 1,
+      "BW": 20.0,
+      "N_ss": 1,
+      "MCS": 9
+    },
+    {
+      "channel_model_id": 4,
+      "N_t": 1,
+      "N_r": 1,
+      "BW": 40.0,
+      "N_ss": 1,
+      "MCS": 0
+    },
+    {
+      "channel_model_id": 4,
+      "N_t": 1,
+      "N_r": 1,
+      "BW": 40.0,
+      "N_ss": 1,
+      "MCS": 1
+    },
+    {
+      "channel_model_id": 4,
+      "N_t": 1,
+      "N_r": 1,
+      "BW": 40.0,
+      "N_ss": 1,
+      "MCS": 3
+    },
+    {
+      "channel_model_id": 4,
+      "N_t": 1,
+      "N_r": 1,
+      "BW": 40.0,
+      "N_ss": 1,
+      "MCS": 5
+    },
+    {
+      "channel_model_id": 4,
+      "N_t": 1,
+      "N_r": 1,
+      "BW": 40.0,
+      "N_ss": 1,
+      "MCS": 6
+    },
+    {
+      "channel_model_id": 4,
+      "N_t": 1,
+      "N_r": 1,
+      "BW": 40.0,
+      "N_ss": 1,
+      "MCS": 8
+    },
+    {
+      "channel_model_id": 4,
+      "N_t": 1,
+      "N_r": 1,
+      "BW": 40.0,
+      "N_ss": 1,
+      "MCS": 9
+    },
+    {
+      "channel_model_id": 4,
+      "N_t": 2,
+      "N_r": 1,
+      "BW": 20.0,
+      "N_ss": 1,
+      "MCS": 0
+    },
+    {
+      "channel_model_id": 4,
+      "N_t": 2,
+      "N_r": 1,
+      "BW": 20.0,
+      "N_ss": 1,
+      "MCS": 1
+    },
+    {
+      "channel_model_id": 4,
+      "N_t": 2,
+      "N_r": 1,
+      "BW": 20.0,
+      "N_ss": 1,
+      "MCS": 2
+    },
+    {
+      "channel_model_id": 4,
+      "N_t": 2,
+      "N_r": 1,
+      "BW": 20.0,
+      "N_ss": 1,
+      "MCS": 3
+    },
+    {
+      "channel_model_id": 4,
+      "N_t": 2,
+      "N_r": 1,
+      "BW": 20.0,
+      "N_ss": 1,
+      "MCS": 4
+    },
+    {
+      "channel_model_id": 4,
+      "N_t": 2,
+      "N_r": 1,
+      "BW": 20.0,
+      "N_ss": 1,
+      "MCS": 5
+    },
+    {
+      "channel_model_id": 4,
+      "N_t": 2,
+      "N_r": 1,
+      "BW": 20.0,
+      "N_ss": 1,
+      "MCS": 6
+    },
+    {
+      "channel_model_id": 4,
+      "N_t": 2,
+      "N_r": 1,
+      "BW": 20.0,
+      "N_ss": 1,
+      "MCS": 7
+    },
+    {
+      "channel_model_id": 4,
+      "N_t": 2,
+      "N_r": 1,
+      "BW": 20.0,
+      "N_ss": 1,
+      "MCS": 8
+    },
+    {
+      "channel_model_id": 4,
+      "N_t": 2,
+      "N_r": 1,
+      "BW": 20.0,
+      "N_ss": 1,
+      "MCS": 9
+    },
+    {
+      "channel_model_id": 4,
+      "N_t": 2,
+      "N_r": 1,
+      "BW": 40.0,
+      "N_ss": 1,
+      "MCS": 0
+    },
+    {
+      "channel_model_id": 4,
+      "N_t": 2,
+      "N_r": 1,
+      "BW": 40.0,
+      "N_ss": 1,
+      "MCS": 1
+    },
+    {
+      "channel_model_id": 4,
+      "N_t": 2,
+      "N_r": 1,
+      "BW": 40.0,
+      "N_ss": 1,
+      "MCS": 2
+    },
+    {
+      "channel_model_id": 4,
+      "N_t": 2,
+      "N_r": 1,
+      "BW": 40.0,
+      "N_ss": 1,
+      "MCS": 3
+    },
+    {
+      "channel_model_id": 4,
+      "N_t": 2,
+      "N_r": 1,
+      "BW": 40.0,
+      "N_ss": 1,
+      "MCS": 4
+    },
+    {
+      "channel_model_id": 4,
+      "N_t": 2,
+      "N_r": 1,
+      "BW": 40.0,
+      "N_ss": 1,
+      "MCS": 6
+    },
+    {
+      "channel_model_id": 4,
+      "N_t": 2,
+      "N_r": 1,
+      "BW": 40.0,
+      "N_ss": 1,
+      "MCS": 7
+    },
+    {
+      "channel_model_id": 4,
+      "N_t": 2,
+      "N_r": 1,
+      "BW": 40.0,
+      "N_ss": 1,
+      "MCS": 8
+    },
+    {
+      "channel_model_id": 4,
+      "N_t": 2,
+      "N_r": 1,
+      "BW": 40.0,
+      "N_ss": 1,
+      "MCS": 9
+    },
+    {
+      "channel_model_id": 4,
+      "N_t": 2,
+      "N_r": 2,
+      "BW": 20.0,
+      "N_ss": 1,
+      "MCS": 0
+    },
+    {
+      "channel_model_id": 4,
+      "N_t": 2,
+      "N_r": 2,
+      "BW": 20.0,
+      "N_ss": 1,
+      "MCS": 2
+    },
+    {
+      "channel_model_id": 4,
+      "N_t": 2,
+      "N_r": 2,
+      "BW": 20.0,
+      "N_ss": 1,
+      "MCS": 4
+    },
+    {
+      "channel_model_id": 4,
+      "N_t": 2,
+      "N_r": 2,
+      "BW": 20.0,
+      "N_ss": 1,
+      "MCS": 5
+    },
+    {
+      "channel_model_id": 4,
+      "N_t": 2,
+      "N_r": 2,
+      "BW": 20.0,
+      "N_ss": 1,
+      "MCS": 6
+    },
+    {
+      "channel_model_id": 4,
+      "N_t": 2,
+      "N_r": 2,
+      "BW": 20.0,
+      "N_ss": 1,
+      "MCS": 7
+    },
+    {
+      "channel_model_id": 4,
+      "N_t": 2,
+      "N_r": 2,
+      "BW": 20.0,
+      "N_ss": 1,
+      "MCS": 8
+    },
+    {
+      "channel_model_id": 4,
+      "N_t": 2,
+      "N_r": 2,
+      "BW": 20.0,
+      "N_ss": 1,
+      "MCS": 9
+    },
+    {
+      "channel_model_id": 4,
+      "N_t": 2,
+      "N_r": 2,
+      "BW": 20.0,
+      "N_ss": 2,
+      "MCS": 0
+    },
+    {
+      "channel_model_id": 4,
+      "N_t": 2,
+      "N_r": 2,
+      "BW": 20.0,
+      "N_ss": 2,
+      "MCS": 3
+    },
+    {
+      "channel_model_id": 4,
+      "N_t": 2,
+      "N_r": 2,
+      "BW": 20.0,
+      "N_ss": 2,
+      "MCS": 4
+    },
+    {
+      "channel_model_id": 4,
+      "N_t": 2,
+      "N_r": 2,
+      "BW": 20.0,
+      "N_ss": 2,
+      "MCS": 5
+    },
+    {
+      "channel_model_id": 4,
+      "N_t": 2,
+      "N_r": 2,
+      "BW": 20.0,
+      "N_ss": 2,
+      "MCS": 6
+    },
+    {
+      "channel_model_id": 4,
+      "N_t": 2,
+      "N_r": 2,
+      "BW": 20.0,
+      "N_ss": 2,
+      "MCS": 8
+    },
+    {
+      "channel_model_id": 4,
+      "N_t": 2,
+      "N_r": 2,
+      "BW": 40.0,
+      "N_ss": 1,
+      "MCS": 0
+    },
+    {
+      "channel_model_id": 4,
+      "N_t": 2,
+      "N_r": 2,
+      "BW": 40.0,
+      "N_ss": 1,
+      "MCS": 1
+    },
+    {
+      "channel_model_id": 4,
+      "N_t": 2,
+      "N_r": 2,
+      "BW": 40.0,
+      "N_ss": 1,
+      "MCS": 2
+    },
+    {
+      "channel_model_id": 4,
+      "N_t": 2,
+      "N_r": 2,
+      "BW": 40.0,
+      "N_ss": 1,
+      "MCS": 5
+    },
+    {
+      "channel_model_id": 4,
+      "N_t": 2,
+      "N_r": 2,
+      "BW": 40.0,
+      "N_ss": 1,
+      "MCS": 6
+    },
+    {
+      "channel_model_id": 4,
+      "N_t": 2,
+      "N_r": 2,
+      "BW": 40.0,
+      "N_ss": 1,
+      "MCS": 7
+    },
+    {
+      "channel_model_id": 4,
+      "N_t": 2,
+      "N_r": 2,
+      "BW": 40.0,
+      "N_ss": 1,
+      "MCS": 8
+    },
+    {
+      "channel_model_id": 4,
+      "N_t": 2,
+      "N_r": 2,
+      "BW": 40.0,
+      "N_ss": 2,
+      "MCS": 1
+    },
+    {
+      "channel_model_id": 4,
+      "N_t": 2,
+      "N_r": 2,
+      "BW": 40.0,
+      "N_ss": 2,
+      "MCS": 2
+    },
+    {
+      "channel_model_id": 4,
+      "N_t": 2,
+      "N_r": 2,
+      "BW": 40.0,
+      "N_ss": 2,
+      "MCS": 4
+    },
+    {
+      "channel_model_id": 4,
+      "N_t": 2,
+      "N_r": 2,
+      "BW": 40.0,
+      "N_ss": 2,
+      "MCS": 5
+    },
+    {
+      "channel_model_id": 4,
+      "N_t": 2,
+      "N_r": 2,
+      "BW": 40.0,
+      "N_ss": 2,
+      "MCS": 7
+    },
+    {
+      "channel_model_id": 4,
+      "N_t": 2,
+      "N_r": 2,
+      "BW": 40.0,
+      "N_ss": 2,
+      "MCS": 8
+    },
+    {
+      "channel_model_id": 4,
+      "N_t": 2,
+      "N_r": 2,
+      "BW": 40.0,
+      "N_ss": 2,
+      "MCS": 9
+    },
+    {
+      "channel_model_id": 4,
+      "N_t": 3,
+      "N_r": 1,
+      "BW": 20.0,
+      "N_ss": 1,
+      "MCS": 0
+    },
+    {
+      "channel_model_id": 4,
+      "N_t": 3,
+      "N_r": 1,
+      "BW": 20.0,
+      "N_ss": 1,
+      "MCS": 1
+    },
+    {
+      "channel_model_id": 4,
+      "N_t": 3,
+      "N_r": 1,
+      "BW": 20.0,
+      "N_ss": 1,
+      "MCS": 2
+    },
+    {
+      "channel_model_id": 4,
+      "N_t": 3,
+      "N_r": 1,
+      "BW": 20.0,
+      "N_ss": 1,
+      "MCS": 3
+    },
+    {
+      "channel_model_id": 4,
+      "N_t": 3,
+      "N_r": 1,
+      "BW": 20.0,
+      "N_ss": 1,
+      "MCS": 4
+    },
+    {
+      "channel_model_id": 4,
+      "N_t": 3,
+      "N_r": 1,
+      "BW": 20.0,
+      "N_ss": 1,
+      "MCS": 5
+    },
+    {
+      "channel_model_id": 4,
+      "N_t": 3,
+      "N_r": 1,
+      "BW": 20.0,
+      "N_ss": 1,
+      "MCS": 6
+    },
+    {
+      "channel_model_id": 4,
+      "N_t": 3,
+      "N_r": 1,
+      "BW": 20.0,
+      "N_ss": 1,
+      "MCS": 7
+    },
+    {
+      "channel_model_id": 4,
+      "N_t": 3,
+      "N_r": 1,
+      "BW": 20.0,
+      "N_ss": 1,
+      "MCS": 8
+    },
+    {
+      "channel_model_id": 4,
+      "N_t": 3,
+      "N_r": 1,
+      "BW": 20.0,
+      "N_ss": 1,
+      "MCS": 9
+    },
+    {
+      "channel_model_id": 4,
+      "N_t": 3,
+      "N_r": 1,
+      "BW": 40.0,
+      "N_ss": 1,
+      "MCS": 0
+    },
+    {
+      "channel_model_id": 4,
+      "N_t": 3,
+      "N_r": 1,
+      "BW": 40.0,
+      "N_ss": 1,
+      "MCS": 1
+    },
+    {
+      "channel_model_id": 4,
+      "N_t": 3,
+      "N_r": 1,
+      "BW": 40.0,
+      "N_ss": 1,
+      "MCS": 2
+    },
+    {
+      "channel_model_id": 4,
+      "N_t": 3,
+      "N_r": 1,
+      "BW": 40.0,
+      "N_ss": 1,
+      "MCS": 4
+    },
+    {
+      "channel_model_id": 4,
+      "N_t": 3,
+      "N_r": 1,
+      "BW": 40.0,
+      "N_ss": 1,
+      "MCS": 6
+    },
+    {
+      "channel_model_id": 4,
+      "N_t": 3,
+      "N_r": 1,
+      "BW": 40.0,
+      "N_ss": 1,
+      "MCS": 7
+    },
+    {
+      "channel_model_id": 4,
+      "N_t": 3,
+      "N_r": 1,
+      "BW": 40.0,
+      "N_ss": 1,
+      "MCS": 8
+    },
+    {
+      "channel_model_id": 4,
+      "N_t": 3,
+      "N_r": 1,
+      "BW": 40.0,
+      "N_ss": 1,
+      "MCS": 9
+    },
+    {
+      "channel_model_id": 4,
+      "N_t": 3,
+      "N_r": 2,
+      "BW": 20.0,
+      "N_ss": 1,
+      "MCS": 0
+    },
+    {
+      "channel_model_id": 4,
+      "N_t": 3,
+      "N_r": 2,
+      "BW": 20.0,
+      "N_ss": 1,
+      "MCS": 1
+    },
+    {
+      "channel_model_id": 4,
+      "N_t": 3,
+      "N_r": 2,
+      "BW": 20.0,
+      "N_ss": 1,
+      "MCS": 2
+    },
+    {
+      "channel_model_id": 4,
+      "N_t": 3,
+      "N_r": 2,
+      "BW": 20.0,
+      "N_ss": 1,
+      "MCS": 4
+    },
+    {
+      "channel_model_id": 4,
+      "N_t": 3,
+      "N_r": 2,
+      "BW": 20.0,
+      "N_ss": 1,
+      "MCS": 5
+    },
+    {
+      "channel_model_id": 4,
+      "N_t": 3,
+      "N_r": 2,
+      "BW": 20.0,
+      "N_ss": 1,
+      "MCS": 7
+    },
+    {
+      "channel_model_id": 4,
+      "N_t": 3,
+      "N_r": 2,
+      "BW": 20.0,
+      "N_ss": 2,
+      "MCS": 0
+    },
+    {
+      "channel_model_id": 4,
+      "N_t": 3,
+      "N_r": 2,
+      "BW": 20.0,
+      "N_ss": 2,
+      "MCS": 1
+    },
+    {
+      "channel_model_id": 4,
+      "N_t": 3,
+      "N_r": 2,
+      "BW": 20.0,
+      "N_ss": 2,
+      "MCS": 2
+    },
+    {
+      "channel_model_id": 4,
+      "N_t": 3,
+      "N_r": 2,
+      "BW": 20.0,
+      "N_ss": 2,
+      "MCS": 4
+    },
+    {
+      "channel_model_id": 4,
+      "N_t": 3,
+      "N_r": 2,
+      "BW": 20.0,
+      "N_ss": 2,
+      "MCS": 6
+    },
+    {
+      "channel_model_id": 4,
+      "N_t": 3,
+      "N_r": 2,
+      "BW": 20.0,
+      "N_ss": 2,
+      "MCS": 7
+    },
+    {
+      "channel_model_id": 4,
+      "N_t": 3,
+      "N_r": 2,
+      "BW": 20.0,
+      "N_ss": 2,
+      "MCS": 8
+    },
+    {
+      "channel_model_id": 4,
+      "N_t": 3,
+      "N_r": 2,
+      "BW": 40.0,
+      "N_ss": 1,
+      "MCS": 0
+    },
+    {
+      "channel_model_id": 4,
+      "N_t": 3,
+      "N_r": 2,
+      "BW": 40.0,
+      "N_ss": 1,
+      "MCS": 1
+    },
+    {
+      "channel_model_id": 4,
+      "N_t": 3,
+      "N_r": 2,
+      "BW": 40.0,
+      "N_ss": 1,
+      "MCS": 2
+    },
+    {
+      "channel_model_id": 4,
+      "N_t": 3,
+      "N_r": 2,
+      "BW": 40.0,
+      "N_ss": 1,
+      "MCS": 3
+    },
+    {
+      "channel_model_id": 4,
+      "N_t": 3,
+      "N_r": 2,
+      "BW": 40.0,
+      "N_ss": 1,
+      "MCS": 4
+    },
+    {
+      "channel_model_id": 4,
+      "N_t": 3,
+      "N_r": 2,
+      "BW": 40.0,
+      "N_ss": 1,
+      "MCS": 5
+    },
+    {
+      "channel_model_id": 4,
+      "N_t": 3,
+      "N_r": 2,
+      "BW": 40.0,
+      "N_ss": 1,
+      "MCS": 6
+    },
+    {
+      "channel_model_id": 4,
+      "N_t": 3,
+      "N_r": 2,
+      "BW": 40.0,
+      "N_ss": 1,
+      "MCS": 7
+    },
+    {
+      "channel_model_id": 4,
+      "N_t": 3,
+      "N_r": 2,
+      "BW": 40.0,
+      "N_ss": 1,
+      "MCS": 9
+    },
+    {
+      "channel_model_id": 4,
+      "N_t": 3,
+      "N_r": 2,
+      "BW": 40.0,
+      "N_ss": 2,
+      "MCS": 1
+    },
+    {
+      "channel_model_id": 4,
+      "N_t": 3,
+      "N_r": 2,
+      "BW": 40.0,
+      "N_ss": 2,
+      "MCS": 2
+    },
+    {
+      "channel_model_id": 4,
+      "N_t": 3,
+      "N_r": 2,
+      "BW": 40.0,
+      "N_ss": 2,
+      "MCS": 3
+    },
+    {
+      "channel_model_id": 4,
+      "N_t": 3,
+      "N_r": 2,
+      "BW": 40.0,
+      "N_ss": 2,
+      "MCS": 4
+    },
+    {
+      "channel_model_id": 4,
+      "N_t": 3,
+      "N_r": 2,
+      "BW": 40.0,
+      "N_ss": 2,
+      "MCS": 5
+    },
+    {
+      "channel_model_id": 4,
+      "N_t": 3,
+      "N_r": 2,
+      "BW": 40.0,
+      "N_ss": 2,
+      "MCS": 6
+    },
+    {
+      "channel_model_id": 4,
+      "N_t": 3,
+      "N_r": 2,
+      "BW": 40.0,
+      "N_ss": 2,
+      "MCS": 7
+    },
+    {
+      "channel_model_id": 4,
+      "N_t": 3,
+      "N_r": 2,
+      "BW": 40.0,
+      "N_ss": 2,
+      "MCS": 8
+    },
+    {
+      "channel_model_id": 4,
+      "N_t": 4,
+      "N_r": 1,
+      "BW": 20.0,
+      "N_ss": 1,
+      "MCS": 0
+    },
+    {
+      "channel_model_id": 4,
+      "N_t": 4,
+      "N_r": 1,
+      "BW": 20.0,
+      "N_ss": 1,
+      "MCS": 1
+    },
+    {
+      "channel_model_id": 4,
+      "N_t": 4,
+      "N_r": 1,
+      "BW": 20.0,
+      "N_ss": 1,
+      "MCS": 2
+    },
+    {
+      "channel_model_id": 4,
+      "N_t": 4,
+      "N_r": 1,
+      "BW": 20.0,
+      "N_ss": 1,
+      "MCS": 6
+    },
+    {
+      "channel_model_id": 4,
+      "N_t": 4,
+      "N_r": 1,
+      "BW": 20.0,
+      "N_ss": 1,
+      "MCS": 7
+    },
+    {
+      "channel_model_id": 4,
+      "N_t": 4,
+      "N_r": 1,
+      "BW": 20.0,
+      "N_ss": 1,
+      "MCS": 9
+    },
+    {
+      "channel_model_id": 4,
+      "N_t": 4,
+      "N_r": 1,
+      "BW": 40.0,
+      "N_ss": 1,
+      "MCS": 0
+    },
+    {
+      "channel_model_id": 4,
+      "N_t": 4,
+      "N_r": 1,
+      "BW": 40.0,
+      "N_ss": 1,
+      "MCS": 1
+    },
+    {
+      "channel_model_id": 4,
+      "N_t": 4,
+      "N_r": 1,
+      "BW": 40.0,
+      "N_ss": 1,
+      "MCS": 2
+    },
+    {
+      "channel_model_id": 4,
+      "N_t": 4,
+      "N_r": 1,
+      "BW": 40.0,
+      "N_ss": 1,
+      "MCS": 3
+    },
+    {
+      "channel_model_id": 4,
+      "N_t": 4,
+      "N_r": 1,
+      "BW": 40.0,
+      "N_ss": 1,
+      "MCS": 4
+    },
+    {
+      "channel_model_id": 4,
+      "N_t": 4,
+      "N_r": 1,
+      "BW": 40.0,
+      "N_ss": 1,
+      "MCS": 5
+    },
+    {
+      "channel_model_id": 4,
+      "N_t": 4,
+      "N_r": 1,
+      "BW": 40.0,
+      "N_ss": 1,
+      "MCS": 6
+    },
+    {
+      "channel_model_id": 4,
+      "N_t": 4,
+      "N_r": 1,
+      "BW": 40.0,
+      "N_ss": 1,
+      "MCS": 7
+    },
+    {
+      "channel_model_id": 4,
+      "N_t": 4,
+      "N_r": 1,
+      "BW": 40.0,
+      "N_ss": 1,
+      "MCS": 8
+    },
+    {
+      "channel_model_id": 4,
+      "N_t": 4,
+      "N_r": 2,
+      "BW": 20.0,
+      "N_ss": 1,
+      "MCS": 0
+    },
+    {
+      "channel_model_id": 4,
+      "N_t": 4,
+      "N_r": 2,
+      "BW": 20.0,
+      "N_ss": 1,
+      "MCS": 1
+    },
+    {
+      "channel_model_id": 4,
+      "N_t": 4,
+      "N_r": 2,
+      "BW": 20.0,
+      "N_ss": 1,
+      "MCS": 2
+    },
+    {
+      "channel_model_id": 4,
+      "N_t": 4,
+      "N_r": 2,
+      "BW": 20.0,
+      "N_ss": 1,
+      "MCS": 3
+    },
+    {
+      "channel_model_id": 4,
+      "N_t": 4,
+      "N_r": 2,
+      "BW": 20.0,
+      "N_ss": 1,
+      "MCS": 6
+    },
+    {
+      "channel_model_id": 4,
+      "N_t": 4,
+      "N_r": 2,
+      "BW": 20.0,
+      "N_ss": 1,
+      "MCS": 7
+    },
+    {
+      "channel_model_id": 4,
+      "N_t": 4,
+      "N_r": 2,
+      "BW": 20.0,
+      "N_ss": 1,
+      "MCS": 8
+    },
+    {
+      "channel_model_id": 4,
+      "N_t": 4,
+      "N_r": 2,
+      "BW": 20.0,
+      "N_ss": 1,
+      "MCS": 9
+    },
+    {
+      "channel_model_id": 4,
+      "N_t": 4,
+      "N_r": 2,
+      "BW": 20.0,
+      "N_ss": 2,
+      "MCS": 0
+    },
+    {
+      "channel_model_id": 4,
+      "N_t": 4,
+      "N_r": 2,
+      "BW": 20.0,
+      "N_ss": 2,
+      "MCS": 1
+    },
+    {
+      "channel_model_id": 4,
+      "N_t": 4,
+      "N_r": 2,
+      "BW": 20.0,
+      "N_ss": 2,
+      "MCS": 3
+    },
+    {
+      "channel_model_id": 4,
+      "N_t": 4,
+      "N_r": 2,
+      "BW": 20.0,
+      "N_ss": 2,
+      "MCS": 4
+    },
+    {
+      "channel_model_id": 4,
+      "N_t": 4,
+      "N_r": 2,
+      "BW": 20.0,
+      "N_ss": 2,
+      "MCS": 5
+    },
+    {
+      "channel_model_id": 4,
+      "N_t": 4,
+      "N_r": 2,
+      "BW": 20.0,
+      "N_ss": 2,
+      "MCS": 6
+    },
+    {
+      "channel_model_id": 4,
+      "N_t": 4,
+      "N_r": 2,
+      "BW": 20.0,
+      "N_ss": 2,
+      "MCS": 7
+    },
+    {
+      "channel_model_id": 4,
+      "N_t": 4,
+      "N_r": 2,
+      "BW": 20.0,
+      "N_ss": 2,
+      "MCS": 8
+    },
+    {
+      "channel_model_id": 4,
+      "N_t": 4,
+      "N_r": 2,
+      "BW": 20.0,
+      "N_ss": 2,
+      "MCS": 9
+    },
+    {
+      "channel_model_id": 4,
+      "N_t": 4,
+      "N_r": 2,
+      "BW": 40.0,
+      "N_ss": 1,
+      "MCS": 0
+    },
+    {
+      "channel_model_id": 4,
+      "N_t": 4,
+      "N_r": 2,
+      "BW": 40.0,
+      "N_ss": 1,
+      "MCS": 1
+    },
+    {
+      "channel_model_id": 4,
+      "N_t": 4,
+      "N_r": 2,
+      "BW": 40.0,
+      "N_ss": 1,
+      "MCS": 2
+    },
+    {
+      "channel_model_id": 4,
+      "N_t": 4,
+      "N_r": 2,
+      "BW": 40.0,
+      "N_ss": 1,
+      "MCS": 4
+    },
+    {
+      "channel_model_id": 4,
+      "N_t": 4,
+      "N_r": 2,
+      "BW": 40.0,
+      "N_ss": 1,
+      "MCS": 5
+    },
+    {
+      "channel_model_id": 4,
+      "N_t": 4,
+      "N_r": 2,
+      "BW": 40.0,
+      "N_ss": 1,
+      "MCS": 6
+    },
+    {
+      "channel_model_id": 4,
+      "N_t": 4,
+      "N_r": 2,
+      "BW": 40.0,
+      "N_ss": 1,
+      "MCS": 7
+    },
+    {
+      "channel_model_id": 4,
+      "N_t": 4,
+      "N_r": 2,
+      "BW": 40.0,
+      "N_ss": 1,
+      "MCS": 8
+    },
+    {
+      "channel_model_id": 4,
+      "N_t": 4,
+      "N_r": 2,
+      "BW": 40.0,
+      "N_ss": 1,
+      "MCS": 9
+    },
+    {
+      "channel_model_id": 4,
+      "N_t": 4,
+      "N_r": 2,
+      "BW": 40.0,
+      "N_ss": 2,
+      "MCS": 1
+    },
+    {
+      "channel_model_id": 4,
+      "N_t": 4,
+      "N_r": 2,
+      "BW": 40.0,
+      "N_ss": 2,
+      "MCS": 2
+    },
+    {
+      "channel_model_id": 4,
+      "N_t": 4,
+      "N_r": 2,
+      "BW": 40.0,
+      "N_ss": 2,
+      "MCS": 4
+    },
+    {
+      "channel_model_id": 4,
+      "N_t": 4,
+      "N_r": 2,
+      "BW": 40.0,
+      "N_ss": 2,
+      "MCS": 5
+    },
+    {
+      "channel_model_id": 4,
+      "N_t": 4,
+      "N_r": 2,
+      "BW": 40.0,
+      "N_ss": 2,
+      "MCS": 6
+    },
+    {
+      "channel_model_id": 4,
+      "N_t": 4,
+      "N_r": 2,
+      "BW": 40.0,
+      "N_ss": 2,
+      "MCS": 8
+    }
+  ]
+}

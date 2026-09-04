@@ -13,13 +13,8 @@ class PKDModel(nn.Module):
 
     Implements conditional time-varying log-AR(p) process with:
     - Stable AR dynamics via PACF parameterization
-    - Flexible innovation distributions: SGN (default), Gaussian, or Flow
+    - Configuration-dependent Gaussian innovation variance
     - Compositional conditioning for generalization
-
-    SGN (Skew Generalized Normal) innovations provide:
-    - Configuration-adaptive variance, skewness, and tail behavior
-    - Generalization of Gaussian (lambda=0, beta=2 case)
-    - Better marginal calibration across diverse PHY conditions
     """
 
     def __init__(self,
@@ -30,7 +25,7 @@ class PKDModel(nn.Module):
                  ar_order: int = 10,
                  hidden_dim: int = 128,
                  kappa_max: float = 0.95,
-                 innovation_type: str = 'sgn',
+                 innovation_type: str = 'gaussian',
                  **innovation_kwargs):
         """
         Args:
@@ -43,11 +38,11 @@ class PKDModel(nn.Module):
             hidden_dim: Hidden dimension for encoder
             kappa_max: Maximum PACF coefficient magnitude (0.90-0.98)
                       Lower = more stable, higher = more flexible
-            innovation_type: 'sgn' (default), 'gaussian', or 'flow'
-            **innovation_kwargs: Additional arguments for innovation model
-                For sgn: min_sigma, min_beta, max_beta (defaults: 0.1, 0.5, 4.0)
-                For gaussian: min_sigma (default: 0.1)
-                For flow: num_flow_bins, flow_tail_bound, min_bin_size, min_derivative
+            innovation_type: Innovation implementation. The supported PKD
+                configuration is 'gaussian'; other values exist only for
+                compatibility with legacy experiments.
+            **innovation_kwargs: Gaussian innovation parameters such as
+                min_sigma (default: 0.1).
         """
         super().__init__()
 

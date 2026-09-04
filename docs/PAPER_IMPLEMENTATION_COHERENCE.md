@@ -91,12 +91,13 @@ class GaussianInnovation:
 
 **Paper Also Mentions:** "conditional normalizing flow" for innovation (page 1, 4)
 
-**Implementation Status:** ⚠️ **Flow support exists but Gaussian is default**
+**Implementation Status:** Gaussian is the supported PKD innovation model
 
 **Discrepancy Analysis:**
 - Paper (Section IV, page 5): "we model the innovation process using a conditional normalizing flow"
 - Paper (Section VI, page 6): "Empirically, we find that Gaussian innovations with configuration-dependent variance are sufficient"
-- **Implementation Choice:** Gaussian innovation is the default (`innovation_type='gaussian'`)
+- **Implementation Choice:** Gaussian innovation is used by training,
+  evaluation, and inference (`innovation_type='gaussian'`)
 - **Rationale:** Paper's own experiments show Gaussian is sufficient, so implementation prioritizes simplicity
 
 **Conclusion:** This is an **intentional simplification** aligned with paper's empirical findings.
@@ -330,9 +331,8 @@ def _get_or_compute_params(self, config_dict):
 
 **Justification:**
 - Paper's Section VI states: "Gaussian innovations... are sufficient"
-- Implementation offers BOTH options via `innovation_type` parameter
 - Gaussian is simpler, faster, and empirically validated by paper
-- Flow remains available for cases needing more flexibility
+- Legacy experimental flow code is not part of the supported model
 
 **Verdict:** ✅ **Intentional simplification aligned with paper's findings**
 
@@ -375,7 +375,8 @@ def _get_or_compute_params(self, config_dict):
 
 **Paper (page 1, 4):** Emphasizes "conditional normalizing flow" for innovations
 
-**Implementation:** Flow exists but Gaussian is default
+**Implementation:** Gaussian innovation is used; legacy flow code is not part
+of the supported model
 
 **Impact:** **MINOR** - Paper's own experiments validate Gaussian sufficiency
 

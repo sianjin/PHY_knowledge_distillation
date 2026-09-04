@@ -121,10 +121,8 @@ def evaluate_model_on_slice(checkpoint_path, test_sequences, test_configs,
             'ar_order': 10,
             'hidden_dim': 128,
             'kappa_max': 0.95,
-            'innovation_type': 'sgn',
-            'min_sigma': 0.1,
-            'min_beta': 0.5,
-            'max_beta': 4.0
+            'innovation_type': 'gaussian',
+            'min_sigma': 0.1
         }
 
     # Create model
@@ -282,10 +280,8 @@ def evaluate_model_on_excluded_tuples(checkpoint_path, test_sequences, test_conf
             'ar_order': 10,
             'hidden_dim': 128,
             'kappa_max': 0.95,
-            'innovation_type': 'sgn',
-            'min_sigma': 0.1,
-            'min_beta': 0.5,
-            'max_beta': 4.0
+            'innovation_type': 'gaussian',
+            'min_sigma': 0.1
         }
 
     model = PKDModel(**model_config)

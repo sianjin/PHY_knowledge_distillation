@@ -1,25 +1,15 @@
 """Training loop for PKD model.
 
-Training with SGN Innovation:
-------------------------------
-The PKD model uses SGN (Skew Generalized Normal) innovations by default, which
-provides configuration-adaptive variance, skewness, and tail behavior. During
-training, the model learns to predict three SGN parameters from the configuration:
-  - sigma: scale parameter (variance)
-  - beta: shape parameter (tail heaviness, beta=2 is Gaussian-like)
-  - lambda: skewness parameter (lambda=0 is symmetric)
+Training with Gaussian innovations:
+------------------------------------
+The supported PKD model predicts a configuration-dependent standard deviation
+sigma_t and models the innovation as eps_t ~ N(0, sigma_t^2).
 
-The training objective minimizes the negative log-likelihood:
-  loss = -log p_SGN(eps_t | sigma_t, beta_t, lambda_t)
+Training minimizes the Gaussian negative log-likelihood, where
+eps_t = X_t - mu_t is the innovation and mu_t is the AR mean.
 
-where eps_t = X_t - mu_t is the innovation (residual) and mu_t is the AR mean.
-
-The SGN distribution generalizes Gaussian innovations:
-  - When lambda=0 and beta=2, SGN reduces to Gaussian
-  - This allows the model to learn both Gaussian and non-Gaussian residuals
-  - Better captures skewed and heavy-tailed effective SINR distributions
-
-Alternative innovations (Gaussian, Flow) are still supported via innovation_type parameter.
+Legacy experimental innovation implementations remain loadable for old
+checkpoints, but they are not used by the training or evaluation pipeline.
 """
 import torch
 import torch.nn as nn
@@ -40,13 +30,37 @@ class PKDDataset(Dataset):
             ar_order: AR order (for history)
             eps: minimum value to prevent log(0) -> -inf
         """
-        self.sequences = sequences
         self.configs = configs
         self.ar_order = ar_order
 
         # Data is already in natural log scale (converted in data_loader.py)
-        # Just store as-is without conversion
-        self.X_sequences = sequences
+        # Store uniform sequences contiguously so DataLoader can fetch a whole
+        # batch with NumPy indexing instead of constructing samples one by one.
+        sequence_lengths = np.asarray([len(sequence) for sequence in sequences])
+        self.uniform_sequences = (
+            len(sequence_lengths) > 0
+            and np.all(sequence_lengths == sequence_lengths[0])
+        )
+        if self.uniform_sequences:
+            self.X_sequences = np.asarray(sequences, dtype=np.float32)
+            self.sequence_length = int(sequence_lengths[0])
+            self.samples_per_sequence = self.sequence_length - ar_order
+        else:
+            self.X_sequences = [
+                np.asarray(sequence, dtype=np.float32) for sequence in sequences
+            ]
+            self.sample_offsets = np.concatenate((
+                [0],
+                np.cumsum(np.maximum(sequence_lengths - ar_order, 0)),
+            ))
+
+        self.static_configs = all(isinstance(config, dict) for config in configs)
+        if self.static_configs and configs:
+            self.config_arrays = {}
+            for key in configs[0]:
+                values = [config[key] for config in configs]
+                dtype = np.float32 if isinstance(values[0], float) else np.int64
+                self.config_arrays[key] = np.asarray(values, dtype=dtype)
 
         # Check for any non-finite values
         for i, X_seq in enumerate(self.X_sequences):
@@ -55,38 +69,60 @@ class PKDDataset(Dataset):
                 print(f"  Min: {np.min(sequences[i])}, Max: {np.max(sequences[i])}")
                 print(f"  Finite ratio: {np.isfinite(X_seq).mean():.4f}")
 
-        # Build training samples (all valid t >= p+1 from all sequences)
-        self.samples = []
-        for seq_idx, X_seq in enumerate(self.X_sequences):
-            T = len(X_seq)
-            for t in range(ar_order, T):
-                self.samples.append({
-                    'seq_idx': seq_idx,
-                    't': t,
-                    'X_t': X_seq[t],
-                    'X_hist': np.flip(X_seq[t-ar_order:t], axis=0).copy()  # [X_{t-1}, ..., X_{t-p}]
-                })
-
     def __len__(self):
-        return len(self.samples)
+        if self.uniform_sequences:
+            return len(self.X_sequences) * self.samples_per_sequence
+        return int(self.sample_offsets[-1])
 
     def __getitem__(self, idx):
-        sample = self.samples[idx]
-        seq_idx = sample['seq_idx']
-        t = sample['t']
+        if self.uniform_sequences:
+            seq_idx, time_offset = divmod(idx, self.samples_per_sequence)
+            t = time_offset + self.ar_order
+        else:
+            seq_idx = np.searchsorted(self.sample_offsets, idx, side='right') - 1
+            t = idx - self.sample_offsets[seq_idx] + self.ar_order
 
         # Get configuration at time t
         config_t = self.configs[seq_idx][t] if isinstance(self.configs[seq_idx], list) else self.configs[seq_idx]
 
         return {
-            'X_t': torch.tensor(sample['X_t'], dtype=torch.float32),
-            'X_hist': torch.tensor(sample['X_hist'], dtype=torch.float32),
+            'X_t': torch.tensor(self.X_sequences[seq_idx][t], dtype=torch.float32),
+            'X_hist': torch.from_numpy(
+                self.X_sequences[seq_idx][t-self.ar_order:t][::-1].copy()
+            ),
             'config': config_t
         }
+
+    def __getitems__(self, indices):
+        """Fetch uniform, static-config batches without per-sample Python work."""
+        if not (self.uniform_sequences and self.static_configs):
+            return [self[index] for index in indices]
+
+        indices = np.asarray(indices, dtype=np.int64)
+        seq_indices, time_offsets = np.divmod(indices, self.samples_per_sequence)
+        time_indices = time_offsets + self.ar_order
+        history_indices = time_indices[:, None] - np.arange(
+            1, self.ar_order + 1, dtype=np.int64
+        )
+
+        X_t = torch.from_numpy(self.X_sequences[seq_indices, time_indices])
+        X_hist = torch.from_numpy(self.X_sequences[seq_indices[:, None], history_indices])
+        config_dict = {
+            key: torch.from_numpy(values[seq_indices])
+            for key, values in self.config_arrays.items()
+        }
+        return X_t, X_hist, config_dict
 
 
 def collate_fn(batch):
     """Collate batch of samples."""
+    if (
+        isinstance(batch, tuple)
+        and len(batch) == 3
+        and torch.is_tensor(batch[0])
+    ):
+        return batch
+
     X_t = torch.stack([b['X_t'] for b in batch])
     X_hist = torch.stack([b['X_hist'] for b in batch])
 
@@ -109,15 +145,17 @@ def train_epoch(model, dataloader, optimizer, device, clip_grad=1.0):
     total_loss = 0.0
     total_samples = 0
 
-    pbar = tqdm(dataloader, desc="Training")
+    pbar = tqdm(dataloader, desc="Training", mininterval=2.0)
     for X_t, X_hist, config_dict in pbar:
         # Move to device
-        X_t = X_t.to(device)
-        X_hist = X_hist.to(device)
-        config_dict = {k: v.to(device) for k, v in config_dict.items()}
+        X_t = X_t.to(device, non_blocking=True)
+        X_hist = X_hist.to(device, non_blocking=True)
+        config_dict = {
+            k: v.to(device, non_blocking=True) for k, v in config_dict.items()
+        }
 
         # Forward
-        optimizer.zero_grad()
+        optimizer.zero_grad(set_to_none=True)
         log_q, info = model.compute_log_likelihood(X_t, X_hist, config_dict)
 
         # Loss: negative log-likelihood
@@ -199,9 +237,11 @@ def validate(model, dataloader, device):
 
     with torch.no_grad():
         for X_t, X_hist, config_dict in dataloader:
-            X_t = X_t.to(device)
-            X_hist = X_hist.to(device)
-            config_dict = {k: v.to(device) for k, v in config_dict.items()}
+            X_t = X_t.to(device, non_blocking=True)
+            X_hist = X_hist.to(device, non_blocking=True)
+            config_dict = {
+                k: v.to(device, non_blocking=True) for k, v in config_dict.items()
+            }
 
             log_q, _ = model.compute_log_likelihood(X_t, X_hist, config_dict)
             loss = -log_q.mean()
@@ -274,8 +314,6 @@ def train_pkd(model, train_sequences, train_configs,
     # Training loop
     best_val_loss = float('inf')
     epochs_without_improvement = 0
-
-    torch.autograd.set_detect_anomaly(True)
 
     for epoch in range(num_epochs):
         print(f"\nEpoch {epoch+1}/{num_epochs}")
