@@ -195,6 +195,7 @@ def run_tuple_baseline_comparison(
     ar_order: int = AR_ORDER,
     device: Optional[str] = None,
     max_files: Optional[int] = None,
+    on_percentage_done=None,
 ) -> Dict[str, Dict[int, dict]]:
     """Full-tuple-exclusion counterpart to run_baseline_comparison
     (Fig. 13, generalized): PKD vs. nearest-tuple-transfer EESM-log-AR,
@@ -202,6 +203,14 @@ def run_tuple_baseline_comparison(
     tuples rather than MCS within one fixed slice. No piecewise-linear
     interpolation baseline (Section V-D design decision -- see
     pkd.baselines.transfer.nearest_tuple_transfer's docstring).
+
+    Args:
+        on_percentage_done: optional callback(pct, results_so_far) invoked
+            after each exclusion percentage finishes (both PKD and
+            nearest_tuple for that pct, when applicable). This sweep takes
+            hours; use this to checkpoint partial results to disk so a
+            crash/interruption only costs the remaining percentages,
+            not the whole run.
 
     Returns:
         {'pkd': {pct: metrics}, 'nearest_tuple': {pct: metrics}}
@@ -233,8 +242,17 @@ def run_tuple_baseline_comparison(
 
         checkpoint_path = f'pkd/trained_models/exclude_config_{pct}/pkd_model.pt'
         if os.path.exists(checkpoint_path) and excluded_tuples:
+            # This sweep only needs the numeric summary (used for Fig. 13's
+            # curves below), not the Fig. 10/12 plots that
+            # evaluate_model_on_excluded_tuples also produces as a side
+            # effect -- route those to a per-percentage scratch path so
+            # repeated calls across the sweep don't overwrite each other or
+            # the real Fig. 10/12 outputs from a dedicated single-percentage
+            # call elsewhere.
             pkd_metrics = evaluate_model_on_excluded_tuples(
-                checkpoint_path, test_sequences, test_configs, excluded_tuples, device
+                checkpoint_path, test_sequences, test_configs, excluded_tuples, device,
+                quantile_save_path=f'figures/_sweep_scratch_quantile_error_{pct}pct.png',
+                ccdf_save_path=f'figures/_sweep_scratch_ccdf_error_{pct}pct.png',
             )
             results['pkd'][pct] = pkd_metrics
         else:
@@ -263,6 +281,9 @@ def run_tuple_baseline_comparison(
         print(f"  [nearest_tuple] Median KS: {metrics['overall_ks_median']:.4f}, "
               f"Median ACF RMSE: {metrics['overall_acf_median']:.4f}")
         results['nearest_tuple'][pct] = metrics
+
+        if on_percentage_done is not None:
+            on_percentage_done(pct, results)
 
     return results
 

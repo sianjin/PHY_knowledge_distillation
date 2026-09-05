@@ -577,19 +577,26 @@ def generate_figure3_ccdf_error_by_tuple(
     generate_figure2_quantile_error_by_tuple, but for the CCDF absolute
     error curve.
 
-    The exceedance threshold tau is redefined as a QUANTILE LEVEL of each
+    The exceedance threshold tau is indexed by a QUANTILE LEVEL of each
     tuple's own teacher distribution (rather than a raw log-SINR value),
     since different excluded tuples (different MCS/MIMO/BW/CH) have very
     different SINR dynamic ranges -- a fixed log-SINR grid would not be
     comparable across tuples, whereas a shared quantile-level grid is.
-    Concretely, for quantile level q, tau(q) = teacher's own q-th
-    quantile, and the plotted error is
-        |P_student(X_t > tau(q)) - (1 - q)|,
-    i.e. how far the student's exceedance probability at the teacher's own
-    q-quantile deviates from its nominal value (1 - q). This puts panel
-    (a) on the same x-axis convention (quantile level) as panel (b)
-    (generate_figure2_quantile_error_by_tuple), which was not the case in
-    the original per-MCS Fig. 10/Eq. (35) (raw log-SINR tau).
+    Concretely, for quantile level q, tau(q) is the q-th quantile of the
+    teacher distribution pooled across all of the tuple's test sequences,
+    and the plotted error is
+        |P_student(X_t > tau(q)) - P_teacher(X_t > tau(q))|,
+    i.e. the same empirical teacher-vs-student CCDF comparison as the
+    original per-MCS Fig. 10/Eq. (35), just with tau parameterized by
+    pooled-teacher quantile level instead of a raw log-SINR grid so panel
+    (a) shares its x-axis convention with panel (b)
+    (generate_figure2_quantile_error_by_tuple). Note P_teacher(X_t >
+    tau(q)) is evaluated per-sequence and will not exactly equal (1 - q)
+    even for a perfect student, since tau(q) is fixed from the
+    tuple-pooled teacher quantile while each sequence's own empirical CCDF
+    varies -- using (1 - q) as a stand-in for P_teacher inflates this
+    curve with pure teacher sampling variability and was the bug fixed
+    here.
 
     Does not modify or replace generate_figure3_ccdf_error, which remains
     the MCS-only-exclusion figure generator.
@@ -649,10 +656,10 @@ def generate_figure3_ccdf_error_by_tuple(
             if np.all(np.isfinite(student_seq)):
                 X_student = student_seq
                 ccdf_error = []
-                for q, tau in zip(quantile_levels, tau_grid):
-                    nominal_exceedance = 1.0 - q
+                for tau in tau_grid:
+                    ccdf_teacher = np.mean(X_teacher > tau)
                     ccdf_student = np.mean(X_student > tau)
-                    ccdf_error.append(np.abs(ccdf_student - nominal_exceedance))
+                    ccdf_error.append(np.abs(ccdf_student - ccdf_teacher))
                 ccdf_errors.append(ccdf_error)
 
         if ccdf_errors:

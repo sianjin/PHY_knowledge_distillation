@@ -243,7 +243,9 @@ def get_excluded_tuples(manifest):
 
 
 def evaluate_model_on_excluded_tuples(checkpoint_path, test_sequences, test_configs,
-                                       excluded_tuples, device='cpu'):
+                                       excluded_tuples, device='cpu',
+                                       quantile_save_path='figures/test_quantile_error_tuple_exclusion.png',
+                                       ccdf_save_path='figures/test_ccdf_error_tuple_exclusion.png'):
     """Evaluate a single tuple-exclusion-trained PKD model on the excluded
     tuples only, using the *_by_tuple figure functions (aggregated median
     + 10-90 percentile band across all excluded tuples), the full-tuple
@@ -257,6 +259,13 @@ def evaluate_model_on_excluded_tuples(checkpoint_path, test_sequences, test_conf
         excluded_tuples: List of {channel_model_id, N_t, N_r, BW, N_ss,
             MCS} dicts identifying which tuples to evaluate against
         device: Device for evaluation
+        quantile_save_path: Where to save the Fig. 10b quantile-error plot.
+            Defaults collide across repeated calls at different exclusion
+            percentages (e.g. from a sweep) -- pass a percentage-suffixed
+            path when calling this for more than one percentage in the
+            same run.
+        ccdf_save_path: Where to save the Fig. 10a/12 CCDF-error plot.
+            Same collision caveat as quantile_save_path.
 
     Returns:
         dict: {'overall_ks_median'/'p10'/'p90', 'overall_acf_median'/
@@ -302,10 +311,12 @@ def evaluate_model_on_excluded_tuples(checkpoint_path, test_sequences, test_conf
     os.makedirs('figures', exist_ok=True)
 
     quantile_results = generate_figure2_quantile_error_by_tuple(
-        model, filtered_sequences, filtered_configs, device=device
+        model, filtered_sequences, filtered_configs, device=device,
+        save_path=quantile_save_path,
     )
     ccdf_results = generate_figure3_ccdf_error_by_tuple(
-        model, filtered_sequences, filtered_configs, device=device
+        model, filtered_sequences, filtered_configs, device=device,
+        save_path=ccdf_save_path,
     )
     temporal_results = generate_figure12_temporal_metrics_by_tuple(
         model, filtered_sequences, filtered_configs, device=device
