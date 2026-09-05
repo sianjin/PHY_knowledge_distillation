@@ -253,6 +253,8 @@ def run_tuple_baseline_comparison(
                 checkpoint_path, test_sequences, test_configs, excluded_tuples, device,
                 quantile_save_path=f'figures/_sweep_scratch_quantile_error_{pct}pct.png',
                 ccdf_save_path=f'figures/_sweep_scratch_ccdf_error_{pct}pct.png',
+                acf_rmse_save_path=f'figures/_sweep_scratch_acf_rmse_{pct}pct.png',
+                psd_rmse_save_path=f'figures/_sweep_scratch_psd_rmse_{pct}pct.png',
             )
             results['pkd'][pct] = pkd_metrics
         else:

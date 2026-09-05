@@ -466,6 +466,31 @@ def generate_figure12_temporal_metrics_by_tuple(
     print(f"  Median normalized PSD RMSE across excluded tuples: {psd_summary['median']:.4f} "
           f"[{psd_summary['p10']:.4f}, {psd_summary['p90']:.4f}]")
 
+    # Fig. 12 (tuple exclusion): one value per excluded tuple, sorted by
+    # value, plotted as a strip with the median/p10/p90 band overlaid --
+    # there's no natural SNR/MCS x-axis here (unlike the original per-MCS
+    # Fig. 1/12, which sweeps SNR within one slice), since each excluded
+    # tuple already collapses its own SNR sweep into one median value.
+    def _plot_per_tuple(summary, ylabel, save_path):
+        vals = np.array(sorted(summary['per_tuple'].values()))
+        idx = np.arange(1, len(vals) + 1)
+        fig, ax = plt.subplots(1, 1, figsize=(8, 5))
+        ax.scatter(idx, vals, color='tab:blue', alpha=0.7, label='Excluded tuples (sorted)')
+        ax.axhline(summary['median'], color='tab:red', linestyle='-', linewidth=2, label='Median')
+        ax.axhline(summary['p10'], color='tab:red', linestyle='--', linewidth=1, alpha=0.6, label='p10 / p90')
+        ax.axhline(summary['p90'], color='tab:red', linestyle='--', linewidth=1, alpha=0.6)
+        ax.set_xlabel('Excluded tuple (sorted by value)')
+        ax.set_ylabel(ylabel)
+        ax.legend()
+        ax.grid(True, alpha=0.3)
+        plt.tight_layout()
+        plt.savefig(save_path, dpi=150, bbox_inches='tight')
+        print(f"Saved {save_path}")
+        plt.close()
+
+    _plot_per_tuple(acf_summary, 'ACF RMSE', ks_save_path)
+    _plot_per_tuple(psd_summary, 'Normalized PSD RMSE', psd_save_path)
+
     return {'ks_stat': ks_summary, 'acf_rmse': acf_summary, 'psd_rmse': psd_summary}
 
 

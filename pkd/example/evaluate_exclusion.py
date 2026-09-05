@@ -245,7 +245,9 @@ def get_excluded_tuples(manifest):
 def evaluate_model_on_excluded_tuples(checkpoint_path, test_sequences, test_configs,
                                        excluded_tuples, device='cpu',
                                        quantile_save_path='figures/test_quantile_error_tuple_exclusion.png',
-                                       ccdf_save_path='figures/test_ccdf_error_tuple_exclusion.png'):
+                                       ccdf_save_path='figures/test_ccdf_error_tuple_exclusion.png',
+                                       acf_rmse_save_path='figures/test_metrics_acf_rmse_tuple_exclusion.png',
+                                       psd_rmse_save_path='figures/test_metrics_psd_rmse_tuple_exclusion.png'):
     """Evaluate a single tuple-exclusion-trained PKD model on the excluded
     tuples only, using the *_by_tuple figure functions (aggregated median
     + 10-90 percentile band across all excluded tuples), the full-tuple
@@ -264,8 +266,13 @@ def evaluate_model_on_excluded_tuples(checkpoint_path, test_sequences, test_conf
             percentages (e.g. from a sweep) -- pass a percentage-suffixed
             path when calling this for more than one percentage in the
             same run.
-        ccdf_save_path: Where to save the Fig. 10a/12 CCDF-error plot.
+        ccdf_save_path: Where to save the Fig. 10a CCDF-error plot.
             Same collision caveat as quantile_save_path.
+        acf_rmse_save_path: Where to save the Fig. 12 per-tuple ACF RMSE
+            plot. Same collision caveat as quantile_save_path.
+        psd_rmse_save_path: Where to save the Fig. 12 per-tuple
+            normalized PSD RMSE plot. Same collision caveat as
+            quantile_save_path.
 
     Returns:
         dict: {'overall_ks_median'/'p10'/'p90', 'overall_acf_median'/
@@ -319,7 +326,9 @@ def evaluate_model_on_excluded_tuples(checkpoint_path, test_sequences, test_conf
         save_path=ccdf_save_path,
     )
     temporal_results = generate_figure12_temporal_metrics_by_tuple(
-        model, filtered_sequences, filtered_configs, device=device
+        model, filtered_sequences, filtered_configs, device=device,
+        ks_save_path=acf_rmse_save_path,
+        psd_save_path=psd_rmse_save_path,
     )
 
     metrics = {
