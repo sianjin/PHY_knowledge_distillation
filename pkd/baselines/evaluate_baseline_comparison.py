@@ -337,6 +337,7 @@ def generate_tuple_comparison_plots(
                   color=style['color'], label=style['label'])
     plt.xlabel('Configuration-Tuple Exclusion Percentage (%)', fontsize=12)
     plt.ylabel('Median ACF RMSE', fontsize=12)
+    plt.ylim(0.05, 0.07)
     plt.legend(fontsize=10, framealpha=0.9)
     plt.grid(True, alpha=0.3)
     plt.tight_layout()
