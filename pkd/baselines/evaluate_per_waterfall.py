@@ -306,6 +306,7 @@ def generate_per_waterfall_plot(
 
     plt.xlabel('SNR (dB)', fontsize=12)
     plt.ylabel('PER', fontsize=12)
+    plt.ylim(1e-2, 1.5)
     plt.legend(fontsize=10, framealpha=0.9)
     plt.grid(True, which='both', alpha=0.3)
     plt.tight_layout()
@@ -486,6 +487,7 @@ def generate_per_waterfall_plot_tuple(
 
     plt.xlabel('SNR (dB)', fontsize=12)
     plt.ylabel('PER', fontsize=12)
+    plt.ylim(1e-2, 1.5)
     plt.legend(fontsize=10, framealpha=0.9)
     plt.grid(True, which='both', alpha=0.3)
     plt.tight_layout()
