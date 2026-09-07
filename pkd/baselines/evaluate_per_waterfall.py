@@ -12,7 +12,8 @@ sequence (PKD via pkd.infer.PKDInference, baselines via
 pkd.baselines.generate.generate_ar_sequence) at each of the target MCS's
 own waterfall SNR points, then averaging AWGNPERLookup.lookup(gamma_eff_db,
 mcs, packet_length=1000) over the sequence. packet_length=1000 matches the
-APEPLength=1000 payload used to generate data/*.mat (phy/simulation/*.m),
+APEPLength=1000 payload used to generate data/*.mat
+(phy/teacher-data-generation/*.m),
 so this is the same PER definition as the ground truth, not the LUT's
 native L0=1458 default.
 

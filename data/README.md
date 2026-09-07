@@ -33,7 +33,9 @@ Each `.mat` file contains:
 
 ## Generating New Data
 
-The `.mat` files are produced by the MATLAB simulation scripts in `phy/simulation/`. See [`phy/README.md`](../phy/README.md) for instructions on running the simulations.
+The `.mat` files are produced by the MATLAB scripts in
+`phy/teacher-data-generation/`. See [`phy/README.md`](../phy/README.md) for
+instructions on generating the teacher data.
 
 ## Using the Data
 

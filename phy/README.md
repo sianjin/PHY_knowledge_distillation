@@ -26,12 +26,13 @@ PHY Knowledge Distillation (PKD) replaces per-configuration calibration with lea
 
 ```
 .
-├── phy/                           # MATLAB: PHY simulation (teacher data generation)
-│   ├── simulation/                # MATLAB scripts for effective SINR generation
+├── phy/                           # MATLAB PHY workflows
+│   ├── eesm-accuracy-validation/  # Calibrate EESM beta and visualize accuracy
 │   │   ├── box0Simulation.m       # Main simulation script
 │   │   ├── calculateSINR.m        # EESM effective SINR computation
 │   │   └── ...                    # Channel modeling, beamforming, spatial correlation
-│   └── validation/                # MATLAB scripts for PHY abstraction validation
+│   ├── teacher-data-generation/   # Generate effective-SINR training datasets
+│   └── runtime-benchmark/         # Measure abstraction sequence-generation runtime
 │
 ├── pkd/                           # Python: PKD student model
 │   ├── config.py                  # Configuration structures
@@ -54,6 +55,21 @@ PHY Knowledge Distillation (PKD) replaces per-configuration calibration with lea
 ---
 
 ## Part 1: MATLAB PHY Simulation (Teacher)
+
+### PHY Folder Responsibilities
+
+- `eesm-accuracy-validation/` calibrates the EESM beta parameter against
+  full-PHY packet outcomes, reruns the abstraction, and plots PER comparisons.
+  Its primary purpose is visual accuracy validation.
+- `teacher-data-generation/` recalibrates beta for each selected PHY
+  configuration, then generates and saves effective-SINR sequences for PKD
+  training.
+- `runtime-benchmark/` recalibrates beta before timing, then measures the
+  lightweight abstraction path. Beta calibration is outside the timed section.
+
+The folders are independent workflows: teacher-data generation and runtime
+benchmarking call their own copies of `corrPHYVal.m`; they do not load a beta
+artifact produced by `eesm-accuracy-validation/`.
 
 ### Requirements
 
@@ -101,8 +117,8 @@ The total configuration space is **4000 distinct configurations** (2 × 10 × 10
 ### Running the Simulation
 
 ```matlab
-% Navigate to simulation folder
-cd phy/simulation
+% Navigate to the teacher-data generation folder
+cd phy/teacher-data-generation
 
 % Run the main simulation script
 box0Simulation
@@ -124,8 +140,8 @@ Each `.mat` file contains:
 ### Validation
 
 ```matlab
-% Navigate to validation folder
-cd phy/validation
+% Navigate to the EESM accuracy-validation folder
+cd phy/eesm-accuracy-validation
 
 % Run validation scripts to compare PHY abstraction methods
 % (EESM, MIESM, RBIR, etc. vs full PHY simulation)
@@ -176,7 +192,7 @@ python -m pkd.example train-real
 
 ### Training
 
-Place `.mat` files from `phy/simulation/` into `data/`, then:
+Place `.mat` files from `phy/teacher-data-generation/` into `data/`, then:
 
 ```python
 from pkd import train_pkd
