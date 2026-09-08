@@ -16,6 +16,7 @@ function [mcsNext, state] = rateController(perInst, mcsCur, state)
 %               initialise. Fields:
 %                 .perEwma   - EWMA of perInst
 %                 .goodCount - consecutive packets with perEwma < PER_LOW
+%                 .badCount  - consecutive packets with perEwma > PER_HIGH
 %
 %   Output
 %     mcsNext : MCS index to use for the next packet (0..MCS_MAX).
@@ -23,30 +24,34 @@ function [mcsNext, state] = rateController(perInst, mcsCur, state)
 %
 %   Policy
 %     perEwma_t = (1-ALPHA)*perEwma_{t-1} + ALPHA*perInst_t
-%     if perEwma_t > PER_HIGH        -> MCS down by 1, reset goodCount
-%     elseif perEwma_t < PER_LOW     -> goodCount++
-%                                       if goodCount >= UP_COUNT ->
-%                                           MCS up by 1, reset goodCount
-%     else                            -> hold, reset goodCount
+%     if perEwma_t > PER_HIGH    -> badCount++; goodCount = 0
+%                                   if badCount  >= DOWN_COUNT ->
+%                                       MCS down by 1, reset badCount
+%     elseif perEwma_t < PER_LOW -> goodCount++; badCount = 0
+%                                   if goodCount >= UP_COUNT ->
+%                                       MCS up by 1, reset goodCount
+%     else                       -> hold, reset both counters
 %
 %   Constants (keep in sync with pkd/rate_control.py):
-%   Fast-EWMA policy with a dead-band: raise MCS only when EWMA PER is
-%   clearly low (< PER_LOW), lower when high (> PER_HIGH), hold in between.
-%   UP_COUNT = 1 (step up on a single good EWMA sample) is needed for the
-%   controller to track even the slow (f = 1) Fig. 15 SNR sweep. The
-%   PER_LOW/PER_HIGH gap (0.03 vs 0.10) damps the up/down oscillation that
-%   UP_COUNT = 1 would otherwise cause -- with PER_LOW = 0.05 the mid-SNR
-%   operating point sat above PER_HIGH and the controller hunted. Down-
-%   steps stay immediate, which keeps the loop stable.
-ALPHA    = 0.2;
-PER_LOW  = 0.03;
-PER_HIGH = 0.10;
-UP_COUNT = 1;
-MCS_MIN  = 0;
-MCS_MAX  = 9;
+%   Fast-EWMA policy with a dead-band and symmetric confirmation counts:
+%   raise MCS when EWMA PER is clearly low (< PER_LOW), lower when clearly
+%   high (> PER_HIGH), hold in between. UP_COUNT = 1 keeps the ascent quick
+%   enough to track the slow (f = 1) Fig. 15 SNR sweep. DOWN_COUNT = 2 (a
+%   single bad EWMA sample no longer forces a step down) stops one unlucky
+%   Bernoulli packet error from knocking the controller down a level --
+%   the cause of the wide across-run MCS spread and the stubborn low-MCS
+%   tail at high SNR in earlier runs. ALPHA = 0.1 (was 0.2) further limits
+%   how much a single error moves perEwma.
+ALPHA      = 0.1;
+PER_LOW    = 0.03;
+PER_HIGH   = 0.10;
+UP_COUNT   = 1;
+DOWN_COUNT = 2;
+MCS_MIN    = 0;
+MCS_MAX    = 9;
 
 if isempty(state)
-    state = struct('perEwma', perInst, 'goodCount', 0);
+    state = struct('perEwma', perInst, 'goodCount', 0, 'badCount', 0);
 else
     state.perEwma = (1 - ALPHA) * state.perEwma + ALPHA * perInst;
 end
@@ -54,9 +59,14 @@ end
 mcsNext = mcsCur;
 
 if state.perEwma > PER_HIGH
-    mcsNext = max(mcsCur - 1, MCS_MIN);
     state.goodCount = 0;
+    state.badCount = state.badCount + 1;
+    if state.badCount >= DOWN_COUNT
+        mcsNext = max(mcsCur - 1, MCS_MIN);
+        state.badCount = 0;
+    end
 elseif state.perEwma < PER_LOW
+    state.badCount = 0;
     state.goodCount = state.goodCount + 1;
     if state.goodCount >= UP_COUNT
         mcsNext = min(mcsCur + 1, MCS_MAX);
@@ -64,5 +74,6 @@ elseif state.perEwma < PER_LOW
     end
 else
     state.goodCount = 0;
+    state.badCount = 0;
 end
 end

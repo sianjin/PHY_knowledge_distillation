@@ -40,7 +40,7 @@ MCS 0–9 adapted dynamically. Payload 1000 bytes, LDPC.
 | File | Role |
 |---|---|
 | `snrTrajectory.m` | Deterministic common `{SNR_t}`: **one slow sinusoid cycle** (`f = 1`, starts high, dips to `snrMin` near the midpoint, rises back) + fixed-seed AR(1) jitter. One slow cycle keeps the SNR quasi-static over ~100-packet windows so the controller settles and the Fig. 15(b) histograms stay tight. Saved to `snr_trajectory.mat`. |
-| `rateController.m` | Shared EWMA-PER dual-threshold controller: raise MCS when EWMA PER < `PER_LOW=0.03`, lower when > `PER_HIGH=0.10`, hold in the dead-band (`ALPHA=0.2`, `UP_COUNT=1` so the ascent tracks the sweep; down-steps immediate). **Byte-for-byte twin of `pkd/rate_control.py`.** |
+| `rateController.m` | Shared EWMA-PER dual-threshold controller: raise MCS when EWMA PER < `PER_LOW=0.03`, lower when > `PER_HIGH=0.10`, hold in the dead-band. `ALPHA=0.1`, `UP_COUNT=1` (ascent tracks the sweep), `DOWN_COUNT=2` (a single unlucky packet error no longer forces a step down — keeps the Fig. 15(b) histograms tight). **Byte-for-byte twin of `pkd/rate_control.py`.** |
 | `calibrateSnrRange.m` | Holds SNR constant on a grid, reports where the controller settles (median MCS per SNR). **The printed table is the reference**; the one-line "Suggested" is a starting point (`snrMin` = lowest SNR with `medianMCS >= 1` and `meanPER < 0.15`; `snrMax` = lowest SNR with `medianMCS >= 8`). Run once per slice. |
 | `betaTable.m` | Calibrates EESM `beta` for MCS 0–9 on the slice via `corrPHYVal`. Cached to `beta_table.mat` (keyed by slice; mismatched cache errors out). Outside the closed-loop path. |
 | `box0RateControl.m` | One closed-loop realization: one TGax channel realization, per-packet effective SINR from EESM at the time-varying `N0_t`, coin flip vs. AWGN-LUT PER, `rateController` picks `MCS_{t+1}`. |
@@ -52,13 +52,12 @@ MCS 0–9 adapted dynamically. Payload 1000 bytes, LDPC.
 ```matlab
 cd phy/rate-control
 
-% 0. One-time per slice: calibrate the SNR range
+% 0. One-time per slice: calibrate the SNR range (parfor over SNR points)
 tbl = calibrateSnrRange("CBW40", "Model-B", [3 2], 2);
-disp(tbl)                       % pick snrMin/snrMax from the table (see notes
-                                % in main_rate_control.m) and set them there
+%   read the printed table; set snrMin/snrMax in main_rate_control.m
 
 % 1. Smoke test (fast: 4 runs, full T so the sweep + convergence show)
-corrPHYRateControl("CBW40", "Model-B", [3 2], 2, 4, 1000, [], 200, 50, 15, 45);
+corrPHYRateControl("CBW40", "Model-B", [3 2], 2, 4, 1000, [], 200, 50, 25, 45);
 
 % 2. Full run
 main_rate_control               % N_real = 100, T = 1000
@@ -90,10 +89,12 @@ First run calibrates `beta` for all 10 MCS (slow, cached afterwards in
 
 ## Validation checklist (before the Python side)
 
-- [ ] `calibrateSnrRange` brackets MCS ~1–8; `snrMin`/`snrMax` in
-      `main_rate_control.m` set (currently 15 / 45 for this slice).
-- [ ] `snrTrajectory(1000, 15, 45)` is one smooth slow cycle: starts near
-      45 dB, dips to 15 dB around packet 500, rises back.
+- [ ] `calibrateSnrRange` brackets MCS ~1–9; `snrMin`/`snrMax` in
+      `main_rate_control.m` set (currently 25 / 45 for this slice — 25 is
+      the lowest SNR with medianMCS >= 1, so the trough is not a flat
+      MCS-0 stripe).
+- [ ] `snrTrajectory(1000, 25, 45)` is one smooth slow cycle: starts near
+      45 dB, dips to 25 dB around packet 500, rises back.
 - [ ] Smoke run completes; **at a fixed packet index the 100 runs cluster
       within ~1–2 adjacent MCS** (tight Fig. 15(b) band — the key check).
 - [ ] `mean MCS_t` tracks the SNR trajectory (high MCS near the peaks,

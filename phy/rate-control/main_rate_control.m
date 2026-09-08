@@ -23,20 +23,21 @@ numSs   = 2;
 
 % ---- Step 0 (one-time): calibrate the SNR range for this slice ----------
 % Hold SNR constant on a grid, see where the controller settles, and pick
-% snrMin/snrMax so the trajectory sweeps roughly MCS 1 to MCS 8.
+% snrMin/snrMax so the trajectory sweeps roughly MCS 1 to MCS 9.
 %   tbl = calibrateSnrRange(cbw, chan, numTxRx, numSs);
 %   disp(tbl)
-% Then set snrMin/snrMax below. Note the "Suggested:" line uses median MCS
-% <= 1 for snrMin, which can pick an outage SNR (PER ~ 1, MCS pinned at 0);
-% prefer the lowest SNR where the link is actually usable (meanPER < ~0.1
-% and MCS starts moving off 0). For the Model-B 3x2:2 CBW40 slice the
-% calibration table gives: SNR 15 -> meanPER 0.08, MCS leaving 0;
-% SNR 45 -> median MCS 8.
-snrMin = 15;
+% Read the TABLE (not just the "Suggested" line): pick snrMin as the lowest
+% SNR where the link is genuinely usable -- medianMCS >= 1 and meanPER
+% well under 0.15 -- so the trajectory trough is a smooth MCS 0-1 dip, not
+% a flat MCS-0 stripe. For the Model-B 3x2:2 CBW40 slice the calibration
+% table gives: SNR 15/20 -> medianMCS 0 (trough would flatline at MCS 0);
+% SNR 25 -> medianMCS 1, meanPER ~0.11; SNR 45 -> medianMCS 9. So 25/45.
+% Re-run calibrateSnrRange after any controller change and re-check.
+snrMin = 25;
 snrMax = 45;
 
 % ---- Smoke test first (fast) -------------------------------------------
-% corrPHYRateControl(cbw, chan, numTxRx, numSs, 4, 1000, [], 200, 50, snrMin, snrMax);
+% corrPHYRateControl(cbw, chan, numTxRx, numSs, 4, 1000, [], 200, 50, 25, 45);
 
 % ---- Full run ---------------------------------------------------------
 N_real = 100;

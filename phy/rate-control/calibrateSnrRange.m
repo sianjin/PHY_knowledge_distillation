@@ -55,15 +55,20 @@ simParams = getBox0SimParams(chan, numTxRx, numSs, 0, cfgHE, 1e3, T, 1);
 settledFrom = floor(0.4 * T) + 1; % ignore the initial transient
 
 SNR = snrGrid(:);
-medianMCS = zeros(size(SNR));
-meanMCS   = zeros(size(SNR));
-modeMCS   = zeros(size(SNR));
-p10MCS    = zeros(size(SNR));
-p90MCS    = zeros(size(SNR));
-meanPER   = zeros(size(SNR));
+nGrid = numel(snrGrid);
+medianMCS = zeros(nGrid, 1);
+meanMCS   = zeros(nGrid, 1);
+modeMCS   = zeros(nGrid, 1);
+p10MCS    = zeros(nGrid, 1);
+p90MCS    = zeros(nGrid, 1);
+meanPER   = zeros(nGrid, 1);
 
-for j = 1:numel(snrGrid)
-    snrConst = snrGrid(j) * ones(T, 1);
+% One parfor iteration per SNR point (independent; sliced outputs). The
+% explicit per-run rng() seed keeps results reproducible regardless of
+% worker assignment or pool size.
+snrGridVec = snrGrid(:);
+parfor j = 1:nGrid
+    snrConst = snrGridVec(j) * ones(T, 1);
     settledMcs = [];
     settledErr = [];
     for n = 1:nRuns
@@ -79,10 +84,13 @@ for j = 1:numel(snrGrid)
     p90MCS(j)    = prctile(settledMcs, 90);
     meanPER(j)   = mean(settledErr);
     fprintf('SNR %5.1f dB -> median MCS %d (mean %.2f, p10 %d, p90 %d), PER %.3f\n', ...
-        snrGrid(j), medianMCS(j), meanMCS(j), p10MCS(j), p90MCS(j), meanPER(j));
+        snrGridVec(j), medianMCS(j), meanMCS(j), p10MCS(j), p90MCS(j), meanPER(j));
 end
 
 tbl = table(SNR, medianMCS, meanMCS, modeMCS, p10MCS, p90MCS, meanPER);
+
+% parfor scrambles the per-point prints above; show the ordered table.
+fprintf('\n'); disp(tbl);
 
 % --- Suggested snrMin / snrMax (starting point only; read the table) -----
 PER_USABLE = 0.15;   % below this the link is workable, not in outage
