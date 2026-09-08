@@ -40,7 +40,7 @@ MCS 0–9 adapted dynamically. Payload 1000 bytes, LDPC.
 | File | Role |
 |---|---|
 | `snrTrajectory.m` | Deterministic common `{SNR_t}`: **one slow sinusoid cycle** (`f = 1`, starts high, dips to `snrMin` near the midpoint, rises back) + fixed-seed AR(1) jitter. One slow cycle keeps the SNR quasi-static over ~100-packet windows so the controller settles and the Fig. 15(b) histograms stay tight. Saved to `snr_trajectory.mat`. |
-| `rateController.m` | Shared EWMA-PER dual-threshold controller: raise MCS when EWMA PER < `PER_LOW=0.05`, lower when > `PER_HIGH=0.10` (`ALPHA=0.2`, `UP_COUNT=1` so the ascent tracks the sweep; down-steps immediate). **Byte-for-byte twin of `pkd/rate_control.py`.** |
+| `rateController.m` | Shared EWMA-PER dual-threshold controller: raise MCS when EWMA PER < `PER_LOW=0.03`, lower when > `PER_HIGH=0.10`, hold in the dead-band (`ALPHA=0.2`, `UP_COUNT=1` so the ascent tracks the sweep; down-steps immediate). **Byte-for-byte twin of `pkd/rate_control.py`.** |
 | `calibrateSnrRange.m` | Holds SNR constant on a grid, reports where the controller settles (median MCS per SNR). Use it to pick `snrMin` (lowest SNR where the link is usable, `meanPER < ~0.1`) and `snrMax` (median MCS ~8). Run once per slice. |
 | `betaTable.m` | Calibrates EESM `beta` for MCS 0–9 on the slice via `corrPHYVal`. Cached to `beta_table.mat` (keyed by slice; mismatched cache errors out). Outside the closed-loop path. |
 | `box0RateControl.m` | One closed-loop realization: one TGax channel realization, per-packet effective SINR from EESM at the time-varying `N0_t`, coin flip vs. AWGN-LUT PER, `rateController` picks `MCS_{t+1}`. |

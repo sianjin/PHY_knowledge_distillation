@@ -30,14 +30,16 @@ function [mcsNext, state] = rateController(perInst, mcsCur, state)
 %     else                            -> hold, reset goodCount
 %
 %   Constants (keep in sync with pkd/rate_control.py):
-%   Standard "raise if PER < 5%%, lower if PER > 10%%" policy with a fast
-%   EWMA. UP_COUNT = 1 (step up on a single good EWMA sample) is needed for
-%   the controller to track even the slow (f = 1) Fig. 15 SNR sweep -- with
-%   UP_COUNT = 3 the ascent lagged so far behind that the rising half of
-%   the sweep never reached the MCS it should. Down-steps stay immediate,
-%   which keeps the loop stable.
+%   Fast-EWMA policy with a dead-band: raise MCS only when EWMA PER is
+%   clearly low (< PER_LOW), lower when high (> PER_HIGH), hold in between.
+%   UP_COUNT = 1 (step up on a single good EWMA sample) is needed for the
+%   controller to track even the slow (f = 1) Fig. 15 SNR sweep. The
+%   PER_LOW/PER_HIGH gap (0.03 vs 0.10) damps the up/down oscillation that
+%   UP_COUNT = 1 would otherwise cause -- with PER_LOW = 0.05 the mid-SNR
+%   operating point sat above PER_HIGH and the controller hunted. Down-
+%   steps stay immediate, which keeps the loop stable.
 ALPHA    = 0.2;
-PER_LOW  = 0.05;
+PER_LOW  = 0.03;
 PER_HIGH = 0.10;
 UP_COUNT = 1;
 MCS_MIN  = 0;
