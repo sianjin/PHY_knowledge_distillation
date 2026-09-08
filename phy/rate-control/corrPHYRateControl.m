@@ -77,24 +77,57 @@ end
 txPeriod = txPeriodAll(1);
 payloadBits = cfgHE.APEPLength * 8;
 
-% Achieved throughput per run (bits successfully delivered / total time)
+% Achieved goodput uses actual PHY airtime. txPeriod is the interval between
+% channel samples and includes idle time, so it is not a packet duration.
+packetDurationByMCS = zeros(1, numel(mcsList));
+cfgDuration = simParams.Config;
+sampleRate = wlanSampleRate(cfgDuration);
+for i = 1:numel(mcsList)
+    cfgMCS = cfgDuration;
+    cfgMCS.MCS = mcsList(i);
+    psduLength = getPSDULength(cfgMCS);
+    tx = wlanWaveformGenerator(zeros(psduLength * 8, 1, 'int8'), cfgMCS, ...
+        'IdleTime', 0, 'WindowTransitionTime', 0);
+    packetDurationByMCS(i) = size(tx, 1) / sampleRate;
+end
+
 successMask = (errorAll == 0);
 successBits = double(sum(successMask, 2)) * payloadBits;
-totalTime = T * txPeriod;
-throughputMbps = successBits / totalTime / 1e6;
+totalAirtimeSeconds = zeros(N_real, 1);
+for i = 1:numel(mcsList)
+    totalAirtimeSeconds = totalAirtimeSeconds + ...
+        sum(mcsAll == mcsList(i), 2) * packetDurationByMCS(i);
+end
+throughputMbps = successBits ./ totalAirtimeSeconds / 1e6;
 
 meta = struct('cbw', char(cbw), 'chan', char(chan), 'numTxRx', numTxRx, ...
     'numSs', numSs, 'N_real', N_real, 'T', T, 'payloadBits', payloadBits, ...
     'txPeriod', txPeriod, 'mcsInit', mcsInit, 'mcsList', mcsList, ...
-    'betaVec', betaVec);
+    'betaVec', betaVec, 'packetDurationByMCS', packetDurationByMCS);
 
-save(outFile, 'mcsAll', 'effSINRAll', 'perInstAll', 'errorAll', ...
+% This output is small enough for v7, which MATLAB can read and write over
+% \\wsl.localhost and Python can load with scipy.io.loadmat.
+tempFile = [tempname(fileparts(outFile)), '.mat'];
+tempCleanup = onCleanup(@() deleteIfPresent(tempFile));
+save(tempFile, 'mcsAll', 'effSINRAll', 'perInstAll', 'errorAll', ...
     'throughputMbps', 'snrTraj', 'txPeriod', 'payloadBits', 'seed', ...
-    'meta', '-v7.3');
+    'packetDurationByMCS', 'totalAirtimeSeconds', 'meta', '-v7');
+[moved, message] = movefile(tempFile, outFile, 'f');
+if ~moved
+    error('corrPHYRateControl:SaveFailed', ...
+        'Unable to replace %s with the completed MAT file: %s', outFile, message);
+end
+clear tempCleanup
 
 fprintf('corrPHYRateControl: saved %d runs x %d packets to %s\n', N_real, T, outFile);
 fprintf('  mean achieved throughput: %.2f Mbps (std %.2f)\n', ...
     mean(throughputMbps), std(throughputMbps));
 fprintf('  mean MCS: %.2f, mean PER: %.4f\n', ...
     mean(double(mcsAll(:))), mean(double(errorAll(:))));
+end
+
+function deleteIfPresent(path)
+if isfile(path)
+    delete(path);
+end
 end

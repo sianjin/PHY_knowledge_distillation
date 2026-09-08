@@ -67,18 +67,24 @@ First run calibrates `beta` for all 10 MCS (slow, cached afterwards in
 
 - **`snr_trajectory.mat`** — `snrTraj` (T×1), plus slice metadata.
 - **`beta_table.mat`** — `betaVec` (1×10), `mcsList`.
-- **`teacher_rate_control.mat`** (v7.3 / HDF5):
+- **`teacher_rate_control.mat`** (MATLAB v7; load in Python with
+  `scipy.io.loadmat(..., simplify_cells=True)`):
   - `mcsAll` (N×T, uint8) — MCS used per packet
   - `effSINRAll` (N×T) — EESM effective SINR (dB)
   - `perInstAll` (N×T) — AWGN-LUT PER at (effSINR, MCS)
   - `errorAll` (N×T, uint8) — sampled packet-error flags
-  - `throughputMbps` (N×1) — achieved throughput per run
-    (`successful_packets * payloadBits / (T * txPeriod)`)
-  - `snrTraj`, `txPeriod`, `payloadBits`, `seed`, `meta`
+  - `throughputMbps` (N×1) — achieved goodput per run, using the actual
+    HE waveform airtime of each selected MCS
+  - `packetDurationByMCS`, `totalAirtimeSeconds` — airtime inputs used for
+    the goodput calculation
+  - `snrTraj`, `txPeriod`, `payloadBits`, `seed`, `meta` (`txPeriod` is the
+    channel-sample spacing, not packet airtime)
 
 ## Validation checklist (before the Python side)
 
-- [ ] `snrTrajectory(1000)` sweeps roughly 2–36 dB, ~1.5 periods, smooth.
+- [ ] `snrTrajectory(1000)` sweeps 12–58 dB by default over two periods,
+      smooth. This range spans the useful MCS 0–9 operating region for the
+      Model-B, 3×2:2 slice without the previous deep-outage interval.
 - [ ] Smoke run completes; `mean MCS` tracks the SNR trajectory
       (high MCS at SNR peaks, MCS 0–1 at the trough).
 - [ ] `effSINRAll` correlates with `snrTraj` (broadcast across runs).

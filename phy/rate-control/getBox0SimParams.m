@@ -5,6 +5,8 @@ function simParams = getBox0SimParams(chans,numTxRx,numSs,mcs,cfgHE,maxNumErrors
 % We encode the antenna+spatial-stream configuration via a 3-column matrix:
 %   [numTx  numRx  numSs] (represented as numTx x numRx : numSs)
 
+chans = reshape(string(chans), 1, []);
+
 % These arrays define the value and order SNRs are defined
 channelConfigs     = ["Model-B","Model-D"];
 anteannaSNRConfigs = [ ...

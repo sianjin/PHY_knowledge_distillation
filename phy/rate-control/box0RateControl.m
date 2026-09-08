@@ -31,7 +31,7 @@ function out = box0RateControl(simParams, betaVec, mcsList, snrTraj, mcsInit)
 %     effSINR   : EESM effective SINR (dB) for each packet
 %     perInst   : AWGN-LUT PER at (effSINR, mcs) for each packet
 %     errorFlag : sampled packet-error indicator (uint8)
-%     txPeriod  : packet transmit period (s), scalar
+%     txPeriod  : channel sample spacing (s), scalar
 %     numPkt    : T
 
 cfgHE = simParams.Config;
@@ -138,7 +138,7 @@ out.mcs = mcs;
 out.effSINR = effSINR;
 out.perInst = perInst;
 out.errorFlag = errorFlag;
-out.txPeriod = txPeriod / 1e6; % seconds
+out.txPeriod = txPeriod / 1e6; % channel sample spacing in seconds
 out.numPkt = T;
 
 disp([char(cfgHE.ChannelBandwidth) ', ' ...

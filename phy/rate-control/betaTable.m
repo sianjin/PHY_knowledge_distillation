@@ -28,23 +28,44 @@ if nargin < 6 || isempty(cacheFile)
     cacheFile = fullfile(fileparts(mfilename('fullpath')), 'beta_table.mat');
 end
 
-if exist(cacheFile, 'file')
-    S = load(cacheFile, 'betaVec', 'mcsList');
-    if isequal(S.mcsList(:).', mcsList(:).')
-        betaVec = S.betaVec;
-        fprintf('betaTable: loaded cached beta from %s\n', cacheFile);
-        return;
+cbw = string(cbw);
+chan = string(chan);
+numTxRx = reshape(numTxRx, 1, []);
+mcsList = reshape(mcsList, 1, []);
+
+if isfile(cacheFile)
+    S = load(cacheFile, 'betaVec', 'mcsList', 'cbw', 'chan', 'numTxRx', 'numSs');
+    requiredFields = {'betaVec', 'mcsList', 'cbw', 'chan', 'numTxRx', 'numSs'};
+    if ~all(isfield(S, requiredFields))
+        error('betaTable:InvalidCache', ...
+            'Cached beta table %s is missing required configuration metadata.', cacheFile);
     end
-end
 
-betaVec = zeros(1, numel(mcsList));
-for i = 1:numel(mcsList)
-    mcs = mcsList(i);
-    fprintf('betaTable: calibrating beta for MCS %d ...\n', mcs);
-    betaVec(i) = corrPHYVal(char(cbw), char(chan), mcs, numTxRx, numSs);
-    fprintf('betaTable: MCS %d -> beta = %.4f\n', mcs, betaVec(i));
-end
+    cacheMatches = ...
+        string(S.cbw) == cbw && ...
+        string(S.chan) == chan && ...
+        isequal(reshape(S.numTxRx, 1, []), numTxRx) && ...
+        isequal(S.numSs, numSs) && ...
+        isequal(reshape(S.mcsList, 1, []), mcsList) && ...
+        numel(S.betaVec) == numel(mcsList);
+    if ~cacheMatches
+        error('betaTable:CacheMismatch', ...
+            ['Cached beta table %s does not match the requested PHY configuration. ' ...
+             'Use a matching cache file or delete it to recalibrate.'], cacheFile);
+    end
 
-save(cacheFile, 'betaVec', 'mcsList', 'cbw', 'chan', 'numTxRx', 'numSs');
-fprintf('betaTable: saved calibrated beta to %s\n', cacheFile);
+    betaVec = reshape(S.betaVec, 1, []);
+    fprintf('betaTable: loaded cached beta from %s\n', cacheFile);
+else
+    betaVec = zeros(1, numel(mcsList));
+    for i = 1:numel(mcsList)
+        mcs = mcsList(i);
+        fprintf('betaTable: calibrating beta for MCS %d ...\n', mcs);
+        betaVec(i) = corrPHYVal(char(cbw), chan, mcs, numTxRx, numSs);
+        fprintf('betaTable: MCS %d -> beta = %.4f\n', mcs, betaVec(i));
+    end
+
+    save(cacheFile, 'betaVec', 'mcsList', 'cbw', 'chan', 'numTxRx', 'numSs');
+    fprintf('betaTable: saved calibrated beta to %s\n', cacheFile);
+end
 end
