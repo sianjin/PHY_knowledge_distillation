@@ -1,4 +1,4 @@
-function corrPHYRateControl(cbw, chan, numTxRx, numSs, N_real, T, outFile)
+function corrPHYRateControl(cbw, chan, numTxRx, numSs, N_real, T, outFile, segLen, burnIn, snrMin, snrMax)
 %corrPHYRateControl Fig. 15 teacher: N closed-loop rate-adaptation runs.
 %
 %   corrPHYRateControl(cbw, chan, numTxRx, numSs, N_real, T, outFile) runs
@@ -20,6 +20,13 @@ function corrPHYRateControl(cbw, chan, numTxRx, numSs, N_real, T, outFile)
 %     N_real  = 100
 %     T       = 1000
 %     outFile = fullfile(fileparts(mfilename('fullpath')), 'teacher_rate_control.mat')
+%     segLen  = 200   non-overlapping window (packets) for the time-resolved
+%                     goodput CDF of Fig. 15(c). Each (run, window) pair with
+%                     window start >= burnIn contributes one goodput sample,
+%                     so the CDF spans the SNR sweep instead of collapsing to
+%                     a near-vertical whole-run line.
+%     burnIn  = 50    leading packets excluded from the goodput CDF and the
+%                     Fig. 15(b) heatmaps (initial controller transient).
 
 if nargin < 1 || isempty(cbw),     cbw = "CBW40";    end
 if nargin < 2 || isempty(chan),    chan = "Model-B"; end
@@ -30,6 +37,10 @@ if nargin < 6 || isempty(T),       T = 1000;         end
 if nargin < 7 || isempty(outFile)
     outFile = fullfile(fileparts(mfilename('fullpath')), 'teacher_rate_control.mat');
 end
+if nargin < 8 || isempty(segLen),  segLen = 200;     end
+if nargin < 9 || isempty(burnIn),  burnIn = 50;      end
+if nargin < 10, snrMin = [];  end   % [] -> snrTrajectory default
+if nargin < 11, snrMax = [];  end
 
 mcsList = 0:9;
 
@@ -40,7 +51,7 @@ cfgHE.APEPLength = 1000;         % payload length in bytes
 cfgHE.ChannelCoding = 'LDPC';
 
 % --- Common deterministic SNR trajectory (shared with the PKD student) ---
-snrTraj = snrTrajectory(T);
+snrTraj = snrTrajectory(T, snrMin, snrMax);
 trajFile = fullfile(fileparts(mfilename('fullpath')), 'snr_trajectory.mat');
 save(trajFile, 'snrTraj', 'T', 'cbw', 'chan', 'numTxRx', 'numSs', 'mcsList');
 fprintf('corrPHYRateControl: saved SNR trajectory to %s\n', trajFile);
@@ -91,27 +102,47 @@ for i = 1:numel(mcsList)
     packetDurationByMCS(i) = size(tx, 1) / sampleRate;
 end
 
+% Per-packet airtime for the MCS actually used (0-based MCS -> +1 index)
+packetAirtime = packetDurationByMCS(double(mcsAll) + 1);   % N_real x T
 successMask = (errorAll == 0);
-successBits = double(sum(successMask, 2)) * payloadBits;
-totalAirtimeSeconds = zeros(N_real, 1);
-for i = 1:numel(mcsList)
-    totalAirtimeSeconds = totalAirtimeSeconds + ...
-        sum(mcsAll == mcsList(i), 2) * packetDurationByMCS(i);
+successBitsPacket = double(successMask) * payloadBits;      % N_real x T
+
+% Whole-run achieved goodput (one scalar per run; kept for reference and
+% for the inset mean +/- std). Near-vertical CDF -- not plotted directly.
+throughputMbps = sum(successBitsPacket(:, burnIn+1:end), 2) ./ ...
+    sum(packetAirtime(:, burnIn+1:end), 2) / 1e6;
+
+% Time-resolved achieved goodput for the Fig. 15(c) CDF: goodput over each
+% non-overlapping segLen-packet window whose start index is >= burnIn.
+% One sample per (run, window). Spans the SNR sweep, so the CDF has real
+% spread from trough windows (low MCS) to peak windows (high MCS).
+segStarts = (burnIn+1):segLen:(T - segLen + 1);
+nSeg = numel(segStarts);
+segGoodputMbps = zeros(N_real, nSeg);
+segSnrMean = zeros(1, nSeg);
+for s = 1:nSeg
+    idx = segStarts(s):(segStarts(s) + segLen - 1);
+    segGoodputMbps(:, s) = sum(successBitsPacket(:, idx), 2) ./ ...
+        sum(packetAirtime(:, idx), 2) / 1e6;
+    segSnrMean(s) = mean(snrTraj(idx));
 end
-throughputMbps = successBits ./ totalAirtimeSeconds / 1e6;
+goodputSamplesMbps = segGoodputMbps(:);   % (N_real*nSeg) x 1 -> Fig. 15(c)
 
 meta = struct('cbw', char(cbw), 'chan', char(chan), 'numTxRx', numTxRx, ...
     'numSs', numSs, 'N_real', N_real, 'T', T, 'payloadBits', payloadBits, ...
     'txPeriod', txPeriod, 'mcsInit', mcsInit, 'mcsList', mcsList, ...
-    'betaVec', betaVec, 'packetDurationByMCS', packetDurationByMCS);
+    'betaVec', betaVec, 'packetDurationByMCS', packetDurationByMCS, ...
+    'segLen', segLen, 'burnIn', burnIn, 'segStarts', segStarts, ...
+    'segSnrMean', segSnrMean);
 
 % This output is small enough for v7, which MATLAB can read and write over
 % \\wsl.localhost and Python can load with scipy.io.loadmat.
 tempFile = [tempname(fileparts(outFile)), '.mat'];
 tempCleanup = onCleanup(@() deleteIfPresent(tempFile));
 save(tempFile, 'mcsAll', 'effSINRAll', 'perInstAll', 'errorAll', ...
-    'throughputMbps', 'snrTraj', 'txPeriod', 'payloadBits', 'seed', ...
-    'packetDurationByMCS', 'totalAirtimeSeconds', 'meta', '-v7');
+    'throughputMbps', 'goodputSamplesMbps', 'segGoodputMbps', 'segSnrMean', ...
+    'snrTraj', 'txPeriod', 'payloadBits', 'seed', ...
+    'packetDurationByMCS', 'meta', '-v7');
 [moved, message] = movefile(tempFile, outFile, 'f');
 if ~moved
     error('corrPHYRateControl:SaveFailed', ...
@@ -120,8 +151,11 @@ end
 clear tempCleanup
 
 fprintf('corrPHYRateControl: saved %d runs x %d packets to %s\n', N_real, T, outFile);
-fprintf('  mean achieved throughput: %.2f Mbps (std %.2f)\n', ...
+fprintf('  whole-run goodput: %.2f Mbps (std %.2f)\n', ...
     mean(throughputMbps), std(throughputMbps));
+fprintf('  windowed goodput (%d-packet, %d samples): %.2f Mbps (std %.2f, range %.1f-%.1f)\n', ...
+    segLen, numel(goodputSamplesMbps), mean(goodputSamplesMbps), ...
+    std(goodputSamplesMbps), min(goodputSamplesMbps), max(goodputSamplesMbps));
 fprintf('  mean MCS: %.2f, mean PER: %.4f\n', ...
     mean(double(mcsAll(:))), mean(double(errorAll(:))));
 end

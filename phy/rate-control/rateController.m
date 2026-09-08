@@ -30,10 +30,13 @@ function [mcsNext, state] = rateController(perInst, mcsCur, state)
 %     else                            -> hold, reset goodCount
 %
 %   Constants (keep in sync with pkd/rate_control.py):
-ALPHA    = 0.1;
+%   ALPHA/UP_COUNT are set so the controller reaches steady state within
+%   the ~100-packet windows over which the Fig. 15 SNR trajectory is
+%   quasi-static, keeping the Fig. 15(b) MCS histograms tight.
+ALPHA    = 0.2;
 PER_LOW  = 0.02;
 PER_HIGH = 0.10;
-UP_COUNT = 5;
+UP_COUNT = 3;
 MCS_MIN  = 0;
 MCS_MAX  = 9;
 

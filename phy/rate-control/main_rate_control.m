@@ -2,10 +2,11 @@
 % rate-adaptation experiment (MATLAB PHY teacher).
 %
 % Produces:
-%   snr_trajectory.mat     - common deterministic time-varying SNR input
-%   beta_table.mat         - calibrated EESM beta for MCS 0-9 on the slice
+%   snr_trajectory.mat       - common deterministic time-varying SNR input
+%   beta_table.mat           - calibrated EESM beta for MCS 0-9 on the slice
 %   teacher_rate_control.mat - N closed-loop realizations (per-packet MCS,
-%                              effective SINR, PER, errors, throughput)
+%                              effective SINR, PER, errors; whole-run and
+%                              windowed achieved goodput)
 %
 % The Python PKD student reads snr_trajectory.mat and teacher_rate_control.mat
 % via pkd/example/evaluate_rate_control.py to build Fig. 15.
@@ -20,10 +21,21 @@ chan    = "Model-B";
 numTxRx = [3 2];
 numSs   = 2;
 
-% ---- Smoke test first: uncomment for a quick sanity run ----
-% corrPHYRateControl(cbw, chan, numTxRx, numSs, 4, 200);
+% ---- Step 0 (one-time): calibrate the SNR range for this slice ----------
+% Hold SNR constant on a grid, see where the controller settles, and pick
+% snrMin/snrMax so the trajectory sweeps roughly MCS 1 to MCS 8.
+%   tbl = calibrateSnrRange(cbw, chan, numTxRx, numSs);
+%   disp(tbl)
+% Then set snrMin/snrMax below from the "Suggested:" line it prints.
+snrMin = 6;    % <-- update from calibrateSnrRange
+snrMax = 40;   % <-- update from calibrateSnrRange
 
-% ---- Full run ----
+% ---- Smoke test first (fast) -------------------------------------------
+% corrPHYRateControl(cbw, chan, numTxRx, numSs, 4, 200, [], 100, 20, snrMin, snrMax);
+
+% ---- Full run ---------------------------------------------------------
 N_real = 100;
 T      = 1000;
-corrPHYRateControl(cbw, chan, numTxRx, numSs, N_real, T);
+segLen = 200;   % windowed-goodput window for Fig. 15(c)
+burnIn = 50;    % drop initial controller transient
+corrPHYRateControl(cbw, chan, numTxRx, numSs, N_real, T, [], segLen, burnIn, snrMin, snrMax);
