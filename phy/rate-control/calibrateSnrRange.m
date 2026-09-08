@@ -21,10 +21,18 @@ function tbl = calibrateSnrRange(cbw, chan, numTxRx, numSs, snrGrid, nRuns, T)
 %
 %   Output: table with columns
 %     SNR, medianMCS, meanMCS, modeMCS, p10MCS, p90MCS, meanPER
-%   over the settled portion of all runs at that SNR.
+%   over the settled portion of all runs at that SNR. THE TABLE IS THE
+%   REFERENCE -- the printed "Suggested" line is only a starting point.
 %
-%   Suggested rule: snrMin = smallest SNR with medianMCS <= 1,
-%                   snrMax = largest  SNR with medianMCS >= 8.
+%   Suggested rule:
+%     snrMin = lowest SNR where the typical MCS is off the floor AND the
+%              link is workable: medianMCS >= 1 AND meanPER < PER_USABLE
+%              (0.15). (The naive "medianMCS <= 1" rule matched the whole
+%              outage plateau -- meanPER ~ 1 -- and kept recommending
+%              snrMin = 0. A p90MCS >= 1 gate is too weak: at a barely-
+%              usable SNR the controller still sits at MCS 0 most of the
+%              time, so the trajectory trough becomes a flat MCS-0 stripe.)
+%     snrMax = lowest SNR where medianMCS >= MCS_HIGH (8).
 
 if nargin < 1 || isempty(cbw),     cbw = "CBW40";     end
 if nargin < 2 || isempty(chan),    chan = "Model-B";  end
@@ -76,12 +84,23 @@ end
 
 tbl = table(SNR, medianMCS, meanMCS, modeMCS, p10MCS, p90MCS, meanPER);
 
-lo = SNR(find(medianMCS <= 1, 1, 'first'));
-hi = SNR(find(medianMCS >= 8, 1, 'last'));
-if ~isempty(lo) && ~isempty(hi)
-    fprintf('\nSuggested: snrMin = %g, snrMax = %g\n', lo, hi);
+% --- Suggested snrMin / snrMax (starting point only; read the table) -----
+PER_USABLE = 0.15;   % below this the link is workable, not in outage
+MCS_HIGH   = 8;      % "top of the sweep" target
+
+usable = (medianMCS >= 1) & (meanPER < PER_USABLE);
+lo = SNR(find(usable, 1, 'first'));
+hi = SNR(find(medianMCS >= MCS_HIGH, 1, 'first'));
+if ~isempty(lo) && ~isempty(hi) && hi > lo
+    fprintf(['\nSuggested (verify against the table): ' ...
+             'snrMin = %g, snrMax = %g\n'], lo, hi);
     fprintf('  snrTrajectory(1000, %g, %g)\n', lo, hi);
 else
-    fprintf('\nGrid did not bracket MCS 1..8; widen snrGrid.\n');
+    if isempty(lo)
+        fprintf('\nNo SNR on the grid is "usable" (medianMCS >= 1 & meanPER < %.2f); widen snrGrid upward.\n', PER_USABLE);
+    end
+    if isempty(hi)
+        fprintf('\nNo SNR on the grid reaches median MCS %d; widen snrGrid upward.\n', MCS_HIGH);
+    end
 end
 end
