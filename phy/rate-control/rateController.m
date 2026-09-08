@@ -30,13 +30,16 @@ function [mcsNext, state] = rateController(perInst, mcsCur, state)
 %     else                            -> hold, reset goodCount
 %
 %   Constants (keep in sync with pkd/rate_control.py):
-%   ALPHA/UP_COUNT are set so the controller reaches steady state within
-%   the ~100-packet windows over which the Fig. 15 SNR trajectory is
-%   quasi-static, keeping the Fig. 15(b) MCS histograms tight.
+%   Standard "raise if PER < 5%%, lower if PER > 10%%" policy with a fast
+%   EWMA. UP_COUNT = 1 (step up on a single good EWMA sample) is needed for
+%   the controller to track even the slow (f = 1) Fig. 15 SNR sweep -- with
+%   UP_COUNT = 3 the ascent lagged so far behind that the rising half of
+%   the sweep never reached the MCS it should. Down-steps stay immediate,
+%   which keeps the loop stable.
 ALPHA    = 0.2;
-PER_LOW  = 0.02;
+PER_LOW  = 0.05;
 PER_HIGH = 0.10;
-UP_COUNT = 3;
+UP_COUNT = 1;
 MCS_MIN  = 0;
 MCS_MAX  = 9;
 

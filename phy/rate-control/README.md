@@ -40,8 +40,8 @@ MCS 0–9 adapted dynamically. Payload 1000 bytes, LDPC.
 | File | Role |
 |---|---|
 | `snrTrajectory.m` | Deterministic common `{SNR_t}`: **one slow sinusoid cycle** (`f = 1`, starts high, dips to `snrMin` near the midpoint, rises back) + fixed-seed AR(1) jitter. One slow cycle keeps the SNR quasi-static over ~100-packet windows so the controller settles and the Fig. 15(b) histograms stay tight. Saved to `snr_trajectory.mat`. |
-| `rateController.m` | Shared EWMA-PER dual-threshold controller (`ALPHA=0.2`, `PER_LOW=0.02`, `PER_HIGH=0.1`, `UP_COUNT=3`). **Byte-for-byte twin of `pkd/rate_control.py`.** |
-| `calibrateSnrRange.m` | Holds SNR constant on a grid, reports where the controller settles (median MCS per SNR), and suggests `snrMin`/`snrMax` so the trajectory sweeps ~MCS 1 to ~MCS 8. Run once per slice. |
+| `rateController.m` | Shared EWMA-PER dual-threshold controller: raise MCS when EWMA PER < `PER_LOW=0.05`, lower when > `PER_HIGH=0.10` (`ALPHA=0.2`, `UP_COUNT=1` so the ascent tracks the sweep; down-steps immediate). **Byte-for-byte twin of `pkd/rate_control.py`.** |
+| `calibrateSnrRange.m` | Holds SNR constant on a grid, reports where the controller settles (median MCS per SNR). Use it to pick `snrMin` (lowest SNR where the link is usable, `meanPER < ~0.1`) and `snrMax` (median MCS ~8). Run once per slice. |
 | `betaTable.m` | Calibrates EESM `beta` for MCS 0–9 on the slice via `corrPHYVal`. Cached to `beta_table.mat` (keyed by slice; mismatched cache errors out). Outside the closed-loop path. |
 | `box0RateControl.m` | One closed-loop realization: one TGax channel realization, per-packet effective SINR from EESM at the time-varying `N0_t`, coin flip vs. AWGN-LUT PER, `rateController` picks `MCS_{t+1}`. |
 | `corrPHYRateControl.m` | `N_real` independent realizations (`parfor`, independent channel seeds, common trajectory). Computes whole-run and windowed achieved goodput. Saves `teacher_rate_control.mat`. |
@@ -54,11 +54,11 @@ cd phy/rate-control
 
 % 0. One-time per slice: calibrate the SNR range
 tbl = calibrateSnrRange("CBW40", "Model-B", [3 2], 2);
-disp(tbl)                       % read the "Suggested: snrMin=.. snrMax=.." line
-%   -> put those into main_rate_control.m (snrMin / snrMax)
+disp(tbl)                       % pick snrMin/snrMax from the table (see notes
+                                % in main_rate_control.m) and set them there
 
-% 1. Smoke test (fast)
-corrPHYRateControl("CBW40", "Model-B", [3 2], 2, 4, 200, [], 100, 20, 6, 40);
+% 1. Smoke test (fast: 4 runs, full T so the sweep + convergence show)
+corrPHYRateControl("CBW40", "Model-B", [3 2], 2, 4, 1000, [], 200, 50, 15, 45);
 
 % 2. Full run
 main_rate_control               % N_real = 100, T = 1000
@@ -90,18 +90,19 @@ First run calibrates `beta` for all 10 MCS (slow, cached afterwards in
 
 ## Validation checklist (before the Python side)
 
-- [ ] `calibrateSnrRange` brackets MCS 1–8; `snrMin`/`snrMax` in
-      `main_rate_control.m` updated from its suggestion.
-- [ ] `snrTrajectory(1000, snrMin, snrMax)` is one smooth slow cycle:
-      starts near `snrMax`, dips to `snrMin` around packet 500, rises back.
+- [ ] `calibrateSnrRange` brackets MCS ~1–8; `snrMin`/`snrMax` in
+      `main_rate_control.m` set (currently 15 / 45 for this slice).
+- [ ] `snrTrajectory(1000, 15, 45)` is one smooth slow cycle: starts near
+      45 dB, dips to 15 dB around packet 500, rises back.
 - [ ] Smoke run completes; **at a fixed packet index the 100 runs cluster
-      within ~1–2 adjacent MCS** (tight Fig. 15(b) band — this is the key
-      check that motivated `f=1` / `UP_COUNT=3`).
+      within ~1–2 adjacent MCS** (tight Fig. 15(b) band — the key check).
 - [ ] `mean MCS_t` tracks the SNR trajectory (high MCS near the peaks,
-      MCS 0–1 at the trough), correlation > 0.9.
+      low MCS at the trough), correlation > 0.9. The ascending half
+      (packets ~500–1000) should reach roughly the same MCS as the
+      descending half at equal SNR — no large hysteresis gap.
 - [ ] `effSINRAll` correlates with `snrTraj` (broadcast across runs).
-- [ ] Mean sampled PER between `PER_LOW=0.02` and `PER_HIGH=0.1`
-      (typically ~0.03–0.08).
+- [ ] Overall sampled PER near the operating band (~0.05–0.10). If it is
+      ~0.2, the controller is still failing to climb — revisit `UP_COUNT`.
 - [ ] `goodputSamplesMbps` has real spread (trough windows well below peak
       windows) — the Fig. 15(c) CDF should not be a vertical line.
 - [ ] `throughputMbps` is a plausible spread (tens of Mbps for this slice).

@@ -26,12 +26,17 @@ numSs   = 2;
 % snrMin/snrMax so the trajectory sweeps roughly MCS 1 to MCS 8.
 %   tbl = calibrateSnrRange(cbw, chan, numTxRx, numSs);
 %   disp(tbl)
-% Then set snrMin/snrMax below from the "Suggested:" line it prints.
-snrMin = 6;    % <-- update from calibrateSnrRange
-snrMax = 40;   % <-- update from calibrateSnrRange
+% Then set snrMin/snrMax below. Note the "Suggested:" line uses median MCS
+% <= 1 for snrMin, which can pick an outage SNR (PER ~ 1, MCS pinned at 0);
+% prefer the lowest SNR where the link is actually usable (meanPER < ~0.1
+% and MCS starts moving off 0). For the Model-B 3x2:2 CBW40 slice the
+% calibration table gives: SNR 15 -> meanPER 0.08, MCS leaving 0;
+% SNR 45 -> median MCS 8.
+snrMin = 15;
+snrMax = 45;
 
 % ---- Smoke test first (fast) -------------------------------------------
-% corrPHYRateControl(cbw, chan, numTxRx, numSs, 4, 200, [], 100, 20, snrMin, snrMax);
+% corrPHYRateControl(cbw, chan, numTxRx, numSs, 4, 1000, [], 200, 50, snrMin, snrMax);
 
 % ---- Full run ---------------------------------------------------------
 N_real = 100;

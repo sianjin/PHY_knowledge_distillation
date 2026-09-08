@@ -15,7 +15,9 @@ function tbl = calibrateSnrRange(cbw, chan, numTxRx, numSs, snrGrid, nRuns, T)
 %     numSs   = 2
 %     snrGrid = 0:5:45        constant SNR values to probe (dB)
 %     nRuns   = 5             independent channel realizations per SNR
-%     T       = 400           packets per run (last 60%% used as "settled")
+%     T       = 800           packets per run (last 60%% used as "settled";
+%                             800 is enough for the controller to converge
+%                             from the mid-table start at any SNR)
 %
 %   Output: table with columns
 %     SNR, medianMCS, meanMCS, modeMCS, p10MCS, p90MCS, meanPER
@@ -30,7 +32,7 @@ if nargin < 3 || isempty(numTxRx), numTxRx = [3 2];   end
 if nargin < 4 || isempty(numSs),   numSs = 2;         end
 if nargin < 5 || isempty(snrGrid), snrGrid = 0:5:45;  end
 if nargin < 6 || isempty(nRuns),   nRuns = 5;         end
-if nargin < 7 || isempty(T),       T = 400;           end
+if nargin < 7 || isempty(T),       T = 800;           end
 
 mcsList = 0:9;
 
