@@ -396,6 +396,54 @@ Results (Averaged over SNRs):
 
 ---
 
+## Closed-Loop Rate Adaptation (Fig. 15)
+
+`evaluate_rate_control.py` builds Fig. 15: it replaces the PHY simulator with
+PKD inside a closed rate-adaptation loop driven by a common time-varying SNR
+trajectory, so `C_t != C`. It compares the teacher and student
+**statistically** -- MCS-selection probability over time and achieved-goodput
+distribution -- not realization by realization.
+
+**Prerequisites** (run the MATLAB teacher first):
+
+```matlab
+cd phy/rate-control
+tbl = calibrateSnrRange("CBW40","Model-B",[3 2],2);   % pick snrMin/snrMax
+main_rate_control                                      % -> teacher_rate_control.mat, snr_trajectory.mat
+```
+
+**Then:**
+
+```bash
+python -m pkd.example.evaluate_rate_control
+```
+
+| Command | Description |
+|---------|-------------|
+| `python -m pkd.example.evaluate_rate_control` | Build Fig. 15 (N = teacher's N runs, default checkpoint `exclude_config_0`) |
+| `python -m pkd.example.evaluate_rate_control --n-runs 100 --seed 42` | Explicit run count / seed |
+| `python -m pkd.example.evaluate_rate_control --checkpoint pkd/trained_models/exclude_config_0/pkd_model.pt` | Choose the PKD checkpoint |
+
+**What it does:**
+- Reads `phy/rate-control/teacher_rate_control.mat` and `snr_trajectory.mat`
+- Runs the PKD closed loop `N` times over the same SNR trajectory, using the
+  shared controller `pkd.rate_control.RateController` (byte-for-byte twin of
+  `phy/rate-control/rateController.m`)
+- Writes `figures/fig15_rate_control.png` and caches the PKD result to
+  `figures/fig15_pkd_student.npz` (delete to force a re-run)
+- Prints teacher vs. student diagnostics (mean MCS, overall PER, MCS/SNR
+  correlation, across-run MCS spread)
+
+**Parity check** for the shared controller:
+
+```bash
+python -m pytest pkd/tests/test_rate_control_parity.py
+# to also check against MATLAB's own output, first run in MATLAB:
+#   cd phy/rate-control && genRateControllerFixture
+```
+
+---
+
 ## Data Format
 
 ### .mat File Structure

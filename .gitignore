@@ -45,6 +45,9 @@ logs/
 .DS_Store
 Thumbs.db
 
+# Local review workspace (drafts, generated review figures, PDFs) -- not committed
+self_review/
+
 # Data
 datasets/
 validation/
