@@ -33,7 +33,7 @@ Inputs (produced by phy/rate-control/main_rate_control.m):
   phy/rate-control/teacher_rate_control.mat
 
 Output:
-  figures/fig15_rate_control.png
+  figures/rate_control_closed_loop.png
 
 Usage:
   python -m pkd.example.evaluate_rate_control \
@@ -308,9 +308,9 @@ def main():
                     help='goodput window (default: from teacher meta)')
     ap.add_argument('--seed', type=int, default=42)
     ap.add_argument('--ar-order', type=int, default=10)
-    ap.add_argument('--save', default='figures/fig15_rate_control.png')
+    ap.add_argument('--save', default='figures/rate_control_closed_loop.png')
     ap.add_argument('--device', default=None)
-    ap.add_argument('--student-cache', default='figures/fig15_pkd_student.npz',
+    ap.add_argument('--student-cache', default='figures/rate_control_pkd_student.npz',
                     help='reuse a saved PKD closed-loop result if present (delete to force a re-run)')
     args = ap.parse_args()
 
