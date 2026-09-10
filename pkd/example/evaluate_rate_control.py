@@ -207,8 +207,8 @@ def ecdf(x: np.ndarray):
 
 
 # Four separate subfigure files, assembled by LaTeX \subfigure (see
-# self_review/5Experiment.tex), matching the Fig. 14 style: no in-figure
-# titles (LaTeX captions carry them), Title-Case axes.
+# self_review/5Experiment.tex). Fig. 14 style: no in-figure titles (LaTeX
+# captions carry them), Title-Case axes, seaborn-v0_8-darkgrid, dpi 300.
 SUBFIG_NAMES = {
     'snr': 'rate_control_snr_trajectory.png',
     'teacher': 'rate_control_mcs_prob_teacher.png',
@@ -218,53 +218,43 @@ SUBFIG_NAMES = {
 TEACHER_COLOR = '#1f77b4'
 PKD_COLOR = '#d62728'
 
-# LaTeX layout (self_review/5Experiment.tex), 2x2 at 0.49\columnwidth each:
-#     row 1:  (a) SNR trajectory   |  (d) goodput CDF      -- wide, short
-#     row 2:  (b) teacher heatmap  |  (c) PKD heatmap       -- rectangular
-# All four share the SAME WIDTH in inches so \includegraphics[width=\linewidth]
-# renders them aligned; the line plots are shorter than the heatmaps.
-# bbox_inches='tight' is deliberately NOT used (it re-crops each figure and
-# breaks the shared width); constrained_layout keeps labels/colorbar inside.
-FIG_W = 6.4                       # inches -- identical for every subfigure
-FIG_H_LINE = 3.1                  # (a) trajectory, (d) CDF
-FIG_H_HEAT = 4.4                  # (b), (c) heatmaps
-SAVE_KW = dict(dpi=300)
-
-RC = {
-    'font.family': 'DejaVu Sans',
-    'font.size': 13,
-    'axes.titlesize': 13,
-    'axes.labelsize': 14,
-    'xtick.labelsize': 12,
-    'ytick.labelsize': 12,
-    'legend.fontsize': 12,
-    'axes.grid': True,
-    'grid.alpha': 0.3,
-    'axes.axisbelow': True,
-    'figure.facecolor': 'white',
-    'savefig.facecolor': 'white',
-}
-
-
-def _new_ax(height):
-    fig, ax = plt.subplots(figsize=(FIG_W, height), constrained_layout=True)
-    return fig, ax
+# LaTeX layout (self_review/5Experiment.tex), 3 rows in one column:
+#     row 1:  (a) SNR trajectory    -- full column width  (0.92\columnwidth)
+#     row 2:  (b) teacher | (c) PKD -- heatmaps side by side (0.49\columnwidth)
+#     row 3:  (d) goodput CDF       -- full column width  (0.92\columnwidth)
+#
+# Match Fig. 14's look: seaborn-v0_8-darkgrid, dpi 300, an 8 in wide figure,
+# and fontsize 12 on the axis labels. Every panel uses the SAME 8 in figure
+# width so text renders at a consistent scale; only the heights differ
+# (the line plots are short/wide, the heatmaps taller). The half-width
+# heatmaps use a slightly smaller fontsize so their text does not blow up
+# relative to the full-width panels once LaTeX scales them down.
+FIG_W = 8.0
+FIG_H_WIDE = 2.7                  # (a), (d)
+FIG_H_HEAT = 5.6                  # (b), (c)
+LABEL_FS = 13                     # full-width panels (Fig. 14 uses 12)
+LEGEND_FS = 11
+LABEL_FS_HEAT = 22               # half-width heatmaps -> apparent size matches (a)/(d)
+SAVE_KW = dict(dpi=300, bbox_inches='tight', pad_inches=0.1)
 
 
 def _mcs_heatmap(prob, vmax, T, save_path):
+    plt.style.use('seaborn-v0_8-darkgrid')
     num_mcs = prob.shape[0]
-    fig, ax = _new_ax(FIG_H_HEAT)
+    fig, ax = plt.subplots(figsize=(FIG_W, FIG_H_HEAT), layout="constrained")
     im = ax.imshow(
         prob, aspect='auto', origin='lower',
         extent=[0, T, MCS_MIN - 0.5, MCS_MAX + 0.5],
         cmap='turbo', vmin=0, vmax=vmax, interpolation='bilinear',
     )
-    ax.set_xlabel('Packet Number')
-    ax.set_ylabel('MCS Index')
+    ax.set_xlabel('Packet Number', fontsize=LABEL_FS_HEAT)
+    ax.set_ylabel('MCS Index', fontsize=LABEL_FS_HEAT)
     ax.set_yticks(range(num_mcs))
+    ax.tick_params(labelsize=LABEL_FS_HEAT - 4)
     ax.grid(False)
     cbar = fig.colorbar(im, ax=ax, fraction=0.046, pad=0.02)
-    cbar.set_label('Selection Probability')
+    cbar.set_label('Selection Probability', fontsize=LABEL_FS_HEAT)
+    cbar.ax.tick_params(labelsize=LABEL_FS_HEAT - 4)
     fig.savefig(save_path, **SAVE_KW)
     plt.close(fig)
     print(f'Saved {save_path}')
@@ -289,45 +279,48 @@ def make_figure(
     gp_t = teacher['goodput_samples']
     gp_s = student['goodput_samples']
 
-    with plt.rc_context(RC):
-        # --- (a) common SNR trajectory ---
-        fig, ax = _new_ax(FIG_H_LINE)
-        ax.plot(pkt, snr_traj, color=TEACHER_COLOR, lw=1.3)
-        ax.set_xlabel('Packet Number')
-        ax.set_ylabel('SNR (dB)')
-        ax.set_xlim(0, T)
-        fig.savefig(os.path.join(out_dir, SUBFIG_NAMES['snr']), **SAVE_KW)
-        plt.close(fig)
-        print(f"Saved {os.path.join(out_dir, SUBFIG_NAMES['snr'])}")
+    # --- (a) common SNR trajectory (full-width panel) ---
+    plt.style.use('seaborn-v0_8-darkgrid')
+    fig, ax = plt.subplots(figsize=(FIG_W, FIG_H_WIDE), layout="constrained")
+    ax.plot(pkt, snr_traj, color=TEACHER_COLOR, lw=1.6)
+    ax.set_xlabel('Packet Number', fontsize=LABEL_FS)
+    ax.set_ylabel('SNR (dB)', fontsize=LABEL_FS)
+    ax.tick_params(labelsize=LABEL_FS - 2)
+    ax.set_xlim(0, T)
+    fig.savefig(os.path.join(out_dir, SUBFIG_NAMES['snr']), **SAVE_KW)
+    plt.close(fig)
+    print(f"Saved {os.path.join(out_dir, SUBFIG_NAMES['snr'])}")
 
-        # --- (b) teacher / (c) PKD MCS-selection probability heatmaps ---
-        _mcs_heatmap(p_teacher, vmax, T, os.path.join(out_dir, SUBFIG_NAMES['teacher']))
-        _mcs_heatmap(p_student, vmax, T, os.path.join(out_dir, SUBFIG_NAMES['pkd']))
+    # --- (b) teacher / (c) PKD MCS-selection probability heatmaps ---
+    _mcs_heatmap(p_teacher, vmax, T, os.path.join(out_dir, SUBFIG_NAMES['teacher']))
+    _mcs_heatmap(p_student, vmax, T, os.path.join(out_dir, SUBFIG_NAMES['pkd']))
 
-        # --- (d) achieved-goodput CDF ---
-        xt, yt = ecdf(gp_t)
-        xs, ys = ecdf(gp_s)
-        fig, ax = _new_ax(FIG_H_LINE)
-        ax.plot(xt, yt, color=TEACHER_COLOR, lw=2, label='Teacher (PHY Simulator)')
-        ax.plot(xs, ys, color=PKD_COLOR, lw=2, ls='--', label='PKD (Student)')
-        ax.set_xlabel('Achieved Goodput (Mbps)')
-        ax.set_ylabel('CDF')
-        ax.set_ylim(0, 1)
-        ax.legend(framealpha=0.9, loc='upper left', fontsize=11)
+    # --- (d) achieved-goodput CDF (full-width panel) ---
+    xt, yt = ecdf(gp_t)
+    xs, ys = ecdf(gp_s)
+    plt.style.use('seaborn-v0_8-darkgrid')
+    fig, ax = plt.subplots(figsize=(FIG_W, FIG_H_WIDE), layout="constrained")
+    ax.plot(xt, yt, color=TEACHER_COLOR, lw=2.4, label='Teacher (PHY Simulator)')
+    ax.plot(xs, ys, color=PKD_COLOR, lw=2.4, ls='--', label='PKD (Student)')
+    ax.set_xlabel('Achieved Goodput (Mbps)', fontsize=LABEL_FS)
+    ax.set_ylabel('CDF', fontsize=LABEL_FS)
+    ax.tick_params(labelsize=LABEL_FS - 2)
+    ax.set_ylim(0, 1)
+    ax.legend(framealpha=0.9, loc='upper left', fontsize=LEGEND_FS)
 
-        mt, st = gp_t.mean(), gp_t.std()
-        ms, ss = gp_s.mean(), gp_s.std()
-        rel = 100 * abs(mt - ms) / mt
-        txt = (f'Mean goodput (Mbps)\n'
-               f'Teacher: {mt:.1f} ± {st:.1f}\n'
-               f'PKD:     {ms:.1f} ± {ss:.1f}\n'
-               f'Rel. diff.: {rel:.1f}%')
-        ax.text(0.97, 0.05, txt, transform=ax.transAxes, fontsize=10,
-                va='bottom', ha='right', family='monospace',
-                bbox=dict(boxstyle='round', fc='white', ec='0.7'))
-        fig.savefig(os.path.join(out_dir, SUBFIG_NAMES['cdf']), **SAVE_KW)
-        plt.close(fig)
-        print(f"Saved {os.path.join(out_dir, SUBFIG_NAMES['cdf'])}")
+    mt, st = gp_t.mean(), gp_t.std()
+    ms, ss = gp_s.mean(), gp_s.std()
+    rel = 100 * abs(mt - ms) / mt
+    txt = (f'Mean goodput (Mbps)\n'
+           f'Teacher: {mt:.1f} ± {st:.1f}\n'
+           f'PKD:     {ms:.1f} ± {ss:.1f}\n'
+           f'Rel. diff.: {rel:.1f}%')
+    ax.text(0.98, 0.05, txt, transform=ax.transAxes, fontsize=LEGEND_FS,
+            va='bottom', ha='right', family='monospace',
+            bbox=dict(boxstyle='round', fc='white', ec='0.7'))
+    fig.savefig(os.path.join(out_dir, SUBFIG_NAMES['cdf']), **SAVE_KW)
+    plt.close(fig)
+    print(f"Saved {os.path.join(out_dir, SUBFIG_NAMES['cdf'])}")
 
 
 def print_diagnostics(name: str, res: Dict[str, np.ndarray], snr_traj: np.ndarray):
