@@ -218,12 +218,16 @@ SUBFIG_NAMES = {
 TEACHER_COLOR = '#1f77b4'
 PKD_COLOR = '#d62728'
 
-# All four subfigures share one figure size and one font spec, so that with
-# LaTeX \includegraphics[width=\linewidth] they render at a consistent scale.
-# bbox_inches='tight' is deliberately NOT used (it crops each figure to its
-# own content and breaks the shared width); constrained_layout keeps labels
-# and the colorbar inside the fixed canvas instead.
-FIG_W, FIG_H = 7.0, 4.2          # inches -- identical for every subfigure
+# LaTeX layout (self_review/5Experiment.tex), 2x2 at 0.49\columnwidth each:
+#     row 1:  (a) SNR trajectory   |  (d) goodput CDF      -- wide, short
+#     row 2:  (b) teacher heatmap  |  (c) PKD heatmap       -- rectangular
+# All four share the SAME WIDTH in inches so \includegraphics[width=\linewidth]
+# renders them aligned; the line plots are shorter than the heatmaps.
+# bbox_inches='tight' is deliberately NOT used (it re-crops each figure and
+# breaks the shared width); constrained_layout keeps labels/colorbar inside.
+FIG_W = 6.4                       # inches -- identical for every subfigure
+FIG_H_LINE = 3.1                  # (a) trajectory, (d) CDF
+FIG_H_HEAT = 4.4                  # (b), (c) heatmaps
 SAVE_KW = dict(dpi=300)
 
 RC = {
@@ -242,14 +246,14 @@ RC = {
 }
 
 
-def _new_ax():
-    fig, ax = plt.subplots(figsize=(FIG_W, FIG_H), constrained_layout=True)
+def _new_ax(height):
+    fig, ax = plt.subplots(figsize=(FIG_W, height), constrained_layout=True)
     return fig, ax
 
 
 def _mcs_heatmap(prob, vmax, T, save_path):
     num_mcs = prob.shape[0]
-    fig, ax = _new_ax()
+    fig, ax = _new_ax(FIG_H_HEAT)
     im = ax.imshow(
         prob, aspect='auto', origin='lower',
         extent=[0, T, MCS_MIN - 0.5, MCS_MAX + 0.5],
@@ -287,7 +291,7 @@ def make_figure(
 
     with plt.rc_context(RC):
         # --- (a) common SNR trajectory ---
-        fig, ax = _new_ax()
+        fig, ax = _new_ax(FIG_H_LINE)
         ax.plot(pkt, snr_traj, color=TEACHER_COLOR, lw=1.3)
         ax.set_xlabel('Packet Number')
         ax.set_ylabel('SNR (dB)')
@@ -303,22 +307,22 @@ def make_figure(
         # --- (d) achieved-goodput CDF ---
         xt, yt = ecdf(gp_t)
         xs, ys = ecdf(gp_s)
-        fig, ax = _new_ax()
+        fig, ax = _new_ax(FIG_H_LINE)
         ax.plot(xt, yt, color=TEACHER_COLOR, lw=2, label='Teacher (PHY Simulator)')
         ax.plot(xs, ys, color=PKD_COLOR, lw=2, ls='--', label='PKD (Student)')
         ax.set_xlabel('Achieved Goodput (Mbps)')
         ax.set_ylabel('CDF')
         ax.set_ylim(0, 1)
-        ax.legend(framealpha=0.9, loc='upper left')
+        ax.legend(framealpha=0.9, loc='upper left', fontsize=11)
 
         mt, st = gp_t.mean(), gp_t.std()
         ms, ss = gp_s.mean(), gp_s.std()
         rel = 100 * abs(mt - ms) / mt
-        txt = (f'Mean Goodput (Mbps)\n'
-               f'Teacher:  {mt:.1f} ± {st:.1f}\n'
-               f'PKD:      {ms:.1f} ± {ss:.1f}\n\n'
-               f'Rel. difference:  {rel:.1f}%')
-        ax.text(0.97, 0.04, txt, transform=ax.transAxes, fontsize=11,
+        txt = (f'Mean goodput (Mbps)\n'
+               f'Teacher: {mt:.1f} ± {st:.1f}\n'
+               f'PKD:     {ms:.1f} ± {ss:.1f}\n'
+               f'Rel. diff.: {rel:.1f}%')
+        ax.text(0.97, 0.05, txt, transform=ax.transAxes, fontsize=10,
                 va='bottom', ha='right', family='monospace',
                 bbox=dict(boxstyle='round', fc='white', ec='0.7'))
         fig.savefig(os.path.join(out_dir, SUBFIG_NAMES['cdf']), **SAVE_KW)
