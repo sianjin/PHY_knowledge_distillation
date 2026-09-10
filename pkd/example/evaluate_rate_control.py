@@ -208,7 +208,7 @@ def ecdf(x: np.ndarray):
 
 # Four separate subfigure files, assembled by LaTeX \subfigure (see
 # self_review/5Experiment.tex), matching the Fig. 14 style: no in-figure
-# titles (LaTeX captions carry them), seaborn-darkgrid, Title-Case axes.
+# titles (LaTeX captions carry them), Title-Case axes.
 SUBFIG_NAMES = {
     'snr': 'rate_control_snr_trajectory.png',
     'teacher': 'rate_control_mcs_prob_teacher.png',
@@ -218,23 +218,50 @@ SUBFIG_NAMES = {
 TEACHER_COLOR = '#1f77b4'
 PKD_COLOR = '#d62728'
 
+# All four subfigures share one figure size and one font spec, so that with
+# LaTeX \includegraphics[width=\linewidth] they render at a consistent scale.
+# bbox_inches='tight' is deliberately NOT used (it crops each figure to its
+# own content and breaks the shared width); constrained_layout keeps labels
+# and the colorbar inside the fixed canvas instead.
+FIG_W, FIG_H = 7.0, 4.2          # inches -- identical for every subfigure
+SAVE_KW = dict(dpi=300)
+
+RC = {
+    'font.family': 'DejaVu Sans',
+    'font.size': 13,
+    'axes.titlesize': 13,
+    'axes.labelsize': 14,
+    'xtick.labelsize': 12,
+    'ytick.labelsize': 12,
+    'legend.fontsize': 12,
+    'axes.grid': True,
+    'grid.alpha': 0.3,
+    'axes.axisbelow': True,
+    'figure.facecolor': 'white',
+    'savefig.facecolor': 'white',
+}
+
+
+def _new_ax():
+    fig, ax = plt.subplots(figsize=(FIG_W, FIG_H), constrained_layout=True)
+    return fig, ax
+
 
 def _mcs_heatmap(prob, vmax, T, save_path):
-    plt.style.use('seaborn-v0_8-darkgrid')
     num_mcs = prob.shape[0]
-    fig, ax = plt.subplots(figsize=(8, 4.6))
+    fig, ax = _new_ax()
     im = ax.imshow(
         prob, aspect='auto', origin='lower',
         extent=[0, T, MCS_MIN - 0.5, MCS_MAX + 0.5],
         cmap='turbo', vmin=0, vmax=vmax, interpolation='bilinear',
     )
-    ax.set_xlabel('Packet Number', fontsize=12)
-    ax.set_ylabel('MCS Index', fontsize=12)
+    ax.set_xlabel('Packet Number')
+    ax.set_ylabel('MCS Index')
     ax.set_yticks(range(num_mcs))
     ax.grid(False)
     cbar = fig.colorbar(im, ax=ax, fraction=0.046, pad=0.02)
-    cbar.set_label('Selection Probability', fontsize=11)
-    fig.savefig(save_path, dpi=300, bbox_inches='tight')
+    cbar.set_label('Selection Probability')
+    fig.savefig(save_path, **SAVE_KW)
     plt.close(fig)
     print(f'Saved {save_path}')
 
@@ -258,46 +285,45 @@ def make_figure(
     gp_t = teacher['goodput_samples']
     gp_s = student['goodput_samples']
 
-    # --- (a) common SNR trajectory ---
-    plt.style.use('seaborn-v0_8-darkgrid')
-    fig, ax = plt.subplots(figsize=(8, 3.6))
-    ax.plot(pkt, snr_traj, color=TEACHER_COLOR, lw=1.2)
-    ax.set_xlabel('Packet Number', fontsize=12)
-    ax.set_ylabel('SNR (dB)', fontsize=12)
-    ax.set_xlim(0, T)
-    fig.savefig(os.path.join(out_dir, SUBFIG_NAMES['snr']), dpi=300, bbox_inches='tight')
-    plt.close(fig)
-    print(f"Saved {os.path.join(out_dir, SUBFIG_NAMES['snr'])}")
+    with plt.rc_context(RC):
+        # --- (a) common SNR trajectory ---
+        fig, ax = _new_ax()
+        ax.plot(pkt, snr_traj, color=TEACHER_COLOR, lw=1.3)
+        ax.set_xlabel('Packet Number')
+        ax.set_ylabel('SNR (dB)')
+        ax.set_xlim(0, T)
+        fig.savefig(os.path.join(out_dir, SUBFIG_NAMES['snr']), **SAVE_KW)
+        plt.close(fig)
+        print(f"Saved {os.path.join(out_dir, SUBFIG_NAMES['snr'])}")
 
-    # --- (b) teacher / (c) PKD MCS-selection probability heatmaps ---
-    _mcs_heatmap(p_teacher, vmax, T, os.path.join(out_dir, SUBFIG_NAMES['teacher']))
-    _mcs_heatmap(p_student, vmax, T, os.path.join(out_dir, SUBFIG_NAMES['pkd']))
+        # --- (b) teacher / (c) PKD MCS-selection probability heatmaps ---
+        _mcs_heatmap(p_teacher, vmax, T, os.path.join(out_dir, SUBFIG_NAMES['teacher']))
+        _mcs_heatmap(p_student, vmax, T, os.path.join(out_dir, SUBFIG_NAMES['pkd']))
 
-    # --- (d) achieved-goodput CDF ---
-    xt, yt = ecdf(gp_t)
-    xs, ys = ecdf(gp_s)
-    plt.style.use('seaborn-v0_8-darkgrid')
-    fig, ax = plt.subplots(figsize=(8, 6))
-    ax.plot(xt, yt, color=TEACHER_COLOR, lw=2, label='Teacher (PHY Simulator)')
-    ax.plot(xs, ys, color=PKD_COLOR, lw=2, ls='--', label='PKD (Student)')
-    ax.set_xlabel('Achieved Goodput (Mbps)', fontsize=12)
-    ax.set_ylabel('CDF', fontsize=12)
-    ax.set_ylim(0, 1)
-    ax.legend(fontsize=10, framealpha=0.9, loc='upper left')
+        # --- (d) achieved-goodput CDF ---
+        xt, yt = ecdf(gp_t)
+        xs, ys = ecdf(gp_s)
+        fig, ax = _new_ax()
+        ax.plot(xt, yt, color=TEACHER_COLOR, lw=2, label='Teacher (PHY Simulator)')
+        ax.plot(xs, ys, color=PKD_COLOR, lw=2, ls='--', label='PKD (Student)')
+        ax.set_xlabel('Achieved Goodput (Mbps)')
+        ax.set_ylabel('CDF')
+        ax.set_ylim(0, 1)
+        ax.legend(framealpha=0.9, loc='upper left')
 
-    mt, st = gp_t.mean(), gp_t.std()
-    ms, ss = gp_s.mean(), gp_s.std()
-    rel = 100 * abs(mt - ms) / mt
-    txt = (f'Mean Goodput (Mbps)\n'
-           f'Teacher:  {mt:.1f} ± {st:.1f}\n'
-           f'PKD:      {ms:.1f} ± {ss:.1f}\n\n'
-           f'Relative Difference:  {rel:.1f}%')
-    ax.text(0.97, 0.05, txt, transform=ax.transAxes, fontsize=9,
-            va='bottom', ha='right', family='monospace',
-            bbox=dict(boxstyle='round', fc='white', ec='0.7'))
-    fig.savefig(os.path.join(out_dir, SUBFIG_NAMES['cdf']), dpi=300, bbox_inches='tight')
-    plt.close(fig)
-    print(f"Saved {os.path.join(out_dir, SUBFIG_NAMES['cdf'])}")
+        mt, st = gp_t.mean(), gp_t.std()
+        ms, ss = gp_s.mean(), gp_s.std()
+        rel = 100 * abs(mt - ms) / mt
+        txt = (f'Mean Goodput (Mbps)\n'
+               f'Teacher:  {mt:.1f} ± {st:.1f}\n'
+               f'PKD:      {ms:.1f} ± {ss:.1f}\n\n'
+               f'Rel. difference:  {rel:.1f}%')
+        ax.text(0.97, 0.04, txt, transform=ax.transAxes, fontsize=11,
+                va='bottom', ha='right', family='monospace',
+                bbox=dict(boxstyle='round', fc='white', ec='0.7'))
+        fig.savefig(os.path.join(out_dir, SUBFIG_NAMES['cdf']), **SAVE_KW)
+        plt.close(fig)
+        print(f"Saved {os.path.join(out_dir, SUBFIG_NAMES['cdf'])}")
 
 
 def print_diagnostics(name: str, res: Dict[str, np.ndarray], snr_traj: np.ndarray):
