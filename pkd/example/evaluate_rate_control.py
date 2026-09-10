@@ -32,13 +32,17 @@ Inputs (produced by phy/rate-control/main_rate_control.m):
   phy/rate-control/snr_trajectory.mat
   phy/rate-control/teacher_rate_control.mat
 
-Output:
-  figures/rate_control_closed_loop.png
+Output (4 separate subfigure PNGs, assembled by LaTeX -- see
+self_review/5Experiment.tex):
+  figures/rate_control_snr_trajectory.png    -- (a) common SNR trajectory
+  figures/rate_control_mcs_prob_teacher.png  -- (b) teacher MCS-selection prob.
+  figures/rate_control_mcs_prob_pkd.png      -- (c) PKD MCS-selection prob.
+  figures/rate_control_goodput_cdf.png       -- (d) achieved-goodput CDF
 
 Usage:
   python -m pkd.example.evaluate_rate_control \
       [--checkpoint pkd/trained_models/exclude_config_0/pkd_model.pt] \
-      [--n-runs 100] [--burn-in 50] [--seed 42]
+      [--n-runs 100] [--burn-in 50] [--seed 42] [--out-dir figures]
 """
 import argparse
 import os
@@ -202,91 +206,98 @@ def ecdf(x: np.ndarray):
     return xs, ys
 
 
+# Four separate subfigure files, assembled by LaTeX \subfigure (see
+# self_review/5Experiment.tex), matching the Fig. 14 style: no in-figure
+# titles (LaTeX captions carry them), seaborn-darkgrid, Title-Case axes.
+SUBFIG_NAMES = {
+    'snr': 'rate_control_snr_trajectory.png',
+    'teacher': 'rate_control_mcs_prob_teacher.png',
+    'pkd': 'rate_control_mcs_prob_pkd.png',
+    'cdf': 'rate_control_goodput_cdf.png',
+}
+TEACHER_COLOR = '#1f77b4'
+PKD_COLOR = '#d62728'
+
+
+def _mcs_heatmap(prob, vmax, T, save_path):
+    plt.style.use('seaborn-v0_8-darkgrid')
+    num_mcs = prob.shape[0]
+    fig, ax = plt.subplots(figsize=(8, 4.6))
+    im = ax.imshow(
+        prob, aspect='auto', origin='lower',
+        extent=[0, T, MCS_MIN - 0.5, MCS_MAX + 0.5],
+        cmap='turbo', vmin=0, vmax=vmax, interpolation='bilinear',
+    )
+    ax.set_xlabel('Packet Number', fontsize=12)
+    ax.set_ylabel('MCS Index', fontsize=12)
+    ax.set_yticks(range(num_mcs))
+    ax.grid(False)
+    cbar = fig.colorbar(im, ax=ax, fraction=0.046, pad=0.02)
+    cbar.set_label('Selection Probability', fontsize=11)
+    fig.savefig(save_path, dpi=300, bbox_inches='tight')
+    plt.close(fig)
+    print(f'Saved {save_path}')
+
+
 def make_figure(
     snr_traj: np.ndarray,
     teacher: Dict[str, np.ndarray],
     student: Dict[str, np.ndarray],
-    save_path: str,
+    out_dir: str,
 ):
+    os.makedirs(out_dir, exist_ok=True)
     T = len(snr_traj)
     pkt = np.arange(1, T + 1)
 
     p_teacher = mcs_selection_prob(teacher['mcs'])
     p_student = mcs_selection_prob(student['mcs'])
-    num_mcs = p_teacher.shape[0]
+    # shared color scale, capped near the actual peak so bands stay readable
+    vmax = float(np.ceil(max(p_teacher.max(), p_student.max()) * 10) / 10)
+    vmax = min(max(vmax, 0.3), 0.8)
 
     gp_t = teacher['goodput_samples']
     gp_s = student['goodput_samples']
+
+    # --- (a) common SNR trajectory ---
+    plt.style.use('seaborn-v0_8-darkgrid')
+    fig, ax = plt.subplots(figsize=(8, 3.6))
+    ax.plot(pkt, snr_traj, color=TEACHER_COLOR, lw=1.2)
+    ax.set_xlabel('Packet Number', fontsize=12)
+    ax.set_ylabel('SNR (dB)', fontsize=12)
+    ax.set_xlim(0, T)
+    fig.savefig(os.path.join(out_dir, SUBFIG_NAMES['snr']), dpi=300, bbox_inches='tight')
+    plt.close(fig)
+    print(f"Saved {os.path.join(out_dir, SUBFIG_NAMES['snr'])}")
+
+    # --- (b) teacher / (c) PKD MCS-selection probability heatmaps ---
+    _mcs_heatmap(p_teacher, vmax, T, os.path.join(out_dir, SUBFIG_NAMES['teacher']))
+    _mcs_heatmap(p_student, vmax, T, os.path.join(out_dir, SUBFIG_NAMES['pkd']))
+
+    # --- (d) achieved-goodput CDF ---
     xt, yt = ecdf(gp_t)
     xs, ys = ecdf(gp_s)
-
-    fig = plt.figure(figsize=(10, 10.5))
-    gs = fig.add_gridspec(3, 2, height_ratios=[0.85, 1.5, 1.15], hspace=0.5, wspace=0.26)
-
-    # (a) common SNR trajectory
-    ax_a = fig.add_subplot(gs[0, :])
-    ax_a.plot(pkt, snr_traj, color='#1f77b4', lw=1.2)
-    ax_a.set_title('(a) Time-varying SNR trajectory (common input)', fontsize=11)
-    ax_a.set_xlabel('Packet Number')
-    ax_a.set_ylabel('SNR (dB)')
-    ax_a.set_xlim(0, T)
-    ax_a.grid(alpha=0.3)
-
-    # (b1)/(b2) MCS selection probability heatmaps.
-    # Cap the color scale near the actual peak so the bands are readable
-    # (with N=100 and ~2-MCS across-run spread, no single cell reaches 1.0).
-    extent = [0, T, MCS_MIN - 0.5, MCS_MAX + 0.5]
-    vmax = float(np.ceil(max(p_teacher.max(), p_student.max()) * 10) / 10)
-    vmax = min(max(vmax, 0.3), 0.8)
-    im_kw = dict(aspect='auto', origin='lower', extent=extent, cmap='turbo',
-                 vmin=0, vmax=vmax, interpolation='bilinear')
-
-    ax_b1 = fig.add_subplot(gs[1, 0])
-    ax_b1.imshow(p_teacher, **im_kw)
-    ax_b1.set_title('(b1) MCS selection probability (Teacher)', fontsize=11)
-    ax_b1.set_xlabel('Packet Number')
-    ax_b1.set_ylabel('MCS')
-    ax_b1.set_yticks(range(num_mcs))
-
-    ax_b2 = fig.add_subplot(gs[1, 1])
-    im = ax_b2.imshow(p_student, **im_kw)
-    ax_b2.set_title('(b2) MCS selection probability (PKD)', fontsize=11)
-    ax_b2.set_xlabel('Packet Number')
-    ax_b2.set_ylabel('MCS')
-    ax_b2.set_yticks(range(num_mcs))
-
-    cbar = fig.colorbar(im, ax=[ax_b1, ax_b2], fraction=0.025, pad=0.02)
-    cbar.set_label('Selection probability', fontsize=9)
-    if vmax < 1.0:
-        cbar.ax.text(0.5, 1.02, f'(clipped at {vmax:g})', transform=cbar.ax.transAxes,
-                     ha='center', va='bottom', fontsize=7, color='0.4')
-
-    # (c) achieved-goodput CDF
-    ax_c = fig.add_subplot(gs[2, :])
-    ax_c.plot(xt, yt, color='#1f77b4', lw=2, label='Teacher (PHY Simulator)')
-    ax_c.plot(xs, ys, color='#d62728', lw=2, ls='--', label='PKD (Student)')
-    ax_c.set_title(f'(c) Distribution of achieved goodput over all runs (N = {teacher["mcs"].shape[0]})', fontsize=11)
-    ax_c.set_xlabel('Achieved goodput (Mbps)')
-    ax_c.set_ylabel('CDF')
-    ax_c.set_ylim(0, 1)
-    ax_c.grid(alpha=0.3)
-    ax_c.legend(loc='upper left', fontsize=9)
+    plt.style.use('seaborn-v0_8-darkgrid')
+    fig, ax = plt.subplots(figsize=(8, 6))
+    ax.plot(xt, yt, color=TEACHER_COLOR, lw=2, label='Teacher (PHY Simulator)')
+    ax.plot(xs, ys, color=PKD_COLOR, lw=2, ls='--', label='PKD (Student)')
+    ax.set_xlabel('Achieved Goodput (Mbps)', fontsize=12)
+    ax.set_ylabel('CDF', fontsize=12)
+    ax.set_ylim(0, 1)
+    ax.legend(fontsize=10, framealpha=0.9, loc='upper left')
 
     mt, st = gp_t.mean(), gp_t.std()
     ms, ss = gp_s.mean(), gp_s.std()
     rel = 100 * abs(mt - ms) / mt
-    txt = (f'Mean goodput (Mbps)\n'
-           f'Teacher:  {mt:.1f}  (± {st:.1f})\n'
-           f'PKD:      {ms:.1f}  (± {ss:.1f})\n\n'
-           f'Relative difference:  {rel:.1f}%')
-    ax_c.text(0.97, 0.05, txt, transform=ax_c.transAxes, fontsize=8.5,
-              va='bottom', ha='right',
-              bbox=dict(boxstyle='round', fc='white', ec='0.7'))
-
-    os.makedirs(os.path.dirname(save_path) or '.', exist_ok=True)
-    fig.savefig(save_path, dpi=200, bbox_inches='tight')
+    txt = (f'Mean Goodput (Mbps)\n'
+           f'Teacher:  {mt:.1f} ± {st:.1f}\n'
+           f'PKD:      {ms:.1f} ± {ss:.1f}\n\n'
+           f'Relative Difference:  {rel:.1f}%')
+    ax.text(0.97, 0.05, txt, transform=ax.transAxes, fontsize=9,
+            va='bottom', ha='right', family='monospace',
+            bbox=dict(boxstyle='round', fc='white', ec='0.7'))
+    fig.savefig(os.path.join(out_dir, SUBFIG_NAMES['cdf']), dpi=300, bbox_inches='tight')
     plt.close(fig)
-    print(f'Saved {save_path}')
+    print(f"Saved {os.path.join(out_dir, SUBFIG_NAMES['cdf'])}")
 
 
 def print_diagnostics(name: str, res: Dict[str, np.ndarray], snr_traj: np.ndarray):
@@ -308,7 +319,8 @@ def main():
                     help='goodput window (default: from teacher meta)')
     ap.add_argument('--seed', type=int, default=42)
     ap.add_argument('--ar-order', type=int, default=10)
-    ap.add_argument('--save', default='figures/rate_control_closed_loop.png')
+    ap.add_argument('--out-dir', default='figures',
+                    help='directory for the 4 subfigure PNGs')
     ap.add_argument('--device', default=None)
     ap.add_argument('--student-cache', default='figures/rate_control_pkd_student.npz',
                     help='reuse a saved PKD closed-loop result if present (delete to force a re-run)')
@@ -380,7 +392,7 @@ def main():
     def trim(res):
         return {k: (v[:, burn_in:] if k in ('mcs', 'errors') else v) for k, v in res.items()}
 
-    make_figure(snr_traj[burn_in:], trim(teacher), trim(student), args.save)
+    make_figure(snr_traj[burn_in:], trim(teacher), trim(student), args.out_dir)
 
 
 if __name__ == '__main__':

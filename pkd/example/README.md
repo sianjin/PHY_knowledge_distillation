@@ -429,8 +429,11 @@ python -m pkd.example.evaluate_rate_control
 - Runs the PKD closed loop `N` times over the same SNR trajectory, using the
   shared controller `pkd.rate_control.RateController` (byte-for-byte twin of
   `phy/rate-control/rateController.m`)
-- Writes `figures/rate_control_closed_loop.png` and caches the PKD result to
-  `figures/rate_control_pkd_student.npz` (delete to force a re-run)
+- Writes 4 subfigure PNGs to `figures/` (assembled by LaTeX, Fig. 14 style):
+  `rate_control_snr_trajectory.png`, `rate_control_mcs_prob_teacher.png`,
+  `rate_control_mcs_prob_pkd.png`, `rate_control_goodput_cdf.png`
+- Caches the PKD closed-loop result to `figures/rate_control_pkd_student.npz`
+  (delete to force a re-run)
 - Prints teacher vs. student diagnostics (mean MCS, overall PER, MCS/SNR
   correlation, across-run MCS spread)
 
