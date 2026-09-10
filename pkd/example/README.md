@@ -404,6 +404,11 @@ trajectory, so `C_t != C`. It compares the teacher and student
 **statistically** -- MCS-selection probability over time and achieved-goodput
 distribution -- not realization by realization.
 
+The default checkpoint is `exclude_config_30` (30% full-tuple exclusion,
+Section V-D). For the Model-B 3x2:2 CBW40 slice used here, MCS 1, 2 and 7
+were held out of training, so the closed-loop sweep also exercises unseen
+MCS configurations -- Fig. 15 doubles as a generalization test.
+
 **Prerequisites** (run the MATLAB teacher first):
 
 ```matlab
@@ -420,9 +425,9 @@ python -m pkd.example.evaluate_rate_control
 
 | Command | Description |
 |---------|-------------|
-| `python -m pkd.example.evaluate_rate_control` | Build Fig. 15 (N = teacher's N runs, default checkpoint `exclude_config_0`) |
+| `python -m pkd.example.evaluate_rate_control` | Build Fig. 15 (N = teacher's N runs, default checkpoint `exclude_config_30`) |
 | `python -m pkd.example.evaluate_rate_control --n-runs 100 --seed 42` | Explicit run count / seed |
-| `python -m pkd.example.evaluate_rate_control --checkpoint pkd/trained_models/exclude_config_0/pkd_model.pt` | Choose the PKD checkpoint |
+| `python -m pkd.example.evaluate_rate_control --checkpoint pkd/trained_models/exclude_config_0/pkd_model.pt` | Choose a different PKD checkpoint |
 
 **What it does:**
 - Reads `phy/rate-control/teacher_rate_control.mat` and `snr_trajectory.mat`

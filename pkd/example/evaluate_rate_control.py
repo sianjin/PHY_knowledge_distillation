@@ -39,9 +39,15 @@ self_review/5Experiment.tex):
   figures/rate_control_mcs_prob_pkd.png      -- (c) PKD MCS-selection prob.
   figures/rate_control_goodput_cdf.png       -- (d) achieved-goodput CDF
 
+PKD checkpoint: exclude_config_30 -- trained with 30% full-tuple exclusion
+(Section V-D). For the Model-B, 3x2:2, 40 MHz slice used here, MCS 1, 2 and
+7 were held out of training, so the closed-loop sweep also exercises MCS
+configurations the model never saw. This makes Fig. 15 a generalization
+test, consistent with Figs. 12-14.
+
 Usage:
   python -m pkd.example.evaluate_rate_control \
-      [--checkpoint pkd/trained_models/exclude_config_0/pkd_model.pt] \
+      [--checkpoint pkd/trained_models/exclude_config_30/pkd_model.pt] \
       [--n-runs 100] [--burn-in 50] [--seed 42] [--out-dir figures]
 """
 import argparse
@@ -333,7 +339,7 @@ def print_diagnostics(name: str, res: Dict[str, np.ndarray], snr_traj: np.ndarra
 
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument('--checkpoint', default='pkd/trained_models/exclude_config_0/pkd_model.pt')
+    ap.add_argument('--checkpoint', default='pkd/trained_models/exclude_config_30/pkd_model.pt')
     ap.add_argument('--n-runs', type=int, default=None,
                     help='PKD realizations (default: match the teacher N)')
     ap.add_argument('--burn-in', type=int, default=None,
