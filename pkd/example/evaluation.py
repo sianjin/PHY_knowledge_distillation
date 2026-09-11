@@ -216,6 +216,36 @@ def evaluate_innovation_structure(model, inference, teacher_seq, config, device=
     print(f"Saved {save_prefix}_pit_hist.png")
     plt.close()
 
+    # Plot 1b: QQ plot of standardized innovations z_t against N(0,1)
+    # Addresses the Gaussian-innovation assumption directly (reviewer request),
+    # complementary to the PIT histogram/KS test above.
+    fig, ax = plt.subplots(1, 1, figsize=(6, 4))
+    stats.probplot(standardized_innovations, dist='norm', plot=ax)
+    ax.get_lines()[0].set_markerfacecolor('#1f77b4')
+    ax.get_lines()[0].set_markeredgecolor('#1f77b4')
+    ax.get_lines()[0].set_markersize(4)
+    ax.get_lines()[1].set_color('r')
+    ax.get_lines()[1].set_linewidth(2)
+    ax.set_title('')
+    ax.set_xlabel('Theoretical quantiles (N(0,1))')
+    ax.set_ylabel('Sample quantiles ($z_t$)')
+    ax.grid(True, alpha=0.3)
+    plt.tight_layout()
+    plt.savefig(f'{save_prefix}_qq.png', dpi=150, bbox_inches='tight')
+    print(f"Saved {save_prefix}_qq.png")
+    plt.close()
+
+    # Shapiro-Wilk normality test on z_t (paired with the QQ plot)
+    if len(standardized_innovations) <= 5000:
+        sw_stat, sw_pval = stats.shapiro(standardized_innovations)
+    else:
+        sw_stat, sw_pval = stats.shapiro(np.random.choice(standardized_innovations, 5000, replace=False))
+    skew = stats.skew(standardized_innovations)
+    kurt = stats.kurtosis(standardized_innovations, fisher=False)  # 3.0 = Gaussian
+    print(f"Shapiro-Wilk test (z_t):  statistic={sw_stat:.4f}, p-value={sw_pval:.4g}")
+    print(f"Skewness of z_t:          {skew:.4f}  (Gaussian: 0)")
+    print(f"Kurtosis of z_t:          {kurt:.4f}  (Gaussian: 3)")
+
     # Plot 2: ACF of centered PIT
     pit_centered = pit_values - 0.5
     pit_acf = compute_acf(pit_centered, max_lag=20)
@@ -244,7 +274,11 @@ def evaluate_innovation_structure(model, inference, teacher_seq, config, device=
         'mean_innov': np.mean(standardized_innovations),
         'var_innov': np.var(standardized_innovations),
         'max_acf': max_acf,
-        'pit_ks_pval': ks_pval
+        'pit_ks_pval': ks_pval,
+        'shapiro_pval': sw_pval,
+        'skew_innov': skew,
+        'kurtosis_innov': kurt,
+        'standardized_innovations': standardized_innovations,
     }
 
 

@@ -7,6 +7,9 @@ Usage:
     python example.py test [N] [--slice key:value ...]             # Evaluate on test set
     python example.py eval [idx] [N]                               # Qualitative evaluation (legacy)
     python example.py eval --slice key:value ... [--idx N]         # Qualitative evaluation (slice-based)
+    python example.py eval --slice key:value ... [--checkpoint PATH]  # Choose which checkpoint to evaluate
+                                                                        # (default: pkd/pkd_model.pt -- state
+                                                                        # this explicitly for any figure)
 
 Examples:
     # Training
@@ -229,7 +232,7 @@ if __name__ == '__main__':
 
     elif mode == 'eval':
         # Qualitative evaluation with real data
-        # Parse --slice and --idx arguments
+        # Parse --slice, --idx, and --checkpoint arguments
         slice_spec, remaining = parse_slice_spec(remaining_args)
 
         idx = None
@@ -240,18 +243,28 @@ if __name__ == '__main__':
             idx = int(remaining[idx_pos + 1])
             remaining = remaining[:idx_pos] + remaining[idx_pos + 2:]
 
+        checkpoint_path = None
+        if '--checkpoint' in remaining:
+            ckpt_pos = remaining.index('--checkpoint')
+            if ckpt_pos + 1 >= len(remaining):
+                raise ValueError("--checkpoint requires a path argument")
+            checkpoint_path = remaining[ckpt_pos + 1]
+            remaining = remaining[:ckpt_pos] + remaining[ckpt_pos + 2:]
+
         # Backward compatibility: if no slice/idx, use old positional syntax
         if slice_spec is None and idx is None:
             test_idx = int(remaining[0]) if len(remaining) > 0 else 0
             max_files = int(remaining[1]) if len(remaining) > 1 else None
             data_dir = remaining[2] if len(remaining) > 2 else default_data_dir
-            example_evaluation(data_dir=data_dir, test_idx=test_idx, max_files=max_files)
+            example_evaluation(data_dir=data_dir, test_idx=test_idx, max_files=max_files,
+                             checkpoint_path=checkpoint_path)
         else:
             # New slice-based syntax
             max_files = int(remaining[0]) if len(remaining) > 0 else None
             data_dir = remaining[1] if len(remaining) > 1 else default_data_dir
             example_evaluation(data_dir=data_dir, max_files=max_files,
-                             slice_spec=slice_spec, slice_idx=idx)
+                             slice_spec=slice_spec, slice_idx=idx,
+                             checkpoint_path=checkpoint_path)
 
     else:
         print(f"Unknown mode: {mode}")

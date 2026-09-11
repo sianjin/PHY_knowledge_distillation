@@ -4,7 +4,7 @@ Usage:
     python -m pkd.example train [N] [--exclusion-config PATH] [--exclusion-mcs PCT] [--exclusion-config-pct PCT] [--exclusion-seed SEED]
     python -m pkd.example test [N] [--slice key:value ...]
     python -m pkd.example eval [idx] [N]
-    python -m pkd.example eval --slice key:value ... [--idx N]
+    python -m pkd.example eval --slice key:value ... [--idx N] [--checkpoint PATH]
     python -m pkd.example exclusion [--slice key:value ...] [--percentages P1 P2 ...]
 
 Examples:
@@ -244,16 +244,26 @@ if __name__ == '__main__':
             idx = int(remaining[idx_pos + 1])
             remaining = remaining[:idx_pos] + remaining[idx_pos + 2:]
 
+        checkpoint_path = None
+        if '--checkpoint' in remaining:
+            ckpt_pos = remaining.index('--checkpoint')
+            if ckpt_pos + 1 >= len(remaining):
+                raise ValueError("--checkpoint requires a path argument")
+            checkpoint_path = remaining[ckpt_pos + 1]
+            remaining = remaining[:ckpt_pos] + remaining[ckpt_pos + 2:]
+
         if slice_spec is None and idx is None:
             test_idx = int(remaining[0]) if len(remaining) > 0 else 0
             max_files = int(remaining[1]) if len(remaining) > 1 else None
             data_dir = remaining[2] if len(remaining) > 2 else default_data_dir
-            example_evaluation(data_dir=data_dir, test_idx=test_idx, max_files=max_files)
+            example_evaluation(data_dir=data_dir, test_idx=test_idx, max_files=max_files,
+                               checkpoint_path=checkpoint_path)
         else:
             max_files = int(remaining[0]) if len(remaining) > 0 else None
             data_dir = remaining[1] if len(remaining) > 1 else default_data_dir
             example_evaluation(data_dir=data_dir, max_files=max_files,
-                               slice_spec=slice_spec, slice_idx=idx)
+                               slice_spec=slice_spec, slice_idx=idx,
+                               checkpoint_path=checkpoint_path)
 
     elif mode == 'exclusion':
         slice_spec, remaining = parse_slice_spec(remaining_args)

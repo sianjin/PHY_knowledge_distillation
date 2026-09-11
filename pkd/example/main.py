@@ -424,7 +424,8 @@ def example_test_evaluation(data_dir='data', max_files=None, slice_spec=None):
 
 
 
-def example_evaluation(data_dir='data', test_idx=None, max_files=None, slice_spec=None, slice_idx=None):
+def example_evaluation(data_dir='data', test_idx=None, max_files=None, slice_spec=None,
+                        slice_idx=None, checkpoint_path=None):
     """Run comprehensive evaluation of student model fidelity on a single test sequence.
 
     This is a qualitative analysis tool for detailed inspection of individual sequences
@@ -437,6 +438,11 @@ def example_evaluation(data_dir='data', test_idx=None, max_files=None, slice_spe
         max_files: Maximum number of files to load (should match training)
         slice_spec: Dict of config filters (e.g., {'N_t': 4, 'MCS': 7}) - new slice-based selection
         slice_idx: Index into filtered sequences (None = random selection with seed=42)
+        checkpoint_path: Path to the model checkpoint to load (default: pkd/pkd_model.pt).
+            Pass this explicitly rather than relying on the default -- pkd_model.pt's
+            training exclusions are not tracked/reproducible, so state which checkpoint
+            (e.g. pkd/trained_models/exclude_config_30/pkd_model.pt) backs any figure
+            generated from this function.
 
     Note:
         Two selection modes:
@@ -451,9 +457,11 @@ def example_evaluation(data_dir='data', test_idx=None, max_files=None, slice_spe
 
     # Load model
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
-    checkpoint = torch.load(os.path.join(os.path.dirname(__file__), '..', 'pkd_model.pt'), map_location=device)
+    if checkpoint_path is None:
+        checkpoint_path = os.path.join(os.path.dirname(__file__), '..', 'pkd_model.pt')
+    checkpoint = torch.load(checkpoint_path, map_location=device)
 
-    print(f"\nLoaded checkpoint from pkd_model.pt")
+    print(f"\nLoaded checkpoint from {checkpoint_path}")
     print(f"  Checkpoint keys: {list(checkpoint.keys())}")
     if 'epoch' in checkpoint:
         print(f"  Trained for {checkpoint['epoch']+1} epochs")
