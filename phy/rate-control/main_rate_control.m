@@ -36,12 +36,9 @@ numSs   = 2;
 snrMin = 25;
 snrMax = 45;
 
-% ---- Smoke test first (fast) -------------------------------------------
-% corrPHYRateControl(cbw, chan, numTxRx, numSs, 4, 1000, [], 200, 50, 25, 45);
-
 % ---- Full run ---------------------------------------------------------
 N_real = 100;
 T      = 1000;
-segLen = 200;   % windowed-goodput window for Fig. 15(c)
+segLen = 200;   % windowed-goodput window for Fig. 15(d)
 burnIn = 50;    % drop initial controller transient
 corrPHYRateControl(cbw, chan, numTxRx, numSs, N_real, T, [], segLen, burnIn, snrMin, snrMax);

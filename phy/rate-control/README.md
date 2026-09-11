@@ -5,12 +5,11 @@ time-varying configurations, yet all other experiments fix `C_t = C`. Here the
 average SNR follows a common deterministic trajectory and the MCS is selected
 packet-by-packet by a rate controller, so `C_t != C`.
 
-It is a copy of `runtime-benchmark/` with a rate-control driver added. The
-shared PHY helpers (`box0Validation.m`, `calculateSINR.m`, `getBox0*Params.m`,
+It reuses the PHY helpers needed for channel simulation and beta calibration
+(`box0Validation.m`, `corrPHYVal.m`, `calculateSINR.m`, `getBox0*Params.m`,
 `spatialCorrelation.m`, `tgaxLinkPerformanceModel.m`, `mcs2beta.m`,
-`betaOptimization.m`, `awgnPerSnrFittingMse.m`, ...) are unchanged.
-`main.m`, `corrPHY.m`, `corrPHYSim.m` are the original runtime-benchmark
-entry points and are **not** used here.
+`betaOptimization.m`, and `awgnPerSnrFittingMse.m`). The unused
+runtime-benchmark entry points are intentionally omitted.
 
 ## What Fig. 15 tests
 

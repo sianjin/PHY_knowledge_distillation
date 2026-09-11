@@ -21,12 +21,12 @@ function corrPHYRateControl(cbw, chan, numTxRx, numSs, N_real, T, outFile, segLe
 %     T       = 1000
 %     outFile = fullfile(fileparts(mfilename('fullpath')), 'teacher_rate_control.mat')
 %     segLen  = 200   non-overlapping window (packets) for the time-resolved
-%                     goodput CDF of Fig. 15(c). Each (run, window) pair with
+%                     goodput CDF of Fig. 15(d). Each (run, window) pair with
 %                     window start >= burnIn contributes one goodput sample,
 %                     so the CDF spans the SNR sweep instead of collapsing to
 %                     a near-vertical whole-run line.
 %     burnIn  = 50    leading packets excluded from the goodput CDF and the
-%                     Fig. 15(b) heatmaps (initial controller transient).
+%                     Fig. 15(b)(c) heatmaps (initial controller transient).
 
 if nargin < 1 || isempty(cbw),     cbw = "CBW40";    end
 if nargin < 2 || isempty(chan),    chan = "Model-B"; end
@@ -112,7 +112,7 @@ successBitsPacket = double(successMask) * payloadBits;      % N_real x T
 throughputMbps = sum(successBitsPacket(:, burnIn+1:end), 2) ./ ...
     sum(packetAirtime(:, burnIn+1:end), 2) / 1e6;
 
-% Time-resolved achieved goodput for the Fig. 15(c) CDF: goodput over each
+% Time-resolved achieved goodput for the Fig. 15(d) CDF: goodput over each
 % non-overlapping segLen-packet window whose start index is >= burnIn.
 % One sample per (run, window). Spans the SNR sweep, so the CDF has real
 % spread from trough windows (low MCS) to peak windows (high MCS).
@@ -126,7 +126,7 @@ for s = 1:nSeg
         sum(packetAirtime(:, idx), 2) / 1e6;
     segSnrMean(s) = mean(snrTraj(idx));
 end
-goodputSamplesMbps = segGoodputMbps(:);   % (N_real*nSeg) x 1 -> Fig. 15(c)
+goodputSamplesMbps = segGoodputMbps(:);   % (N_real*nSeg) x 1 -> Fig. 15(d)
 
 meta = struct('cbw', char(cbw), 'chan', char(chan), 'numTxRx', numTxRx, ...
     'numSs', numSs, 'N_real', N_real, 'T', T, 'payloadBits', payloadBits, ...
