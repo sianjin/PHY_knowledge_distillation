@@ -398,25 +398,19 @@ Results (Averaged over SNRs):
 
 ## Resource-Usage Evaluation: PKD vs. EESM-log-AR (Table III/IV)
 
-`evaluate_resource_usage.py` extends the runtime comparison to address two
-reviewer comments on Table III/IV:
+`evaluate_resource_usage.py` extends the runtime comparison in Table III/IV
+in two ways:
 
-1. *"Table III compares PKD only with traditional PHY abstraction. Including
-   EESM-log-AR inference runtime would more directly isolate the
-   scalability gain over stochastic abstraction."* -- adds EESM-log-AR
-   (Python, the same free-running AR(p)+Gaussian generator used for the
-   sparse-MCS baselines in Figs. 12-14) as a second timed method, calibrated
-   once offline (untimed) **at each SNR operating point** on training-split
-   teacher sequences -- mirroring how the MATLAB traditional-abstraction
-   table excludes offline beta calibration from the timed section -- then
-   timed only on its free-running generation, exactly matching what is
-   timed for PKD (`PKDInference.run_sequence`).
-2. *"The authors do not measure CPU/GPU utilization and memory footprint...
-   CPU-only runtime does not fully characterize the computational
-   requirements."* -- both methods run under a background `psutil` sampling
-   thread recording RSS and CPU utilization throughout the whole SNR sweep;
-   if CUDA is available, PKD also reports GPU utilization/memory via
-   `torch.cuda`.
+1. It adds EESM-log-AR (Python, the same free-running AR(p)+Gaussian
+   generator used for the sparse-MCS baselines in Figs. 12-14) as a second
+   timed method, calibrated once offline (untimed) **at each SNR operating
+   point** on training-split teacher sequences -- mirroring how the MATLAB
+   traditional-abstraction table excludes offline beta calibration from
+   the timed section -- then timed only on its free-running generation,
+   exactly matching what is timed for PKD (`PKDInference.run_sequence`).
+2. Both methods run under a background `psutil` sampling thread recording
+   RSS and CPU utilization throughout the whole SNR sweep; if CUDA is
+   available, PKD also reports GPU utilization/memory via `torch.cuda`.
 
 **Averaged over SNR, matching Table III/IV.** Table II's dataset uses 10 SNR
 operating points along each MCS's PER-SNR waterfall, and

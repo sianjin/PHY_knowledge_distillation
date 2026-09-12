@@ -6,18 +6,16 @@ curve"; phy/runtime-benchmark/main.m loops isnr = 1:10 and reports
 tAvg = tEnd/numSnr*numCores; pkd/example/evaluate_runtime.py reports the
 average total runtime across 10 SNR values).
 
-Addresses two reviewer comments on the runtime table (Table III/IV):
+This script extends that runtime comparison in two ways:
 
-1. "Table III compares PKD only with traditional PHY abstraction. Including
-   EESM-log-AR inference runtime would more directly isolate the
-   scalability gain over stochastic abstraction." -- This script adds a
-   free-running EESM-log-AR generator (pkd.baselines.generate, the same
-   one used for the sparse-MCS baseline comparisons in Figs. 12-14) as a
-   second timed method, calibrated once (offline, untimed) PER SNR POINT
-   on teacher training sequences (mirroring how the MATLAB traditional-
-   abstraction runtime table excludes offline beta calibration from the
-   timed section), then timed only on its free-running generation --
-   mirroring exactly what is timed for PKD (PKDInference.run_sequence).
+1. It adds a free-running EESM-log-AR generator (pkd.baselines.generate,
+   the same one used for the sparse-MCS baseline comparisons in
+   Figs. 12-14) as a second timed method alongside PKD, calibrated once
+   (offline, untimed) PER SNR POINT on teacher training sequences
+   (mirroring how the MATLAB traditional-abstraction runtime table
+   excludes offline beta calibration from the timed section), then timed
+   only on its free-running generation -- mirroring exactly what is timed
+   for PKD (PKDInference.run_sequence).
 
    Unlike PKD (queried at any SNR via its continuous conditioning network)
    or phy/runtime-benchmark/main.m's arbitrary linspace(10,55,10) grid
@@ -28,13 +26,11 @@ Addresses two reviewer comments on the runtime table (Table III/IV):
    via isnr = 1:10. PKD is timed at that SAME set of SNR values so the two
    methods' averages are computed over identical operating points.
 
-2. "The authors do not measure CPU/GPU utilization and memory footprint...
-   CPU-only runtime does not fully characterize the computational
-   requirements." -- Both methods run under a background psutil sampling
-   thread recording RSS and CPU utilization THROUGHOUT THE WHOLE SNR LOOP
-   (one continuous timed region per method, no parfor/subprocess-per-SNR),
-   reporting peak/mean alongside the existing wall-clock/throughput
-   numbers, plus per-SNR breakdown and the cross-SNR average matching
+2. Both methods run under a background psutil sampling thread recording
+   RSS and CPU utilization THROUGHOUT THE WHOLE SNR LOOP (one continuous
+   timed region per method, no parfor/subprocess-per-SNR), reporting
+   peak/mean alongside the existing wall-clock/throughput numbers, plus
+   per-SNR breakdown and the cross-SNR average matching
    evaluate_runtime.py's "Average total runtime" convention. GPU
    utilization/memory via torch.cuda for PKD when CUDA is available.
 

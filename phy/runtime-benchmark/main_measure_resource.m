@@ -1,15 +1,9 @@
 % main_measure_resource  Single-process resource-usage measurement for the
 % traditional PHY abstraction, AVERAGED OVER ALL SNR OPERATING POINTS
-% (Table III/IV baseline).
-%
-% Addresses reviewer comments:
-%   1. "The evaluation reports only execution time. The authors do not
-%      measure CPU/GPU utilization and memory footprint."
-%   2. "The reported runtime reduction ... is evaluated only on a CPU."
-%      (This script IS the CPU-only baseline being characterized; see
-%      pkd/example/evaluate_resource_usage.py for the matching PKD/
-%      EESM-log-AR measurement on the Python side, run over the SAME SNR
-%      grid so the three are comparable.)
+% (Table III/IV baseline). Reports CPU utilization and peak memory
+% alongside wall-clock time; see pkd/example/evaluate_resource_usage.py
+% for the matching PKD/EESM-log-AR measurement on the Python side, run
+% over the SAME SNR grid so the three are directly comparable.
 %
 % Matches main.m's convention of looping over numSnr = 10 SNR points
 % (isnr = 1:10) for the same (CBW, CH, numTxRx, numSs, mcs), and reports

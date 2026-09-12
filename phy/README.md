@@ -74,9 +74,7 @@ PHY Knowledge Distillation (PKD) replaces per-configuration calibration with lea
   cost), additionally reporting CPU utilization (`cputime`) and peak
   memory (`memory().MemUsedMATLAB`, Windows only) alongside the same
   per-SNR-averaged wall-clock number, matching the methodology of
-  `pkd/example/evaluate_resource_usage.py` on the Python side (addresses
-  the reviewer comment that only execution time, not CPU/memory, was
-  reported).
+  `pkd/example/evaluate_resource_usage.py` on the Python side.
 
 The folders are independent workflows: teacher-data generation and runtime
 benchmarking call their own copies of `corrPHYVal.m`; they do not load a beta
