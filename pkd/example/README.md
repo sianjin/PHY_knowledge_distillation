@@ -406,76 +406,97 @@ reviewer comments on Table III/IV:
    scalability gain over stochastic abstraction."* -- adds EESM-log-AR
    (Python, the same free-running AR(p)+Gaussian generator used for the
    sparse-MCS baselines in Figs. 12-14) as a second timed method, calibrated
-   once offline on training-split teacher sequences at the target
-   (slice, MCS, SNR) -- mirroring how the MATLAB traditional-abstraction
+   once offline (untimed) **at each SNR operating point** on training-split
+   teacher sequences -- mirroring how the MATLAB traditional-abstraction
    table excludes offline beta calibration from the timed section -- then
    timed only on its free-running generation, exactly matching what is
    timed for PKD (`PKDInference.run_sequence`).
 2. *"The authors do not measure CPU/GPU utilization and memory footprint...
    CPU-only runtime does not fully characterize the computational
-   requirements."* -- both methods are run under a background `psutil`
-   sampling thread recording RSS and CPU utilization throughout the timed
-   region; if CUDA is available, PKD also reports GPU utilization/memory
-   via `torch.cuda`.
+   requirements."* -- both methods run under a background `psutil` sampling
+   thread recording RSS and CPU utilization throughout the whole SNR sweep;
+   if CUDA is available, PKD also reports GPU utilization/memory via
+   `torch.cuda`.
+
+**Averaged over SNR, matching Table III/IV.** Table II's dataset uses 10 SNR
+operating points along each MCS's PER-SNR waterfall, and
+`phy/runtime-benchmark/main.m` loops over all 10 (`isnr = 1:10`) to report
+`tAvg`; `evaluate_runtime.py` similarly averages PKD's runtime over 10 SNR
+values. This script does the same: it discovers the dataset's real SNR grid
+for the given (slice, MCS) -- EESM-log-AR must calibrate from real data, so
+an arbitrary grid (like `evaluate_runtime.py`'s `linspace(10,55,10)`, fine
+for PKD alone) will not work here -- then times **both** methods at every
+point in that same grid, in one continuous timed region per method (no
+`parfor`/subprocess-per-SNR), and reports the per-SNR breakdown plus the
+cross-SNR average.
 
 ```bash
-# Quick comparison (one process, see the isolation note below)
+# Quick comparison over the full dataset SNR grid (one process; see the
+# isolation note below for peak-RSS)
 python -m pkd.example.evaluate_resource_usage \
     --channel-model 2 --N-t 3 --N-r 2 --BW 40.0 --N-ss 2 --MCS 7 \
     --num-sequences 50 --sequence-length 1000
 
 # Paper-quality, per-method ISOLATED peak-RSS: run in separate processes.
-# EESM-log-AR calibrates from the training set itself (no --snr needed):
+# EESM-log-AR always needs the dataset load (real calibration data):
 python -m pkd.example.evaluate_resource_usage \
     --channel-model 2 --N-t 3 --N-r 2 --BW 40.0 --N-ss 2 --MCS 7 \
     --num-sequences 50 --method eesm
-# note the "Calibrated ... at SNR=XX.XX dB" line, then pass that SNR to PKD
-# (required for --method pkd, so it can skip loading the training set):
+# note the printed "N SNR points: [...]" line, then pass those SAME values
+# to PKD via --snr-list so it can skip the dataset load entirely:
 python -m pkd.example.evaluate_resource_usage \
-    --channel-model 2 --N-t 3 --N-r 2 --BW 40.0 --N-ss 2 --MCS 7 --snr 41 \
+    --channel-model 2 --N-t 3 --N-r 2 --BW 40.0 --N-ss 2 --MCS 7 \
+    --snr-list 26 29 32 35 38 41 44 47 50 53 \
     --num-sequences 50 --method pkd
 ```
 
-**Why `--method pkd` requires `--snr`:** loading the training split to
-calibrate EESM-log-AR measurably raises this process's RSS (~+200 MB even
-after `gc.collect()`, since CPython/glibc do not reliably return freed heap
-pages to the OS) -- an artifact of the *dataset load*, not of either
-method's actual runtime memory need. `--method pkd` skips calibration
-entirely (hence needs the SNR given explicitly) so its reported peak RSS is
-the network's own footprint, not inflated by an unrelated dataset load.
-`--method both` still runs both back-to-back in one process for a quick
-wall-clock/CPU-utilization check (those numbers are unaffected by process
-sharing); its printed peak-RSS ratio carries the same caveat.
+**Why `--method pkd` needs `--snr-list` for isolation:** by default (no
+`--snr-list`), PKD's timed run still loads the training split just to
+*discover* the real SNR grid, which measurably raises this process's RSS
+(~+200 MB even after `gc.collect()`, since CPython/glibc do not reliably
+return freed heap pages to the OS) -- an artifact of the dataset load, not
+of PKD's own runtime memory need (PKD itself can be queried at any SNR
+without touching training data). Passing `--snr-list` explicitly (copied
+from a prior `--method eesm` run's printed grid) skips that load, giving a
+peak-RSS number that reflects only the network + AR state buffer.
+`--snr-list` is rejected for `--method both`/`eesm`, since EESM-log-AR must
+load real data regardless. `--method both` still runs both methods
+back-to-back in one process for a quick wall-clock/CPU-utilization check
+(unaffected by process sharing); its printed peak-RSS ratio carries the
+one-process caveat.
 
-**Representative result** (Model-B, 3x2:2, 40 MHz, MCS 7, SNR 41 dB, 50
-sequences x 1000 packets, isolated processes, CPU-only, 8-core laptop):
+**Representative result** (Model-B, 3x2:2, 40 MHz, MCS 7, averaged over the
+dataset's SNR grid, 50 sequences x 1000 packets per SNR point, isolated
+processes, CPU-only, 8-core laptop):
 
-| Method | Wall-clock | Throughput | Peak RSS | Mean CPU util. |
+| Method | Avg. per-SNR wall-clock | Throughput | Peak RSS | Mean CPU util. |
 |---|---|---|---|---|
-| EESM-log-AR (incl. per-config calibration load) | 0.51 s | 97.5k packets/s | 458 MB | 101% (~1 core) |
-| PKD (no per-config calibration) | 2.92 s | 17.1k packets/s | 233 MB | 121% (~1.2 cores) |
+| EESM-log-AR (incl. per-config calibration load) | ~0.09 s | ~115k packets/s | ~380 MB | ~110-260% |
+| PKD (no per-config calibration) | ~0.49 s | ~20k packets/s | 233 MB | ~120-215% |
 
-EESM-log-AR's free-running generation is faster in absolute terms than
-PKD's neural conditioning + parameter heads -- expected, since it evaluates
-pre-fitted scalar constants rather than a small MLP forward pass. Its
-larger peak-RSS here reflects a genuine part of its resource profile,
-not a measurement artifact: EESM-log-AR must load and calibrate against
-teacher data **separately for every configuration**, while PKD's
-configuration-conditioned network is trained once, offline, across the
-*entire* configuration space, and needs no per-configuration teacher data
-at inference time. This is the same configuration-scalability trade-off
-the paper's main runtime claim (Table III/IV) is about, now quantified
-against a stochastic-abstraction baseline rather than only against
-full-fidelity PHY simulation.
+(Exact numbers vary slightly with `--num-snr`/machine load; re-run for the
+paper's final figures with the full 10-point grid.) EESM-log-AR's
+free-running generation is faster in absolute terms than PKD's neural
+conditioning + parameter heads -- expected, since it evaluates pre-fitted
+scalar constants rather than a small MLP forward pass. Its larger peak-RSS
+here reflects a genuine part of its resource profile, not a measurement
+artifact: EESM-log-AR must load and calibrate against teacher data
+**separately for every configuration**, while PKD's configuration-conditioned
+network is trained once, offline, across the *entire* configuration space,
+and needs no per-configuration teacher data at inference time. This is the
+same configuration-scalability trade-off the paper's main runtime claim
+(Table III/IV) is about, now quantified against a stochastic-abstraction
+baseline rather than only against full-fidelity PHY simulation.
 
 **Command-line Arguments:**
 
 Required: `--channel-model`, `--N-t`, `--N-r`, `--BW`, `--N-ss`, `--MCS` (same as `evaluate_runtime.py`).
 
 Optional:
-- `--snr`: SNR in dB. Required for `--method pkd`; if omitted for `--method both`/`eesm`, uses whichever SNR the matched training sequences carry.
+- `--num-snr`: use only the first N points of the dataset's SNR grid (default: all, typically 10, matching Table II)
+- `--snr-list`: explicit SNR values (dB) to time PKD at, e.g. `--snr-list 26 29 32`. Only valid with `--method pkd`; skips the dataset load entirely (see isolation note above)
 - `--num-sequences` (default 50), `--sequence-length` (default 1000)
-- `--sample-interval`: resource-sampling period in seconds (default 0.01; keep well below the expected run time so each run collects enough samples)
+- `--sample-interval`: resource-sampling period in seconds (default 0.01; keep well below the expected per-SNR run time so each SNR point collects enough samples)
 - `--method {both,pkd,eesm}` (default `both`)
 - `--model-path` (default `pkd/pkd_model.pt`), `--data-dir` (default `data`), `--max-files`
 

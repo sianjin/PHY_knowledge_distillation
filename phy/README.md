@@ -67,13 +67,16 @@ PHY Knowledge Distillation (PKD) replaces per-configuration calibration with lea
 - `runtime-benchmark/` recalibrates beta before timing, then measures the
   lightweight abstraction path. Beta calibration is outside the timed section.
   `main.m`/`corrPHYSim.m` produce the wall-clock-only Table III/IV numbers
-  via a 10-worker `parfor` over SNR points. `main_measure_resource.m` is a
-  separate, single-configuration, single-process (no `parfor`) driver that
-  additionally reports CPU utilization (`cputime`) and peak memory
-  (`memory().MemUsedMATLAB`, Windows only) for one configuration, matching
-  the methodology of `pkd/example/evaluate_resource_usage.py` on the
-  Python side (addresses the reviewer comment that only execution time,
-  not CPU/memory, was reported).
+  via a 10-worker `parfor` over SNR points, reporting `tAvg` averaged over
+  all 10. `main_measure_resource.m` is a separate, single-process driver
+  that loops over the same 10 SNR points **sequentially, no `parfor`**
+  (to avoid conflating parallel-pool aggregation with per-configuration
+  cost), additionally reporting CPU utilization (`cputime`) and peak
+  memory (`memory().MemUsedMATLAB`, Windows only) alongside the same
+  per-SNR-averaged wall-clock number, matching the methodology of
+  `pkd/example/evaluate_resource_usage.py` on the Python side (addresses
+  the reviewer comment that only execution time, not CPU/memory, was
+  reported).
 
 The folders are independent workflows: teacher-data generation and runtime
 benchmarking call their own copies of `corrPHYVal.m`; they do not load a beta
