@@ -15,6 +15,32 @@ def compute_acf(x, max_lag=50):
     return acf[:max_lag+1]
 
 
+def compute_pacf(x, max_lag=50):
+    """Compute the partial autocorrelation function (PACF) via the
+    Durbin-Levinson recursion on the sample ACF.
+
+    Used to justify the AR order p (Reviewer comment): the PACF of a true
+    AR(p) process is (in expectation) zero beyond lag p, so p is chosen as
+    the lag beyond which the empirical PACF stays inside the approximate
+    95% white-noise confidence band +/-1.96/sqrt(N).
+
+    Returns an array of length max_lag+1, pacf[0] = 1 by convention.
+    """
+    acf = compute_acf(x, max_lag=max_lag)
+    pacf = np.zeros(max_lag + 1)
+    pacf[0] = 1.0
+    phi = np.zeros((max_lag + 1, max_lag + 1))
+    phi[1, 1] = acf[1]
+    pacf[1] = acf[1]
+    for k in range(2, max_lag + 1):
+        num = acf[k] - np.sum(phi[k-1, 1:k] * acf[k-1:0:-1])
+        den = 1.0 - np.sum(phi[k-1, 1:k] * acf[1:k])
+        phi[k, k] = num / den if abs(den) > 1e-12 else 0.0
+        phi[k, 1:k] = phi[k-1, 1:k] - phi[k, k] * phi[k-1, k-1:0:-1]
+        pacf[k] = phi[k, k]
+    return pacf
+
+
 def compute_psd(x, fs=1.0):
     """Compute power spectral density."""
     freqs, psd = welch(x, fs=fs, nperseg=min(256, len(x)//4))
