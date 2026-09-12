@@ -62,6 +62,16 @@ fprintf('Calibrating EESM beta (offline, untimed)...\n');
 betaOpt = corrPHYVal(CBW, CH, mcs, numTxRx, numSs);
 fprintf('  beta = %.4f\n', betaOpt);
 
+% corrPHYVal uses parfor internally, which spawns a parallel pool of
+% worker processes (kept alive by default between calls, e.g. until an
+% idle timeout). memory().MemUsedMATLAB and cputime below only reflect
+% THIS (client) process, not the workers, and corrPHYVal already runs
+% entirely before the timed region starts -- but shut the pool down
+% explicitly here anyway, so there is no lingering parallel pool of any
+% kind during the single-process timed region that follows, matching the
+% single-process methodology used on the Python side.
+delete(gcp('nocreate'));
+
 % ---- Build one simParams struct per SNR point (untimed) ----
 simParamsAll = cell(1, numSnr);
 snrValues = zeros(1, numSnr);
