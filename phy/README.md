@@ -95,6 +95,16 @@ PHY Knowledge Distillation (PKD) replaces per-configuration calibration with lea
   should be investigated (e.g. re-run on an idle machine) before trusting
   that configuration's result.
 
+  At the paper's N_seq=50, the full 6-configuration sweep is roughly a
+  day and a half of sequential wall-clock time (configurations run one
+  at a time, deliberately, to avoid cross-configuration CPU contention).
+  To check the isolation fix and the CBW20-vs-CBW40 trend without
+  committing to that up front, pass a smaller N_seq as a third argument,
+  e.g. `./runMeasureResourceSweep.sh results logs 10` (~8h for all 6
+  configurations); diagnostic runs are saved with a `_Nseq<N>` filename
+  suffix so they never collide with the full N_seq=50 result used for
+  the paper.
+
 The folders are independent workflows: teacher-data generation and runtime
 benchmarking call their own copies of `corrPHYVal.m`; they do not load a beta
 artifact produced by `eesm-accuracy-validation/`.

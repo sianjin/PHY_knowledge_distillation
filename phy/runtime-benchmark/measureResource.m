@@ -1,4 +1,4 @@
-function results_summary = measureResource(CBW, CH, numTxRx, numSs, mcs, outDir)
+function results_summary = measureResource(CBW, CH, numTxRx, numSs, mcs, outDir, N_seq)
 % measureResource  Single-process resource-usage measurement for the
 % traditional PHY abstraction, AVERAGED OVER ALL SNR OPERATING POINTS
 % (Table III/IV baseline). Reports CPU utilization and peak memory
@@ -28,18 +28,28 @@ function results_summary = measureResource(CBW, CH, numTxRx, numSs, mcs, outDir)
 % JIT/cache warm-up effects, or another process's leftover CPU load -- all
 % of which otherwise show up as elevated per-SNR timing variance.
 %
+% N_seq (7th argument, optional, default 50) overrides the number of
+% sequences per SNR point. The paper's Table III/IV numbers use N_seq=50;
+% a smaller N_seq (e.g. 10) is useful for a quick multi-configuration
+% variance/trend check across a full sweep without committing to the full
+% multi-day run for every configuration up front. Output files are tagged
+% with _Nseq<N> whenever N_seq != 50, so a diagnostic run never collides
+% with the full N_seq=50 result.
+%
 % Requires MATLAB on Windows for the `memory` function (MemUsedMATLAB is
 % Windows-only; see https://www.mathworks.com/help/matlab/ref/memory.html).
 % CPU utilization uses `cputime`, which is cross-platform, but this script
 % is intended to be run on the same Windows machine as the rest of
 % phy/runtime-benchmark for a self-consistent Table III/IV entry.
 
-if nargin < 6
+if nargin < 6 || isempty(outDir)
     outDir = fileparts(mfilename('fullpath'));
+end
+if nargin < 7 || isempty(N_seq)
+    N_seq = 50;           % sequences per SNR point (matches corrPHYSim.m / Table II/III)
 end
 
 numSnr  = 10;             % matches main.m's numSnr; loops isnr = 1:numSnr
-N_seq   = 50;             % sequences per SNR point (matches corrPHYSim.m / Table II/III)
 T       = 1000;           % packets per sequence (matches corrPHYSim.m)
 maxNumErrors  = 1e3;
 maxNumPackets = T;
@@ -182,8 +192,16 @@ results_summary = struct( ...
 if ~exist(outDir, 'dir')
     mkdir(outDir);
 end
-outName = sprintf('resource_usage_%s_%s_%dx%d_%dSS.mat', ...
-    CBW, CH, numTxRx(1), numTxRx(2), numSs);
+if N_seq == 50
+    outName = sprintf('resource_usage_%s_%s_%dx%d_%dSS.mat', ...
+        CBW, CH, numTxRx(1), numTxRx(2), numSs);
+else
+    % Tag the filename when N_seq deviates from the paper's N_seq=50, so a
+    % reduced-N_seq diagnostic run (e.g. a quick variance/isolation check)
+    % never overwrites or gets confused with the full N_seq=50 result.
+    outName = sprintf('resource_usage_%s_%s_%dx%d_%dSS_Nseq%d.mat', ...
+        CBW, CH, numTxRx(1), numTxRx(2), numSs, N_seq);
+end
 outPath = fullfile(outDir, outName);
 save(outPath, 'results_summary');
 fprintf('\nSaved results_summary to %s\n', outPath);
