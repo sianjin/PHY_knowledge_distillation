@@ -84,7 +84,12 @@ PHY Knowledge Distillation (PKD) replaces per-configuration calibration with lea
   JIT/cache warm-up, background load from the previous run) leak between
   configurations, which shows up as high per-SNR timing variance and can
   make runtime comparisons across configurations untrustworthy; a fresh
-  OS process per configuration avoids that. Each run saves its own
+  OS process per configuration avoids that. For the same reason,
+  `measureResource.m` calibrates beta with `corrPHYValSequential.m` (a
+  plain `for` loop) rather than `corrPHYVal.m`'s `parfor` -- whether a
+  parallel pool actually spins up, and how long start-up/teardown takes,
+  is not deterministic across machines or configurations, so it is
+  removed entirely rather than relied on. Each run saves its own
   `resource_usage_<CBW>_<CH>_<Nt>x<Nr>_<Nss>SS.mat` and logs a
   `HighVariance` warning if the per-SNR relative std exceeds 10%, which
   should be investigated (e.g. re-run on an idle machine) before trusting

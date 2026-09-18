@@ -56,20 +56,15 @@ fprintf('Configuration: %s, %s, %dx%d:%d, MCS %d, %d SNR points\n', ...
 % ---- Offline (untimed) beta calibration -- excluded from the timed/
 % measured region, matching corrPHYSim.m's convention. beta is calibrated
 % once for this configuration (not per SNR point), same as main.m/
-% corrPHYSim.m. ----
-fprintf('Calibrating EESM beta (offline, untimed)...\n');
-betaOpt = corrPHYVal(CBW, CH, mcs, numTxRx, numSs);
+% corrPHYSim.m. Uses corrPHYValSequential (a plain `for` loop) instead of
+% corrPHYVal (parfor), so that no parallel pool is ever spawned during a
+% resource-usage run -- whether a pool actually starts, and how long
+% start-up/teardown takes, is not deterministic across machines or
+% configurations, and that variability was itself showing up as
+% inconsistent measurement conditions between configurations. ----
+fprintf('Calibrating EESM beta (offline, untimed, sequential)...\n');
+betaOpt = corrPHYValSequential(CBW, CH, mcs, numTxRx, numSs);
 fprintf('  beta = %.4f\n', betaOpt);
-
-% corrPHYVal uses parfor internally, which spawns a parallel pool of
-% worker processes (kept alive by default between calls, e.g. until an
-% idle timeout). memory().MemUsedMATLAB and cputime below only reflect
-% THIS (client) process, not the workers, and corrPHYVal already runs
-% entirely before the timed region starts -- but shut the pool down
-% explicitly here anyway, so there is no lingering parallel pool of any
-% kind during the single-process timed region that follows, matching the
-% single-process methodology used on the Python side.
-delete(gcp('nocreate'));
 
 % ---- Build one simParams struct per SNR point (untimed) ----
 simParamsAll = cell(1, numSnr);
