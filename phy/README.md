@@ -68,13 +68,27 @@ PHY Knowledge Distillation (PKD) replaces per-configuration calibration with lea
   lightweight abstraction path. Beta calibration is outside the timed section.
   `main.m`/`corrPHYSim.m` produce the wall-clock-only Table III/IV numbers
   via a 10-worker `parfor` over SNR points, reporting `tAvg` averaged over
-  all 10. `main_measure_resource.m` is a separate, single-process driver
-  that loops over the same 10 SNR points **sequentially, no `parfor`**
+  all 10. `measureResource.m` is a separate, single-process function that
+  loops over the same 10 SNR points **sequentially, no `parfor`**
   (to avoid conflating parallel-pool aggregation with per-configuration
   cost), additionally reporting CPU utilization (`cputime`) and peak
   memory (`memory().MemUsedMATLAB`, Windows only) alongside the same
   per-SNR-averaged wall-clock number, matching the methodology of
   `pkd/example/evaluate_resource_usage.py` on the Python side.
+
+  For a multi-configuration sweep (e.g. CBW20/CBW40 x several MIMO
+  configs), use `runMeasureResourceSweep.sh`, which launches
+  `measureResource.m` as a **separate `matlab -batch` process per
+  configuration**. Editing configuration variables and re-running inside
+  one persistent MATLAB session lets state (a lingering parallel pool,
+  JIT/cache warm-up, background load from the previous run) leak between
+  configurations, which shows up as high per-SNR timing variance and can
+  make runtime comparisons across configurations untrustworthy; a fresh
+  OS process per configuration avoids that. Each run saves its own
+  `resource_usage_<CBW>_<CH>_<Nt>x<Nr>_<Nss>SS.mat` and logs a
+  `HighVariance` warning if the per-SNR relative std exceeds 10%, which
+  should be investigated (e.g. re-run on an idle machine) before trusting
+  that configuration's result.
 
 The folders are independent workflows: teacher-data generation and runtime
 benchmarking call their own copies of `corrPHYVal.m`; they do not load a beta

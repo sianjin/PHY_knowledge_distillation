@@ -1,4 +1,5 @@
-% main_measure_resource  Single-process resource-usage measurement for the
+function results_summary = measureResource(CBW, CH, numTxRx, numSs, mcs, outDir)
+% measureResource  Single-process resource-usage measurement for the
 % traditional PHY abstraction, AVERAGED OVER ALL SNR OPERATING POINTS
 % (Table III/IV baseline). Reports CPU utilization and peak memory
 % alongside wall-clock time; see pkd/example/evaluate_resource_usage.py
@@ -15,9 +16,17 @@
 % configuration cost" -- main.m's tAvg already backs out per-unit time via
 % *numCores, and CPU utilization/memory must be sampled over the same
 % single-process, sequential-SNR-loop unit to be comparable against PKD's
-% own single-process measurement (pkd/example/evaluate_resource_usage.py
-% times PKD and EESM-log-AR the same way: one process, sequential SNR
-% loop, no parfor/subprocess-per-SNR).
+% own single-process measurement.
+%
+% This is a FUNCTION (not a plain script) so that runMeasureResourceSweep.sh
+% can launch it in its own isolated `matlab -batch` process per
+% configuration via:
+%   matlab -batch "measureResource(\"CBW40\",\"Model-B\",[3 2],2,7,'results')"
+% Running each configuration in its own OS process (rather than editing
+% variables and re-running inside one persistent MATLAB session) avoids any
+% state carried over between configurations -- a lingering parallel pool,
+% JIT/cache warm-up effects, or another process's leftover CPU load -- all
+% of which otherwise show up as elevated per-SNR timing variance.
 %
 % Requires MATLAB on Windows for the `memory` function (MemUsedMATLAB is
 % Windows-only; see https://www.mathworks.com/help/matlab/ref/memory.html).
@@ -25,14 +34,10 @@
 % is intended to be run on the same Windows machine as the rest of
 % phy/runtime-benchmark for a self-consistent Table III/IV entry.
 
-clear; clc;
+if nargin < 6
+    outDir = fileparts(mfilename('fullpath'));
+end
 
-% ---- Fixed configuration (edit to match the desired Table III/IV row) ----
-CBW     = "CBW40";
-CH      = "Model-B";
-numTxRx = [3 2];
-numSs   = 2;
-mcs     = 7;
 numSnr  = 10;             % matches main.m's numSnr; loops isnr = 1:numSnr
 N_seq   = 50;             % sequences per SNR point (matches corrPHYSim.m / Table II/III)
 T       = 1000;           % packets per sequence (matches corrPHYSim.m)
@@ -91,7 +96,7 @@ if haveMemoryFcn
     memStart = memory;
     peakMemBytes = memStart.MemUsedMATLAB;
 else
-    warning('main_measure_resource:NoMemoryFcn', ...
+    warning('measureResource:NoMemoryFcn', ...
         ['This is not Windows: MATLAB''s memory() function is unavailable, ' ...
          'so peak-memory will NOT be measured (only wall-clock and CPU%%). ' ...
          'Run this script on the Windows MATLAB machine for the full result.']);
@@ -133,6 +138,7 @@ cpuUtilPct = 100 * cpuTime / wallTimeTotal;
 totalPacketsPerSnr = N_seq * T;
 wallTimeAvg = mean(wallTimePerSnr);
 wallTimeStd = std(wallTimePerSnr);
+wallTimeRelStdPct = 100 * wallTimeStd / wallTimeAvg;
 wallTimePerSeqAvg = wallTimeAvg / N_seq;
 wallTimePerPacketMsAvg = wallTimeAvg / totalPacketsPerSnr * 1e3;
 throughputPacketsPerSecAvg = totalPacketsPerSnr / wallTimeAvg;
@@ -144,8 +150,16 @@ fprintf('Resource-Usage Result: Traditional PHY Abstraction (MATLAB)\n');
 fprintf('=========================================================\n');
 fprintf('SNR points:            %d  (%.1f to %.1f dB)\n', numSnr, min(snrValues), max(snrValues));
 fprintf('Sequences x packets:   %d x %d per SNR point\n', N_seq, T);
-fprintf('Average per-SNR time:  %.4f s  (std %.4f s)  [%.4f s/sequence, %.4f ms/packet]\n', ...
-    wallTimeAvg, wallTimeStd, wallTimePerSeqAvg, wallTimePerPacketMsAvg);
+fprintf('Average per-SNR time:  %.4f s  (std %.4f s, %.1f%% relative)  [%.4f s/sequence, %.4f ms/packet]\n', ...
+    wallTimeAvg, wallTimeStd, wallTimeRelStdPct, wallTimePerSeqAvg, wallTimePerPacketMsAvg);
+if wallTimeRelStdPct > 10
+    warning('measureResource:HighVariance', ...
+        ['Per-SNR wall-clock relative std is %.1f%% (>10%%). This usually means ' ...
+         'the process was not isolated (background load, another MATLAB/worker ' ...
+         'process running concurrently, thermal throttling, etc.) -- treat this ' ...
+         'result with caution and prefer re-running on an otherwise-idle machine.'], ...
+        wallTimeRelStdPct);
+end
 fprintf('Total wall-clock:      %.4f s  (sum over all SNR points, single process)\n', wallTimeTotal);
 fprintf('Throughput:            %.1f packets/s (per-SNR average)\n', throughputPacketsPerSecAvg);
 fprintf('CPU time (cputime):    %.4f s\n', cpuTime);
@@ -166,7 +180,17 @@ results_summary = struct( ...
     'CBW', CBW, 'CH', CH, 'numTxRx', numTxRx, 'numSs', numSs, 'mcs', mcs, ...
     'snrValues', snrValues, 'N_seq', N_seq, 'T', T, ...
     'wallTimePerSnr', wallTimePerSnr, 'wallTimeAvg', wallTimeAvg, 'wallTimeStd', wallTimeStd, ...
+    'wallTimeRelStdPct', wallTimeRelStdPct, ...
     'wallTimeTotal', wallTimeTotal, 'cpuTime', cpuTime, 'cpuUtilPct', cpuUtilPct, ...
     'peakMemBytes', peakMemBytes, 'throughputPacketsPerSecAvg', throughputPacketsPerSecAvg);
-save(fullfile(fileparts(mfilename('fullpath')), 'resource_usage_result.mat'), 'results_summary');
-fprintf('\nSaved results_summary to resource_usage_result.mat\n');
+
+if ~exist(outDir, 'dir')
+    mkdir(outDir);
+end
+outName = sprintf('resource_usage_%s_%s_%dx%d_%dSS.mat', ...
+    CBW, CH, numTxRx(1), numTxRx(2), numSs);
+outPath = fullfile(outDir, outName);
+save(outPath, 'results_summary');
+fprintf('\nSaved results_summary to %s\n', outPath);
+
+end
