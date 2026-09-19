@@ -1,5 +1,4 @@
-% Main function to run simulation
-% Loop over multiple bandwidth, MCS and SNR points
+% Parallel wall-clock evaluation over multiple SNR points
 
 CBWstring = ["CBW20","CBW40"];
 chanString = ["Model-B","Model-D"];

@@ -7,6 +7,7 @@ function simParams = getBox0ValParams(chans,numTxRx,numSs,mcs,cfgHE,maxNumErrors
 
 % These arrays define the value and order SNRs are defined
 channelConfigs     = ["Model-B","Model-D"];
+chans = reshape(string(chans), 1, []);
 anteannaSNRConfigs = [ ...
     1 1 1;   % 1x1:1
     2 1 1;   % 2x1:1

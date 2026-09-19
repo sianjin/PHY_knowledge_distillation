@@ -66,7 +66,7 @@ PHY Knowledge Distillation (PKD) replaces per-configuration calibration with lea
   training.
 - `runtime-benchmark/` recalibrates beta before timing, then measures the
   lightweight abstraction path. Beta calibration is outside the timed section.
-  `main.m`/`corrPHYSim.m` produce the wall-clock-only Table III/IV numbers
+  `measureRuntimeParfor.m`/`corrPHYSim.m` produce the wall-clock-only Table III/IV numbers
   via a 10-worker `parfor` over SNR points, reporting `tAvg` averaged over
   all 10. `measureResource.m` is a separate, single-process function that
   loops over the same 10 SNR points **sequentially, no `parfor`**

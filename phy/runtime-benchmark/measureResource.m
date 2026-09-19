@@ -6,14 +6,15 @@ function results_summary = measureResource(CBW, CH, numTxRx, numSs, mcs, outDir,
 % for the matching PKD/EESM-log-AR measurement on the Python side, run
 % over the SAME SNR grid so the three are directly comparable.
 %
-% Matches main.m's convention of looping over numSnr = 10 SNR points
+% Matches measureRuntimeParfor.m's convention of looping over numSnr = 10 SNR points
 % (isnr = 1:10) for the same (CBW, CH, numTxRx, numSs, mcs), and reports
-% the per-SNR wall-clock plus the average -- the same quantity main.m
-% reports as tAvg. UNLIKE main.m, this script does NOT use parfor: it runs
+% the per-SNR wall-clock plus the average -- the same quantity
+% measureRuntimeParfor.m reports as tAvg. Unlike that script, this function
+% does not use parfor: it runs
 % all 10 SNR points sequentially in ONE MATLAB process, because reporting
 % the aggregate CPU%/memory of a 10-worker parfor pool would conflate "how
 % many SNR points were batched in parallel" with "how much does one
-% configuration cost" -- main.m's tAvg already backs out per-unit time via
+% configuration cost" -- measureRuntimeParfor.m's tAvg already backs out per-unit time via
 % *numCores, and CPU utilization/memory must be sampled over the same
 % single-process, sequential-SNR-loop unit to be comparable against PKD's
 % own single-process measurement.
@@ -49,7 +50,7 @@ if nargin < 7 || isempty(N_seq)
     N_seq = 50;           % sequences per SNR point (matches corrPHYSim.m / Table II/III)
 end
 
-numSnr  = 10;             % matches main.m's numSnr; loops isnr = 1:numSnr
+numSnr  = 10;             % matches measureRuntimeParfor.m; loops isnr = 1:numSnr
 T       = 1000;           % packets per sequence (matches corrPHYSim.m)
 maxNumErrors  = 1e3;
 maxNumPackets = T;
@@ -65,7 +66,7 @@ fprintf('Configuration: %s, %s, %dx%d:%d, MCS %d, %d SNR points\n', ...
 
 % ---- Offline (untimed) beta calibration -- excluded from the timed/
 % measured region, matching corrPHYSim.m's convention. beta is calibrated
-% once for this configuration (not per SNR point), same as main.m/
+% once for this configuration (not per SNR point), same as measureRuntimeParfor.m/
 % corrPHYSim.m. Uses corrPHYValSequential (a plain `for` loop) instead of
 % corrPHYVal (parfor), so that no parallel pool is ever spawned during a
 % resource-usage run -- whether a pool actually starts, and how long

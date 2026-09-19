@@ -6,8 +6,9 @@ function betaOpt = corrPHYValSequential(cbw,chan,mcs,numTxRx,numSs)
 % takes) is not deterministic across machines/configurations, and even
 % though calibration itself is untimed, spinning a pool up and down right
 % before the timed region can still perturb machine state at that
-% boundary. Keep this in sync with corrPHYVal.m (used by main.m, where the
-% parfor speedup is wanted) aside from the loop type.
+% boundary. Keep this in sync with corrPHYVal.m (used by
+% measureRuntimeParfor.m, where the parfor speedup is wanted) aside from the
+% loop type.
 
 maxNumErrors = 1e3;  % The maximum number of packet errors at an SNR point
 maxNumPackets = 1e3; % The maximum number of packets at an SNR point

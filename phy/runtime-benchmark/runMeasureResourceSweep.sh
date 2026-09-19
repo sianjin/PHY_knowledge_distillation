@@ -51,6 +51,22 @@ CH="Model-B"
 MCS=7
 
 mkdir -p "$OUT_DIR" "$LOG_DIR"
+OUT_DIR="$(cd "$OUT_DIR" && pwd)"
+LOG_DIR="$(cd "$LOG_DIR" && pwd)"
+
+if command -v matlab >/dev/null 2>&1; then
+  MATLAB_CMD="$(command -v matlab)"
+  MATLAB_SCRIPT_DIR="$SCRIPT_DIR"
+  MATLAB_OUT_DIR="$OUT_DIR"
+elif [[ -x "/mnt/c/Program Files/MATLAB/R2026a/bin/matlab.exe" ]] &&
+     command -v wslpath >/dev/null 2>&1; then
+  MATLAB_CMD="/mnt/c/Program Files/MATLAB/R2026a/bin/matlab.exe"
+  MATLAB_SCRIPT_DIR="$(wslpath -w "$SCRIPT_DIR")"
+  MATLAB_OUT_DIR="$(wslpath -w "$OUT_DIR")"
+else
+  echo "MATLAB was not found in PATH or at the Windows R2026a location." >&2
+  exit 127
+fi
 
 # (CBW, numTxRx, numSs) sweep -- matches the configurations already measured:
 # CBW20/CBW40 x {1x1:1, 3x2:1, 4x2:2}
@@ -65,7 +81,8 @@ CONFIGS=(
 
 for cfg in "${CONFIGS[@]}"; do
   IFS='|' read -r CBW NUMTXRX NUMSS <<< "$cfg"
-  TAG="${CBW}_${CH}_$(echo "$NUMTXRX" | tr -d '[] ' | tr ' ' 'x')_${NUMSS}SS"
+  read -r NUMTX NUMRX <<< "${NUMTXRX//[\[\]]/}"
+  TAG="${CBW}_${CH}_${NUMTX}x${NUMRX}_${NUMSS}SS"
 
   if [[ -n "${CONFIGS_FILTER:-}" ]]; then
     matched=0
@@ -85,7 +102,7 @@ for cfg in "${CONFIGS[@]}"; do
   echo "=== Running ${CBW}, ${CH}, ${NUMTXRX}, numSs=${NUMSS}, MCS=${MCS}, N_seq=${N_SEQ} ==="
   echo "    (fresh matlab -batch process; log: ${LOG_FILE})"
 
-  matlab -batch "addpath(\"${SCRIPT_DIR}\"); measureResource(\"${CBW}\",\"${CH}\",${NUMTXRX},${NUMSS},${MCS},\"${OUT_DIR}\",${N_SEQ})" \
+  "$MATLAB_CMD" -batch "addpath('${MATLAB_SCRIPT_DIR}'); measureResource('${CBW}','${CH}',${NUMTXRX},${NUMSS},${MCS},'${MATLAB_OUT_DIR}',${N_SEQ})" \
     2>&1 | tee "$LOG_FILE"
 
   echo "=== Done: ${TAG} ==="
