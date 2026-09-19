@@ -27,6 +27,14 @@
 # right, re-run the configurations you need (or all of them) at the
 # default N_seq=50 for the numbers that actually go in the paper.
 #
+# To re-run only a subset (e.g. one or two configurations that came back
+# with high per-SNR variance and are worth re-checking before spending
+# time on the rest), set CONFIGS_FILTER to a space-separated list of
+# substrings matched against each configuration's tag
+# (<CBW>_<CH>_<Nt>x<Nr>_<Nss>SS), e.g.:
+#   CONFIGS_FILTER="CBW40_Model-B_1x1_1SS CBW40_Model-B_3x2_1SS" \
+#     ./runMeasureResourceSweep.sh results logs 10
+#
 # Results are saved as one .mat file per configuration in outDir (default:
 # results/), named resource_usage_<CBW>_<CH>_<Nt>x<Nr>_<Nss>SS.mat by
 # measureResource.m itself. Console output for each run is tee'd to logDir
@@ -58,6 +66,20 @@ CONFIGS=(
 for cfg in "${CONFIGS[@]}"; do
   IFS='|' read -r CBW NUMTXRX NUMSS <<< "$cfg"
   TAG="${CBW}_${CH}_$(echo "$NUMTXRX" | tr -d '[] ' | tr ' ' 'x')_${NUMSS}SS"
+
+  if [[ -n "${CONFIGS_FILTER:-}" ]]; then
+    matched=0
+    for pattern in $CONFIGS_FILTER; do
+      if [[ "$TAG" == *"$pattern"* ]]; then
+        matched=1
+        break
+      fi
+    done
+    if [[ "$matched" -eq 0 ]]; then
+      continue
+    fi
+  fi
+
   LOG_FILE="$LOG_DIR/measureResource_${TAG}.log"
 
   echo "=== Running ${CBW}, ${CH}, ${NUMTXRX}, numSs=${NUMSS}, MCS=${MCS}, N_seq=${N_SEQ} ==="
