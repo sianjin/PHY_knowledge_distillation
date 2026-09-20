@@ -42,6 +42,7 @@ Usage:
         [--method {both,pkd,eesm}]
 """
 import argparse
+import json
 import os
 import threading
 import time
@@ -297,6 +298,13 @@ def parse_args():
                         "the printed note). For a paper-quality, per-method "
                         "isolated peak-RSS number, run this script twice in "
                         "separate processes with --method pkd and --method eesm.")
+    p.add_argument('--out-dir', type=str, default=None,
+                   help='If given, also save results as JSON to '
+                        '<out-dir>/resource_usage_<method>_CBW<BW>_ch<channel-model>_'
+                        '<N-t>x<N-r>_<N-ss>SS.json (one file per method actually run), '
+                        'including the discovered/used SNR grid, so a driver script can '
+                        'read it back (e.g. to feed the same grid into a follow-up '
+                        '--method pkd --snr-list run) without parsing stdout.')
     return p.parse_args()
 
 
@@ -452,6 +460,42 @@ def main():
               'by any of this and are safe to compare directly.')
     else:
         print('=' * 70)
+
+    if args.out_dir:
+        os.makedirs(args.out_dir, exist_ok=True)
+        tag = f'CBW{int(args.BW)}_ch{args.channel_model}_{args.N_t}x{args.N_r}_{args.N_ss}SS'
+
+        def _jsonable(obj):
+            if isinstance(obj, dict):
+                return {k: _jsonable(v) for k, v in obj.items()}
+            if isinstance(obj, (list, tuple)):
+                return [_jsonable(v) for v in obj]
+            if isinstance(obj, (np.floating, np.integer)):
+                return obj.item()
+            return obj
+
+        def _write(method_name, per_snr, summary):
+            payload = {
+                'method': method_name,
+                'channel_model_id': args.channel_model,
+                'N_t': args.N_t, 'N_r': args.N_r, 'BW': args.BW, 'N_ss': args.N_ss,
+                'MCS': args.MCS,
+                'num_sequences': args.num_sequences, 'sequence_length': args.sequence_length,
+                'snr_values': [float(s) for s in per_snr.keys()],
+                'wall_time_per_snr': [float(v) for v in per_snr.values()],
+                'wall_time_avg': float(np.mean(list(per_snr.values()))),
+                'wall_time_std': float(np.std(list(per_snr.values()))),
+                'summary': _jsonable(summary),
+            }
+            out_path = os.path.join(args.out_dir, f'resource_usage_{method_name}_{tag}.json')
+            with open(out_path, 'w') as fh:
+                json.dump(payload, fh, indent=2)
+            print(f'Saved {method_name} results to {out_path}')
+
+        if eesm_summary is not None:
+            _write('eesm', eesm_per_snr, eesm_summary)
+        if pkd_summary is not None:
+            _write('pkd', pkd_per_snr, pkd_summary)
 
 
 if __name__ == '__main__':
