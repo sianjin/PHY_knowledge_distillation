@@ -35,6 +35,10 @@ CHANNEL_MODEL=2   # Model-B, matches phy/runtime-benchmark's CH="Model-B"
 MCS=7
 
 mkdir -p "$OUT_DIR"
+# Resolve to an absolute path BEFORE cd-ing to REPO_ROOT below, so a
+# relative outDir (e.g. "results", meant relative to the caller's cwd) is
+# not silently written relative to REPO_ROOT instead.
+OUT_DIR="$(cd "$OUT_DIR" && pwd)"
 
 # (BW, N_t, N_r, N_ss) sweep -- matches runMeasureResourceSweep.sh's
 # CBW20/CBW40 x {1x1:1, 3x2:1, 4x2:2}

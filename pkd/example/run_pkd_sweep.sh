@@ -35,6 +35,10 @@ if [[ ! -d "$OUT_DIR" ]]; then
   echo "outDir '$OUT_DIR' does not exist -- run run_eesm_sweep.sh first." >&2
   exit 1
 fi
+# Resolve to an absolute path BEFORE cd-ing to REPO_ROOT below, so a
+# relative outDir (e.g. "results", meant relative to the caller's cwd)
+# does not silently get looked up relative to REPO_ROOT instead.
+OUT_DIR="$(cd "$OUT_DIR" && pwd)"
 
 CONFIGS=(
   "20|1|1|1"
