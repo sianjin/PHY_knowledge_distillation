@@ -69,3 +69,4 @@ for cfg in "${CONFIGS[@]}"; do
 done
 
 echo "All configurations complete. Results in: $OUT_DIR"
+echo "Next: ./run_pkd_sweep.sh \"$OUT_DIR\" to time PKD at the same SNR grids."

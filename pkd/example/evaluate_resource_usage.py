@@ -69,6 +69,13 @@ from pkd.example.utils import filter_by_slice
 CHANNEL_MODEL_NAMES = {1: 'A', 2: 'B', 3: 'C', 4: 'D', 5: 'E', 6: 'F'}
 AR_ORDER = 10
 
+# pkd/example/evaluate_resource_usage.py -> repo root is two levels up.
+# --model-path and --data-dir default relative to this (not the caller's
+# cwd), so the script works the same whether invoked via python -m from
+# the repo root, via run_pkd_sweep.sh (which cd's to the repo root itself),
+# or directly from within pkd/example/.
+_REPO_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
 
 # ----------------------------------------------------------------------------
 # Resource sampling
@@ -300,8 +307,8 @@ def parse_args():
                    help='Resource-sampling interval in seconds (default 0.01). '
                         'Use a value well below the expected per-SNR wall-clock '
                         'time so each SNR point collects enough samples.')
-    p.add_argument('--model-path', type=str, default='pkd/pkd_model.pt')
-    p.add_argument('--data-dir', type=str, default='data')
+    p.add_argument('--model-path', type=str, default=os.path.join(_REPO_ROOT, 'pkd', 'pkd_model.pt'))
+    p.add_argument('--data-dir', type=str, default=os.path.join(_REPO_ROOT, 'data'))
     p.add_argument('--max-files', type=int, default=None)
     p.add_argument('--method', choices=['both', 'pkd', 'eesm'], default='both',
                    help="Which method to time. 'both' (default) times PKD and "
