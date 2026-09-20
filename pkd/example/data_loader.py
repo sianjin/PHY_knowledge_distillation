@@ -6,7 +6,8 @@ import os
 import glob
 
 
-def load_real_data(data_dir='data', train_ratio=0.7, val_ratio=0.1, max_files=None, random_seed=42):
+def load_real_data(data_dir='data', train_ratio=0.7, val_ratio=0.1, max_files=None, random_seed=42,
+                    file_glob_pattern='*.mat'):
     """Load real PHY simulator data from .mat files.
 
     Args:
@@ -15,6 +16,11 @@ def load_real_data(data_dir='data', train_ratio=0.7, val_ratio=0.1, max_files=No
         val_ratio: Ratio of sequences to use for validation (default: 0.1)
         max_files: Maximum number of files to load (None = load all)
         random_seed: Random seed for reproducible shuffling (None = no shuffling)
+        file_glob_pattern: Glob pattern (relative to data_dir) selecting which
+            .mat files to load. Default '*.mat' loads the whole dataset,
+            which is what training needs; pass a narrower pattern (e.g.
+            matching one channel/MIMO/MCS slice's filename convention) to
+            load only the files relevant to a single configuration.
 
     Returns:
         train_sequences: List of gamma_eff sequences for training (in natural log scale)
@@ -34,8 +40,8 @@ def load_real_data(data_dir='data', train_ratio=0.7, val_ratio=0.1, max_files=No
 
         Default split is 70% train, 10% val, 20% test.
     """
-    # Find all .mat files
-    mat_files = sorted(glob.glob(os.path.join(data_dir, '*.mat')))
+    # Find matching .mat files
+    mat_files = sorted(glob.glob(os.path.join(data_dir, file_glob_pattern)))
 
     if max_files is not None:
         mat_files = mat_files[:max_files]

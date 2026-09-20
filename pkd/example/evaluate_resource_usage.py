@@ -140,9 +140,22 @@ def get_snr_grid(data_dir, max_files, slice_spec, mcs):
     e.g. the 10-point PER-SNR waterfall grid (Table II). Loaded once from
     the training split; both EESM-log-AR calibration and PKD timing use
     this same grid so their per-SNR averages are over identical points.
+
+    The .mat filenames directly encode (BW, channel, N_t, N_r, N_ss, MCS)
+    -- e.g. CBW20_Model-B_1-by-1-by-1_MCS0_SNR-10.mat -- so a glob pattern
+    built from slice_spec restricts the load to just this configuration's
+    ~10 SNR files, instead of load_real_data's default of the whole
+    dataset (thousands of files across every other configuration).
     """
+    channel_letter = CHANNEL_MODEL_NAMES.get(slice_spec['channel_model_id'], '*')
+    file_glob_pattern = (
+        f"CBW{int(slice_spec['BW'])}_Model-{channel_letter}_"
+        f"{slice_spec['N_t']}-by-{slice_spec['N_r']}-by-{slice_spec['N_ss']}_"
+        f"MCS{mcs}_SNR*.mat"
+    )
     train_sequences, train_configs, _, _, _, _ = load_real_data(
         data_dir=data_dir, train_ratio=0.7, val_ratio=0.1, max_files=max_files, random_seed=42,
+        file_glob_pattern=file_glob_pattern,
     )
     full_spec = dict(slice_spec)
     full_spec['MCS'] = mcs
