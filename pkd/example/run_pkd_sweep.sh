@@ -26,7 +26,7 @@ REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 OUT_DIR="${1:-$SCRIPT_DIR/results}"
 NUM_SEQ="${2:-10}"
 SEQ_LEN="${3:-1000}"
-MODEL_PATH="${4:-$REPO_ROOT/pkd/pkd_model.pt}"
+MODEL_PATH="${4:-$REPO_ROOT/pkd/trained_models/exclude_config_30/pkd_model.pt}"
 
 CHANNEL_MODEL=2   # Model-B, matches run_eesm_sweep.sh
 MCS=7

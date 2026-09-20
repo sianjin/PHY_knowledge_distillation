@@ -307,7 +307,14 @@ def parse_args():
                    help='Resource-sampling interval in seconds (default 0.01). '
                         'Use a value well below the expected per-SNR wall-clock '
                         'time so each SNR point collects enough samples.')
-    p.add_argument('--model-path', type=str, default=os.path.join(_REPO_ROOT, 'pkd', 'pkd_model.pt'))
+    p.add_argument('--model-path', type=str,
+                   default=os.path.join(_REPO_ROOT, 'pkd', 'trained_models', 'exclude_config_30', 'pkd_model.pt'),
+                   help="Path to the PKD checkpoint to time. Timing/CPU/memory do not "
+                        "depend on which tuples were excluded during training, so any "
+                        "trained checkpoint gives the same resource-usage numbers; the "
+                        "default is exclude_config_30 (tracked in git, present on every "
+                        "clone -- unlike pkd/pkd_model.pt, which is a local, gitignored "
+                        "copy that must be created manually on each machine).")
     p.add_argument('--data-dir', type=str, default=os.path.join(_REPO_ROOT, 'data'))
     p.add_argument('--max-files', type=int, default=None)
     p.add_argument('--method', choices=['both', 'pkd', 'eesm'], default='both',
